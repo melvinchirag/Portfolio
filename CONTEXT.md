@@ -340,17 +340,70 @@ only MIT libs + our own shaders (NOT their code). What's done:
 - teal `#80fff0`, additive, UnrealBloom. Manual DRACO loader (self-hosted decoder
   path via gstatic) — NOT drei useGLTF (which hung after cache clears).
 
-**Still TODO on the mask:** glowing eyes (Melvin asked, not built yet); push
-density back up (currently SIZE=384/~147k, dropped from 262k to avoid a
-mount-time freeze — do it via a PRE-FILTERED face mesh so no rejection cost);
-remove last top-streak/antenna remnants (same pre-filter fixes it); the editorial
-type overlay ("CS, and beyond" + name) on top; the 6-hour variation cycle.
+Update (later 2026-07-27): the glyph layer was refined per Melvin — **not the
+whole mask**; only **localized roving patches** show glyphs now (3 "hotspots"
+that hop to random face locations every ~2.2s), and each glyph **cycles
+binary → Telugu → hex** over time (shader-driven). **Drag anywhere to spin the
+mask 360°** was added (rotates the group + raycast mesh; mask stays on the left).
+Bloom softened to tame an over-exposed white blob at the chin.
 
-**⚠️ Dev-env gotchas learned:** adding deps mid-session corrupts Vite's HMR →
-black screen; fix = restart dev server + **open a FRESH browser tab** (old tab
-stays poisoned). Dev server currently on **:5176**. Melvin's Chrome window keeps
-collapsing to ~150px tall, so the agent can't always see full renders — Melvin
-verifies full-size.
+---
+
+## 🤝 HANDOFF — continue here with any AI (state as of ~2026-07-27 15:55)
+
+**Read `AGENTS.md` then this file. Work is on git branch `hero-build`
+(not merged to main).** Everything below is the live picture.
+
+### How to run + SEE it (important gotchas)
+```bash
+cd site && npm run dev          # opens on :5176 (or next free port)
+npx tsc --noEmit && npx oxlint  # must both be clean before committing
+```
+- **After editing, open a FRESH browser tab** on the localhost URL. Vite HMR
+  gets *poisoned* if a component throws mid-edit → black screen that persists in
+  that tab; a brand-new tab loads clean. If black persists everywhere: stop the
+  dev server, `rm -rf site/node_modules/.vite`, restart, new tab.
+- The model + shaders take a few seconds; wait ~8–10s before judging a load.
+- Neural-net loader plays ~5s once per tab session before the hero.
+
+### The hero mask — file: `site/src/components/scene/MaskField.tsx`
+Our own GPGPU particle mask. Tunable knobs (all near the top / in `sim`):
+- `SIZE` (384) — √particle-count (~147k). Raising freezes mount because of
+  rejection sampling — **the right fix is to pre-filter the mesh to a face-only
+  sub-geometry, then sample without rejection** (lets you go 512–768+).
+- `OFFSET` (-0.62,0,0) — mask's left position. `FRONT_FACING` (0.12) + `yCap`
+  (0.66 of height) — the de-crown face clip.
+- Glyphs: `BINARY`/`TELUGU`/`HEX` arrays, `GLYPH_COUNT` (6000), `N_HOTSPOTS` (3),
+  `hotRadius` (0.18×face) — patch size; hotspot hop interval 2.2s (in useFrame);
+  cycle speed `uTime*0.5` in `glyphVertex`. Glyph colour `#b9fff2`.
+- Base dots colour `#80fff0`; `uForce` 0.72 (spring damping); Bloom intensity 0.7.
+- Model: `site/public/models/cyborg.glb` (CC BY 4.0). DRACO decoder loaded from
+  gstatic CDN — **self-host it before production** (offline safety).
+
+### Immediate NEXT steps (Melvin's stated order)
+1. **Type overlay on the hero:** his name + tagline **"CS, and beyond"** over/beside
+   the mask (mask is on the LEFT; name goes CENTER). `RevealText` + `LocalTime`
+   are still imported in `Home.tsx` for this.
+2. **Scrollytelling for the hero** — this is the ONLY page with scroll. Five
+   sections, each its own theme/transition; the mask belongs to section 1. Melvin
+   wants to try **anime.js** (not installed) and add elements himself first — do
+   NOT build sections 2–5 until he says.
+3. Then the **other pages** (About/Work/Vision/Contact) — each its own concept.
+4. Backlog on the mask: push density up (pre-filter, see above); remove last
+   top-streak/antenna remnants (same pre-filter); tune the chin brightness;
+   the 6-hour model/colour variation cycle. **Glowing eyes: Melvin said DROP for
+   now.** Résumé still a completely separate "coolest way to show a resume".
+
+### Credits owed (must appear on the site + README before shipping)
+- Cyborg "Soulless" model — **Ali Rahimi (@Free-Radical-666), CC BY 4.0**.
+- Technique learned from Codrops "Dreamy Particles" by Dominik Fojcik (our code
+  is a clean-room reimplementation using MIT libs — see
+  `docs/particle-mask-technique.md`).
+
+### Constraints reminder
+Dark only; comment non-obvious code (Melvin reads it); update this file + the
+README master key when things change; confirm before deploy/delete; don't ship
+unlicensed code. Repo: private github.com/melvinchirag/Portfolio.
 
 ### 🎨 Hero direction (2026-07-27) — "look first", references studied
 
