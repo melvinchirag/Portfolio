@@ -125,6 +125,77 @@ const renderFragment = /* glsl */ `
   }
 `
 
+/* ---- The "make it ours" layer: a subset of particles rendered as GLYPHS ----
+ * A mix that encodes Melvin: binary + hexadecimal (the CS signal) and TELUGU
+ * letters (his heritage — Kuwait → India → Michigan). They re-shuffle on a ~5s
+ * wave so the face keeps "speaking" in code and mother tongue. */
+const GLYPH_CHARS = [
+  '0', '1', // binary
+  '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', // hex
+  'అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', 'న', 'మ', 'ర', 'ల', 'వ', 'స', 'హ', // Telugu
+]
+const GLYPH_COUNT = 5200 // how many of the particles carry a glyph
+
+// Bake all glyphs into one texture atlas (grid of cells) drawn on a canvas.
+function makeGlyphAtlas() {
+  const cols = Math.ceil(Math.sqrt(GLYPH_CHARS.length))
+  const cell = 64
+  const px = cols * cell
+  const cvs = document.createElement('canvas')
+  cvs.width = px
+  cvs.height = px
+  const ctx = cvs.getContext('2d')!
+  ctx.clearRect(0, 0, px, px)
+  ctx.fillStyle = '#ffffff'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  // Nirmala UI / Gautami render Telugu on Windows; monospace fallback for digits
+  ctx.font = '42px "Nirmala UI", "Gautami", "Noto Sans Telugu", monospace'
+  GLYPH_CHARS.forEach((ch, i) => {
+    const cx = (i % cols) * cell + cell / 2
+    const cy = Math.floor(i / cols) * cell + cell / 2
+    ctx.fillText(ch, cx, cy)
+  })
+  const tex = new THREE.CanvasTexture(cvs)
+  tex.flipY = false // match gl_PointCoord's top-left origin
+  tex.minFilter = THREE.LinearFilter
+  tex.magFilter = THREE.LinearFilter
+  tex.needsUpdate = true
+  return { texture: tex, cols }
+}
+
+const glyphVertex = /* glsl */ `
+  uniform sampler2D uPositionTexture;
+  uniform float uGlyphSize;
+  attribute vec2 aRef;
+  attribute float aGlyph;
+  varying float vGlyph;
+  void main() {
+    vec3 pos = texture2D(uPositionTexture, aRef).xyz;
+    vGlyph = aGlyph;
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+    gl_PointSize = uGlyphSize / -mv.z;
+    gl_Position = projectionMatrix * mv;
+  }
+`
+
+const glyphFragment = /* glsl */ `
+  precision highp float;
+  uniform sampler2D uAtlas;
+  uniform float uCols;
+  uniform vec3 uColor;
+  varying float vGlyph;
+  void main() {
+    float idx = floor(vGlyph + 0.5);
+    float cx = mod(idx, uCols);
+    float cy = floor(idx / uCols);
+    vec2 uv = (vec2(cx, cy) + gl_PointCoord) / uCols;
+    vec4 g = texture2D(uAtlas, uv);
+    if (g.a < 0.15) discard;
+    gl_FragColor = vec4(uColor, g.a);
+  }
+`
+
 function MaskParticles() {
   const gl = useThree((s) => s.gl)
   const camera = useThree((s) => s.camera)
@@ -237,21 +308,55 @@ function MaskParticles() {
       blending: THREE.AdditiveBlending,
     })
 
+    // ---- glyph layer: a strided subset of particles carrying a glyph id ----
+    const atlas = makeGlyphAtlas()
+    const stride = Math.max(1, Math.floor(count / GLYPH_COUNT))
+    const gPositions: number[] = []
+    const gRefs: number[] = []
+    const gGlyphArr: number[] = []
+    for (let k = 0; k < count; k += stride) {
+      gPositions.push(0, 0, 0)
+      gRefs.push(refs[k * 2], refs[k * 2 + 1])
+      gGlyphArr.push(Math.floor(Math.random() * GLYPH_CHARS.length))
+    }
+    const glyphGeo = new THREE.BufferGeometry()
+    glyphGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(gPositions), 3))
+    glyphGeo.setAttribute('aRef', new THREE.BufferAttribute(new Float32Array(gRefs), 2))
+    const glyphAttr = new THREE.BufferAttribute(new Float32Array(gGlyphArr), 1)
+    glyphGeo.setAttribute('aGlyph', glyphAttr)
+
+    const glyphMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uPositionTexture: { value: null },
+        uGlyphSize: { value: 24 },
+        uAtlas: { value: atlas.texture },
+        uCols: { value: atlas.cols },
+        uColor: { value: new THREE.Color('#b9fff2') },
+      },
+      vertexShader: glyphVertex,
+      fragmentShader: glyphFragment,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+
     // a hidden mesh (with BVH) purely for cursor→surface raycasting
     ;(maskGeometry as unknown as { computeBoundsTree: () => void }).computeBoundsTree()
     const rayMesh = new THREE.Mesh(maskGeometry)
     rayMesh.position.copy(OFFSET) // match the rendered points' left offset
     rayMesh.updateMatrixWorld()
 
-    return { gpu, posVar, velVar, geometry, material, rayMesh }
+    return { gpu, posVar, velVar, geometry, material, rayMesh, glyphGeo, glyphMat, glyphAttr }
   }, [maskGeometry, gl])
 
   const raycaster = useRef(new THREE.Raycaster())
   const mouseSpeed = useRef(0)
+  const glyphTimer = useRef(0)
 
   useFrame((_, delta) => {
     if (!sim) return
-    const { gpu, posVar, velVar, material, rayMesh } = sim
+    const { gpu, posVar, velVar, material, glyphMat, glyphAttr, rayMesh } = sim
 
     // cursor → 3D point on the mask
     raycaster.current.setFromCamera(pointer as THREE.Vector2, camera)
@@ -266,18 +371,29 @@ function MaskParticles() {
     velVar.material.uniforms.uTime.value += delta
 
     gpu.compute()
-    material.uniforms.uPositionTexture.value = gpu.getCurrentRenderTarget(posVar).texture
+    const posTex = gpu.getCurrentRenderTarget(posVar).texture
+    material.uniforms.uPositionTexture.value = posTex
     material.uniforms.uVelocityTexture.value = gpu.getCurrentRenderTarget(velVar).texture
+    glyphMat.uniforms.uPositionTexture.value = posTex
+
+    // every ~5s, reshuffle ~35% of the glyphs → a wave of changing code/Telugu
+    glyphTimer.current += delta
+    if (glyphTimer.current > 5) {
+      glyphTimer.current = 0
+      const arr = glyphAttr.array as Float32Array
+      for (let i = 0; i < arr.length; i++) {
+        if (Math.random() < 0.35) arr[i] = Math.floor(Math.random() * GLYPH_CHARS.length)
+      }
+      glyphAttr.needsUpdate = true
+    }
   })
 
   if (!sim) return null
   return (
-    <points
-      geometry={sim.geometry}
-      material={sim.material}
-      position={[OFFSET.x, OFFSET.y, OFFSET.z]}
-      frustumCulled={false}
-    />
+    <group position={[OFFSET.x, OFFSET.y, OFFSET.z]}>
+      <points geometry={sim.geometry} material={sim.material} frustumCulled={false} />
+      <points geometry={sim.glyphGeo} material={sim.glyphMat} frustumCulled={false} />
+    </group>
   )
 }
 
