@@ -12,6 +12,7 @@ so no experiment gets lost between sessions/tools.
 
 | # | Artifact | For | Status | Source |
 |---|----------|-----|--------|--------|
+| 0 | [Hero — editorial shell (The Blend, Phase 1)](https://claude.ai/code/artifact/6b0b88cd-b804-4ea2-b965-71b40c6243d0) | Camp-B editorial skeleton for the locked "Blend" direction: cinematic letterbox, grand-serif + mono type, "CS, and beyond", live timecode, name scramble, and a **reserved viewfinder slot** for the WebGL centerpiece. | 🟡 | `scratchpad/hero-editorial.html` |
 | 1 | [Hero prototype — "The Current"](https://claude.ai/code/artifact/dfabfa71-13fe-48d6-a619-825987bf081f) | Field-agnostic hero probe: scrollytelling + kinetic type + curl-noise "light current". Melvin: "good but needs massive improvements." | 🟡 | `scratchpad/hero-current.html` |
 | 2 | [Ink fluid simulation](https://claude.ai/code/artifact/0c2546e1-2b6d-4137-9000-88c39653e3c2) | Real Navier-Stokes GPU fluid, luminous ink in black water. Melvin: "very, very pretty… I really love it." **Reserved concept — page TBD (Vision candidate).** | 🟢 | `scratchpad/ink-fluid.html` |
 | 3 | [Loader / concept explorer](https://claude.ai/code/artifact/5752aa81-6bec-4447-9ba2-2afe24df14cd) | 5–6 loader directions side-by-side to pick from. The "concept explorer" process fix. | 🔵 | — |
