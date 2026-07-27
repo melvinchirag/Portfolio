@@ -1,0 +1,344 @@
+/* ============================================================================
+ * index.css — global styles, design tokens, and every custom CSS class
+ * ----------------------------------------------------------------------------
+ * WHAT THIS FILE IS
+ * The single stylesheet for the whole site. It does four jobs:
+ *   1. Loads the web fonts and Tailwind itself.
+ *   2. Declares design tokens (colours, fonts) that both Tailwind utility
+ *      classes and our hand-written CSS read from.
+ *   3. Sets base page styling (background, body text colour, scroll behaviour).
+ *   4. Defines the handful of custom classes Tailwind can't express: liquid
+ *      glass, the progressive blur edge, text reveals, and the custom cursor.
+ *
+ * PALETTE — "warm film", chosen 2026-07-24
+ * Amber / gold / bronze on a warm near-black. Replaced an earlier blue-violet
+ * placeholder that read as generic. This palette leans into the "cinematic
+ * film" third of the planned triptych portrait, and no other CS student
+ * portfolio looks like it. See docs/references.md.
+ * ========================================================================= */
+
+/* Load our two typefaces from Google Fonts before anything else, so text never
+ * renders in a fallback font first. Instrument Serif is the display face (big
+ * headings); Inter is the body face. `display=swap` shows fallback text
+ * immediately rather than leaving a blank space while fonts download. */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap');
+/* Pull in the whole Tailwind CSS framework. This one line is what makes utility
+ * classes like `flex`, `px-6`, and `text-white/40` work in our components. */
+@import 'tailwindcss';
+
+/* Tailwind v4 reads design tokens from this special `@theme` block. Anything
+ * declared here becomes BOTH a normal CSS variable AND a Tailwind utility —
+ * `--color-ember` automatically enables classes like `text-ember`. */
+@theme {
+  /* The display typeface, used for large headings like the hero name. */
+  --font-display: 'Instrument Serif', serif;
+  /* The body typeface, used for everything else. The fallbacks after it apply
+   * only if Inter fails to load. */
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* The page background. Deliberately NOT pure black (#000) — a warm near-black
+   * has depth and stops the amber particles looking like they float on a void. */
+  --color-void: #080604;
+  /* A slightly lighter warm black, for surfaces that need to sit above the base. */
+  --color-deep: #120d08;
+  /* Deep bronze — the coolest, dimmest end of the particle colour range. */
+  --color-bronze: #6b3f1d;
+  /* Mid amber — the bulk of the warm palette, used for most accents. */
+  --color-amber: #c87a2e;
+  /* Hot gold — the brightest highlight. Used rarely, on purpose. */
+  --color-gold: #f0b356;
+}
+
+/* `:root` targets the <html> element. Tokens here are plain CSS variables that
+ * don't need to become Tailwind utilities. */
+:root {
+  /* Our standard easing curve: fast at first, then a long gentle settle. This
+   * is what makes motion feel physical rather than mechanical. Every transition
+   * on the site should use it so the whole page moves with one personality. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Style the root <html> element. */
+html {
+  /* Set the background here as well as on <body> so that "overscroll" areas —
+   * the rubber-band space when you scroll past the end — are also dark, rather
+   * than flashing white. */
+  background: #080604;
+}
+
+/* Style the <body> element, which wraps all visible content. */
+body {
+  /* Browsers add a default margin around the body; remove it so our full-bleed
+   * scene can actually reach the edges of the window. */
+  margin: 0;
+  /* Prevent sideways scrolling. Wide or animated elements can otherwise push
+   * the page a few pixels wider and create an ugly horizontal scrollbar. */
+  overflow-x: hidden;
+  /* The base page background, matching <html> above. */
+  background: #080604;
+  /* Default text colour: a warm off-white rather than pure white, so it sits
+   * comfortably in the warm palette instead of looking clinical. */
+  color: #f2e9dd;
+  /* Default typeface for all text, unless a component overrides it. */
+  font-family: 'Inter', system-ui, sans-serif;
+  /* Light weight (300) as the default. Thin type reads as more refined at large
+   * sizes, and we bump specific elements heavier where they need emphasis. */
+  font-weight: 300;
+  /* Renders text with smoother edges on WebKit browsers. Makes light-weight
+   * type on dark backgrounds look noticeably less chunky. */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Lenis (our smooth-scroll library) adds these classes to <html> at runtime.
+ * This rule disables the browser's own native smooth scrolling, because if both
+ * ran at once they would fight each other and produce stuttering. */
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+/* Lenis adds this class when scrolling is programmatically locked (for example
+ * while a modal is open). `overflow: hidden` is what actually freezes the page. */
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+ * LIQUID GLASS
+ * The frosted-glass surface used for UI chrome. The recipe is: a nearly
+ * transparent background + a blur of whatever is behind it + a bright inner
+ * top edge that mimics light catching a real glass bevel.
+ * ------------------------------------------------------------------------ */
+.liquid-glass {
+  /* An almost invisible white film. Its job is not to be seen directly — it
+   * just stops the blur beneath from looking muddy. */
+  background: rgba(255, 255, 255, 0.02);
+  /* Blur whatever is rendered behind this element, and boost its colour
+   * saturation slightly so the scene showing through stays vivid rather than
+   * turning grey the way a plain blur would make it. */
+  backdrop-filter: blur(12px) saturate(140%);
+  /* The same rule with a `-webkit-` prefix, for Safari support. */
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  /* No hard border — the bright edge is drawn by the ::before rule below,
+   * which can fade around the shape instead of being a flat uniform line. */
+  border: none;
+  /* Two shadows at once: an inset highlight along the top inner edge (light
+   * catching the bevel), and a soft outer drop shadow that lifts the element
+   * off the page. */
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.12),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  /* Establishes this element as the positioning reference for the absolutely
+   * positioned ::before pseudo-element below. Without this, ::before would
+   * position itself against the page instead. */
+  position: relative;
+  /* Clip anything that spills outside the rounded corners. */
+  overflow: hidden;
+}
+
+/* Draws the glass's bright rim. This is a border that varies in brightness
+ * around the shape — brightest at top and bottom, invisible at the sides —
+ * which is how light actually behaves on a curved glass edge. */
+.liquid-glass::before {
+  /* Pseudo-elements only render if `content` is set, even to an empty string. */
+  content: '';
+  /* Take this element out of normal layout flow so it can overlay its parent. */
+  position: absolute;
+  /* Stretch to all four edges of the parent (shorthand for top/right/bottom/left: 0). */
+  inset: 0;
+  /* Match whatever corner rounding the parent has, so the rim follows the shape. */
+  border-radius: inherit;
+  /* This padding value becomes the rim's thickness, via the mask trick below. */
+  padding: 1.4px;
+  /* A vertical gradient, bright at both ends and transparent through the
+   * middle — this is the brightness variation that sells it as glass. */
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.15) 20%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.15) 80%,
+    rgba(255, 255, 255, 0.45) 100%
+  );
+  /* The border trick: define two masks — one covering only the content box
+   * (inside the padding), one covering the whole element. */
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  /* Subtract the inner mask from the outer one, leaving only the padding ring
+   * visible. That ring is our rim. (Safari-prefixed version.) */
+  -webkit-mask-composite: xor;
+  /* The same subtraction in standard syntax, for non-Safari browsers. */
+  mask-composite: exclude;
+  /* Make the rim transparent to the mouse so it can never block a click on the
+   * button or link underneath it. */
+  pointer-events: none;
+}
+
+/* A soft blur that fades in toward the bottom edge of the viewport. Used
+ * instead of a flat dark overlay to separate content from the scene — it adds
+ * depth without dimming the scene, which CLAUDE.md explicitly requires. */
+.progressive-blur {
+  /* Pin to the viewport so it stays put while the page scrolls beneath it. */
+  position: fixed;
+  /* Anchor to the bottom edge... */
+  bottom: 0;
+  /* ...and stretch fully across the screen. */
+  left: 0;
+  right: 0;
+  /* How tall the blurred band is. */
+  height: 140px;
+  /* Sits above page content (z-10) but below the nav (z-50), per the layer
+   * order fixed in CLAUDE.md. */
+  z-index: 30;
+  /* Never intercept clicks — this is purely decorative. */
+  pointer-events: none;
+  /* Blur whatever shows through it. */
+  backdrop-filter: blur(4px);
+  /* Safari-prefixed version of the same. */
+  -webkit-backdrop-filter: blur(4px);
+  /* A mask controls where this element is visible: fully visible at the very
+   * bottom, fading to nothing toward the top. That gradual fade is what makes
+   * the blur feel like depth rather than a visible band. */
+  mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+  /* Safari-prefixed version of the mask. */
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+}
+
+/* The Resume button.
+ *
+ * Was a bright ember→violet gradient pill; Melvin found it cheap-looking, and
+ * with the field now amber a warm gradient would also stop reading as scarce.
+ * It is glass instead: still the most distinct thing in the nav (it is the only
+ * element with a filled surface) without shouting. */
+.glass-cta {
+  /* Positioning context for the ::before rim below. */
+  position: relative;
+  /* A faint warm film rather than plain white, so it belongs to the palette. */
+  background: rgba(255, 240, 220, 0.05);
+  /* Blur the scene behind it, and lift its saturation so the amber showing
+   * through stays warm instead of washing to grey. */
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  /* A hairline warm rim plus a soft dark drop shadow to lift it off the page. */
+  box-shadow:
+    0 0 0 1px rgba(255, 214, 165, 0.18) inset,
+    0 4px 18px -6px rgba(0, 0, 0, 0.55);
+  /* Animate hover changes on our standard easing curve. */
+  transition:
+    background 500ms var(--ease-out-expo),
+    box-shadow 500ms var(--ease-out-expo);
+}
+
+/* On hover the glass brightens and its rim warms — a gentle "this is live"
+ * signal. No lift or scale: nothing on this site bounces. */
+.glass-cta:hover {
+  background: rgba(255, 240, 220, 0.1);
+  box-shadow:
+    0 0 0 1px rgba(255, 214, 165, 0.34) inset,
+    0 6px 22px -6px rgba(0, 0, 0, 0.6);
+}
+
+/* Per-character reveal. Fade and rise only — nothing bounces, per the motion
+   language in CLAUDE.md. */
+.reveal-char {
+  display: inline-block;
+  white-space: pre;
+  opacity: 0;
+  transform: translateY(0.5em);
+  animation: char-in 900ms var(--ease-out-expo) forwards;
+}
+
+@keyframes char-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scroll-cue {
+  display: block;
+  width: 1px;
+  height: 34px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), transparent);
+  transform-origin: top;
+  animation: cue-drift 2.4s var(--ease-out-expo) infinite;
+}
+
+@keyframes cue-drift {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  40% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1) translateY(34px);
+    opacity: 0;
+  }
+}
+
+/* The custom cursor dot. Sits above everything and must never eat a click.
+ * Its position is set from JavaScript every frame — see Cursor.tsx. */
+.cursor-dot {
+  /* Fixed to the viewport; JS writes `left`/`top` in pixels each frame. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* Above the nav (z-50) and the loader (z-100) so it is never occluded. */
+  z-index: 200;
+  width: 7px;
+  height: 7px;
+  /* Shift by half its size so the dot is centred on the pointer rather than
+   * hanging below and to the right of it. */
+  margin: -3.5px 0 0 -3.5px;
+  /* A very large radius makes any element a perfect circle. */
+  border-radius: 9999px;
+  /* Warm white core, matching the palette. */
+  background: rgba(255, 244, 230, 0.92);
+  /* An amber halo so the dot reads as a light source, not a sticker. */
+  box-shadow: 0 0 14px 3px rgba(240, 179, 86, 0.5);
+  /* Never intercept clicks — it sits over every interactive element. */
+  pointer-events: none;
+  /* Starts hidden; JS reveals it on first pointer movement so it doesn't
+   * appear parked in the corner before the mouse has moved. */
+  opacity: 0;
+  /* Only `transform` and `opacity` are transitioned — position must NOT be, or
+   * the CSS transition would fight the per-frame JS updates and lag behind. */
+  transition:
+    transform 400ms var(--ease-out-expo),
+    opacity 300ms linear;
+}
+
+@media (pointer: fine) {
+  /* Only hide the native cursor where the custom one actually renders — the
+     class is added by SunCursor once WebGL is confirmed working, so a failure
+     never leaves the visitor with no cursor at all. */
+  html.has-sun-cursor,
+  html.has-sun-cursor * {
+    cursor: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* The reveal animation is what makes these visible; without it they must
+     not be left at opacity 0. */
+  .reveal-char {
+    opacity: 1;
+    transform: none;
+  }
+
+  .scroll-cue {
+    opacity: 0.6;
+    transform: none;
+  }
+}
