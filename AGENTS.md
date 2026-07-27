@@ -27,11 +27,12 @@ expressed through *craft* (motion, 3D, detail), never by making a visitor work.
    authoritative and supersedes everything below it.** Read this every session.
 2. `PORTFOLIO_VISION.md` — the full vision/spec and the reference-driven process.
 3. `site/CLAUDE.md` — hard build rules the coding work must follow.
-4. `docs/references.md` — reference sites, each with a named job.
-5. `docs/concepts.md` — approved visual concepts and which page each is reserved for.
-6. `docs/CODEBASE.md` — how the code works (learning doc; may lag the code — trust
+4. `docs/references.md` — reference sites, compartmentalized by their differences.
+5. `docs/artifacts.md` — index of every prototype/artifact link + what each is for.
+6. `docs/concepts.md` — approved visual concepts and which page each is reserved for.
+7. `docs/CODEBASE.md` — how the code works (learning doc; may lag the code — trust
    `CONTEXT.md` + the source over it when they disagree).
-7. `docs/pages/home.md` — the Home/hero spec.
+8. `docs/pages/home.md` — the Home/hero spec.
 
 ## 3. Current priority (2026-07-27)
 - The **hero direction is being chosen**: abstract / editorial / "insane" —
