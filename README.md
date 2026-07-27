@@ -97,8 +97,10 @@ a feature is done and approved into `site/`.
 |---|---|---|---|
 | Loading sequence | Raw WebGL + Three.js | Neuron cell-bodies igniting, dendrites growing/connecting as a volumetric point-cloud with multi-pass bloom, 3D camera push-through. Once per tab session, skippable. | `site/src/components/Loader.tsx` |
 | Smooth scroll | Lenis | Inertial scroll (duration 1.2, exponential decay, desktop only) | `site/src/hooks/useLenis.ts` |
-| Liquid-glass UI | CSS | Blur + inset highlight + gradient-mask border | `site/src/index.css` (`.liquid-glass`) |
-| Hero | _TBD — abstract/editorial direction being chosen_ | 🚧 | `site/src/pages/Home.tsx` |
+| Liquid-glass UI (base recipe) | CSS | Blur + inset highlight + gradient-mask border | `site/src/index.css` (`.liquid-glass`) |
+| **Hero particle mask** | React Three Fiber + Three.js `GPUComputationRenderer` + `MeshSurfaceSampler` + `three-mesh-bvh` (all MIT) + custom GLSL | 1.4M-particle-scale GPGPU sim scattered on a real 3D face mesh (CC BY 4.0 model), spring-held + cursor-repelled; brightness = particle velocity; drag to rotate 360°. A subset of particles render as glyphs (binary/Telugu/hex, cycling) in roving "hotspot" patches. Clean-room rebuild of a studied technique — see `docs/particle-mask-technique.md`. | `site/src/components/scene/MaskField.tsx` |
+| **Hero liquid-glass info tabs** | CSS + SVG filter (`feTurbulence`/`feDisplacementMap`/`feOffset`) | Animated glass panels: an SVG filter distorts (≈refracts) the backdrop, driven by a `requestAnimationFrame` loop so the distortion *flows* rather than sitting static; a rotating conic-gradient rim (`@property` + CSS `@keyframes`) reads as light catching a curved liquid surface; an inset-shadow colour fringe stands in for chromatic dispersion. Technique referenced from `iyinchao/liquid-glass-studio` (MIT) — see `docs/references.md`. Content is 4 real facts about Melvin, auto-advancing. | `site/src/components/GlassFilterDefs.tsx`, `site/src/components/HeroInfoTabs.tsx`, `.glass-panel`/`.glass-tab`/`.uses-glass-distort` in `site/src/index.css` |
+| Hero — scrollytelling | _not built yet — next up_ | 🚧 | `site/src/pages/Home.tsx` |
 | About / Work / Vision / Contact | _each its own concept_ | 🚧 | `site/src/pages/…` |
 | Résumé | _"coolest way to display a resume"_ | 🚧 | 🚧 |
 
@@ -141,9 +143,23 @@ index + the highlights.
   loader.
 - **Representational vs. abstract art in code** — abstract generative motion
   (fields, particles, fluid) is code's home turf; a real face/photograph needs
-  real tools (photo/3D/AI image), not procedural noise. (Lesson learned twice.)
-- 🚧 Scroll-scrubbed timelines (GSAP ScrollTrigger) · custom GLSL basics ·
-  quality tiers · the liquid-glass recipe — added as each is used.
+  real tools (photo/3D/AI image), not procedural noise. (Lesson learned twice —
+  once on a face made of particles, again trying to turn a 2D photo into a "3D
+  mask". Both failed for the same reason: no real geometry, no real result.)
+- **GPGPU particles on a 3D surface** — sample thousands of points across a
+  mesh (`MeshSurfaceSampler`), store them as pixels in a texture, then let the
+  GPU simulate physics on that texture every frame (`GPUComputationRenderer`):
+  a spring pulls each particle back "home", the cursor repels nearby ones.
+  Render as `THREE.Points` whose *brightness* = each particle's velocity, so
+  motion is what makes the shape glow — stillness fades to near-invisible.
+  Full walkthrough: `docs/particle-mask-technique.md`.
+- **Motion is what sells "liquid"** — a static blur/distortion reads as a
+  textured surface, not fluid; matter has to visibly move. The hero's glass
+  panels only started reading as liquid once the SVG distortion noise was
+  animated (`requestAnimationFrame` nudging a `feOffset`) and a highlight was
+  made to travel around the edge, instead of everything sitting frozen.
+- 🚧 Scroll-scrubbed timelines (GSAP ScrollTrigger) · quality tiers — added as
+  each is used.
 
 ---
 

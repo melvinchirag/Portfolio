@@ -1,13 +1,34 @@
 # References
 
-Reference websites Melvin likes, compartmentalized by their **differences** so
-we can pick a direction deliberately. Two rounds:
+Two kinds of references live in this file: **design references** (whole sites,
+studied for direction/mood/structure) and **code/technique repos** (open-source
+projects whose *technique* we studied and reimplemented — never copied
+wholesale). Design references are in two rounds:
 
 - **Round 2 (current, 2026-07-27)** — for the abstract/editorial hero direction.
   Look-first. Fill the table as links come in.
 - **Round 1 (2026-07-24)** — the original 8, gathered for the earlier direction.
   Kept as history further down; still useful, but predates the "no single field"
   and abstract/editorial steer.
+
+---
+
+## Code / technique repos (actually used, 2026-07-27)
+
+Both studied and cloned to `scratchpad/` (gitignored, not in the repo) for
+reference; **neither's source code is copied into `site/`.** Full teardown +
+clean-rebuild reasoning for each is in `docs/particle-mask-technique.md` (mask)
+and `CONTEXT.md`'s HANDOFF section (glass). (`docs/artifacts.md` is a different
+list — it indexes *our own* prototypes, not external repos.)
+
+| Repo | License | What we used it for | Where in our code |
+|---|---|---|---|
+| [DGFX/codrops-dreamy-particles](https://github.com/DGFX/codrops-dreamy-particles) (Dominik Fojcik, Codrops tutorial) | **None declared → all rights reserved.** Did NOT copy its code. | Studied the GPGPU-particles-on-a-3D-mesh **technique** (GPUComputationRenderer + MeshSurfaceSampler + velocity/position sim shaders + UnrealBloomPass). Rebuilt from scratch using only the MIT libraries it also depends on. | `site/src/components/scene/MaskField.tsx` |
+| [iyinchao/liquid-glass-studio](https://github.com/iyinchao/liquid-glass-studio) | **MIT** — free to use directly, we chose not to for engineering-risk reasons (see below) | Studied the real-time refraction/dispersion/fresnel/glare **physics** (raw WebGL2, SDF rounded-rect + Snell's-law shader). Full port judged too slow/risky under time pressure — its refraction pipeline needs its own render-to-texture blur pass outside Three.js. Instead: an SVG `feDisplacementMap` filter achieving the same physical *ideas* (refraction, dispersion, fresnel, glare) as animated CSS, with real accessible DOM text. | `site/src/components/GlassFilterDefs.tsx`, `.glass-panel`/`.glass-tab`/`.uses-glass-distort` in `site/src/index.css` |
+
+**Also used (3D asset, not a code repo):** the cyborg "Soulless" model —
+Sketchfab, **Ali Rahimi (@Free-Radical-666), CC BY 4.0** — commercial use +
+modification allowed, attribution required. Credit this on the shipped site.
 
 ---
 
