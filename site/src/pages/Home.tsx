@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from 'react'
 import { RevealText } from '../components/RevealText'
+import { MaskField } from '../components/scene/MaskField'
 
 /**
  * A live clock, borrowed from Cinetica. Small, useless, and exactly the kind of
@@ -43,38 +44,15 @@ function LocalTime() {
 
 export function Home() {
   return (
-    <section className="relative flex h-screen flex-col justify-between px-6 pt-28 pb-6 md:px-10 md:pb-10">
-      {/* Hero centerpiece is being rebuilt on the Codrops "dreamy particles"
-          GPGPU engine (a real 3D cyborg mask), replacing the rejected
-          photo-to-particles approach. Black for now. */}
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <h1 className="font-display text-white">
-          <RevealText
-            text="Melvin"
-            className="block text-[clamp(3.5rem,11vw,9rem)] leading-[0.9] tracking-[-0.02em]"
-            delay={0.15}
-            stagger={0.06}
-          />
-        </h1>
-        <p className="mt-7 max-w-xl text-balance text-[15px] leading-relaxed text-white/45 md:text-base">
-          <span className="text-white/30">[ identity line goes here — one sentence, your voice ]</span>
-        </p>
-      </div>
-
-      <div className="flex items-end justify-between gap-6 text-[11px] tracking-[0.18em] text-white/40 uppercase">
-        <p className="max-w-[45%] leading-relaxed">
-          Computer Science
-          <span className="mx-1.5 text-white/20">·</span>
-          Eastern Michigan University
-          <span className="mt-1 block tracking-normal text-white/25 normal-case">
-            Michigan, US <span className="mx-1 text-white/15">·</span> <LocalTime />
-          </span>
-        </p>
-        <p className="flex shrink-0 items-center gap-2 text-white/35">
-          <span className="hidden sm:inline">Scroll</span>
-          <span className="scroll-cue" aria-hidden />
-        </p>
-      </div>
+    <section className="relative h-screen">
+      {/* Our own GPGPU particle mask (real 3D cyborg model). Shown alone while we
+          tune it against the reference; editorial type/chrome layer back on top
+          once the look is locked. */}
+      <MaskField />
     </section>
   )
 }
+
+// Kept for the type-overlay phase; referenced so lint doesn't flag as unused.
+void LocalTime
+void RevealText
