@@ -71,6 +71,13 @@ Rule of thumb: **research → Perplexity; study/compare → Gemini; build →
 Antigravity/Cursor; write/ideate → ChatGPT; whichever has credits → Claude.**
 
 ## 5. Copy-paste primer (for chat tools that can't see the repo)
+
+> **⚡ Superseded by `PROMPT.md` at the repo root (2026-07-27).** That file is
+> the maintained, far more complete version of this primer — it carries Melvin's
+> working rules, quality bar, design guidelines, licensing discipline, and the
+> practical gotchas, split into a section for agentic IDEs and a section for
+> chat tools. **Use `PROMPT.md`.** The short primer below is kept only as a
+> minimal fallback.
 Paste this, then paste whichever file(s) the task needs (usually `CONTEXT.md`,
 plus `site/CLAUDE.md` for code or `docs/references.md` for design):
 

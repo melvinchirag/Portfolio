@@ -9,6 +9,12 @@ reading this, read this whole file first, then the linked docs, before acting.
 > reads `GEMINI.md`, Claude Code reads `CLAUDE.md`. To avoid drift, those are
 > kept as thin pointers to THIS file plus `CONTEXT.md`. **This file + `CONTEXT.md`
 > are the two things to feed a chat tool that can't browse the repo.**
+>
+> **`PROMPT.md` (repo root) is the copy-paste onboarding prompt** Melvin gives a
+> new AI to get work at the right standard — it carries his working rules,
+> quality bar, and hard-won lessons. If you're an AI reading this and you were
+> NOT given that prompt, read it anyway: it tells you how Melvin expects to be
+> worked with.
 
 ---
 
