@@ -70,6 +70,19 @@ Each page owns its own visual world; there is no global background scene.
 - Honor `prefers-reduced-motion`; content readable without any animation.
 - Update `CONTEXT.md` (and `docs/CODEBASE.md` if code changed) in the SAME pass.
 
+## 5b. The README is the master key (maintain it, finalize it at the end)
+Root `README.md` is the project's **master key** — a detailed, learning-optimized,
+rebuild-from-scratch document listing every tool / language / framework and
+**what each part of the website is made with**. Requirements:
+- It is a **living document**: when a feature is approved into `site/`, add its
+  row to README §3 (what it's built with + the technique) and any learning note
+  to §6, in the same pass.
+- It must stay **detailed enough to rebuild the site from an empty folder**, and
+  **structured to teach** — say what a thing is and why, not just what it does.
+- **At the very end of the project, finalize it**: resolve every 🚧 marker,
+  complete the rebuild-from-scratch guide, and commit it as the closing step.
+- Details matter — exact versions, exact file paths, exact commands.
+
 ## 6. Stack & how to run
 Vite + React + TypeScript · Tailwind v4 · Three.js (React Three Fiber + drei) ·
 custom GLSL · GSAP ScrollTrigger + Lenis · React Router · deploys to Vercel.

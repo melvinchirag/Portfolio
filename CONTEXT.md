@@ -282,6 +282,13 @@ Claude) to survive session limits + credit caps. New files support this:
   is a second decision trail. (`gh` CLI is NOT installed; repo was created in
   the browser. Note the repo name is capitalized `Portfolio`.)
 
+**Root `README.md` = the "master key"** (added 2026-07-27): a living,
+learning-optimized, rebuild-from-scratch doc of every tool/framework and what
+each part of the site is made with. Update README §3/§6 whenever a feature lands;
+**finalize (resolve all 🚧) as the closing step of the project.** Rule in
+`AGENTS.md` §5b. `docs/references.md` now compartmentalizes refs by difference;
+`docs/artifacts.md` indexes every prototype.
+
 Working rule reinforced: **end every session by updating this top section**
 (what changed / what's next / what's blocked) — that's what keeps any tool able
 to continue.
