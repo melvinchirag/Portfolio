@@ -322,6 +322,36 @@ resources we have. Ceiling stays high; floor rises a lot.
    the reserved ink-fluid is earmarked elsewhere).
 3. Only then wire into `site/`. Do NOT build hero sections 2–5 until Melvin says.
 
+### ✅ HERO MASK BUILT (2026-07-27) — our own GPGPU particle mask, on branch `hero-build`
+
+The hero centerpiece is real and working in the site (`site/src/components/scene/
+MaskField.tsx`). Decision history: rejected photo-to-particles (a 2D photo can't
+be a 3D sci-fi mask); studied the Codrops "Dreamy Particles" engine in full
+(`docs/particle-mask-technique.md`); **rebuilt the technique from scratch** with
+only MIT libs + our own shaders (NOT their code). What's done:
+- GPGPU particle sim (GPUComputationRenderer + MeshSurfaceSampler + three-mesh-bvh,
+  all MIT) on the **cyborg "Soulless" model** (CC BY 4.0 — MUST credit Ali Rahimi).
+- **Fixed on the LEFT** (name goes centre), front-facing, no orbit; cursor still
+  disturbs the particles (spring-back + repel).
+- **De-crowned** — front-facing + height-clip leaves just the face.
+- **"Make it ours" glyph layer (Melvin's idea):** ~5200 particles render as
+  **binary + hexadecimal + TELUGU letters** (his heritage), reshuffling ~35%
+  every 5s. Confirmed rendering.
+- teal `#80fff0`, additive, UnrealBloom. Manual DRACO loader (self-hosted decoder
+  path via gstatic) — NOT drei useGLTF (which hung after cache clears).
+
+**Still TODO on the mask:** glowing eyes (Melvin asked, not built yet); push
+density back up (currently SIZE=384/~147k, dropped from 262k to avoid a
+mount-time freeze — do it via a PRE-FILTERED face mesh so no rejection cost);
+remove last top-streak/antenna remnants (same pre-filter fixes it); the editorial
+type overlay ("CS, and beyond" + name) on top; the 6-hour variation cycle.
+
+**⚠️ Dev-env gotchas learned:** adding deps mid-session corrupts Vite's HMR →
+black screen; fix = restart dev server + **open a FRESH browser tab** (old tab
+stays poisoned). Dev server currently on **:5176**. Melvin's Chrome window keeps
+collapsing to ~150px tall, so the agent can't always see full renders — Melvin
+verifies full-size.
+
 ### 🎨 Hero direction (2026-07-27) — "look first", references studied
 
 - Melvin's steer: **get the LOOK right before worrying about font/content.**
