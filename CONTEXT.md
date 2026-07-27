@@ -471,26 +471,126 @@ tagline + `<HeroInfoTabs/>` (right side, glass).
        screenshots 3s apart show the rim highlight at different angular
        positions and a different internal distortion pattern.
 
-### Immediate NEXT steps (Melvin's stated order, as of this handoff)
-1. ~~Type overlay~~ ✅ done this session (name + "CS, and beyond" + caption).
-2. ~~Liquid-glass info tabs~~ ✅ done this session.
-3. **Scrollytelling for the hero — NOT yet built, Melvin flagged it again this
-   session ("don't forget").** It's next up, not forgotten. The ONLY page with
+### 📋 NEXT CHANGES — Melvin's spec, given 2026-07-27 ~17:06 EDT (NOT YET BUILT)
+
+Full itemized feedback from Melvin's last message this session. **None of this
+is implemented yet** — capturing it precisely here so nothing is lost across
+the tool switch. Treat this as the priority queue, ahead of the "Immediate NEXT
+steps" list below it (which was written before this feedback landed).
+
+1. **The liquid glass still isn't good enough.** Melvin's exact words: "the
+   liquid glass is shit." This is AFTER the flowing-noise + rotating-rim fix
+   earlier this session — that fix was a real improvement (verified motion) but
+   apparently not enough. **Recommendation for whoever picks this up:** the
+   CSS/SVG approach may have hit its ceiling; seriously consider actually
+   porting `iyinchao/liquid-glass-studio`'s real WebGL2 shader now (MIT
+   license, no legal blocker — see `docs/references.md`). That repo's approach
+   (SDF rounded-rect + Snell's-law refraction + RGB dispersion + real Fresnel +
+   angular glare, sampling an actual blurred backdrop texture) is a
+   categorically different/better result than any CSS filter can produce. It
+   needs its own render-to-texture blur pass (2-pass gaussian) wired into the
+   R3F canvas — real work, but likely the actual fix this time.
+
+2. **Tagline copy:** "CS, and beyond" → **"Computer Science and Beyond"**
+   (spelled out, not the CS abbreviation). File: `Home.tsx`.
+
+3. **The clock becomes a persistent sticky sidebar, not inline text.** Move off
+   the centered caption line entirely. New spec: pinned to the **right edge of
+   the screen**, **spans the full height of the viewport**, and stays fixed
+   there **regardless of scroll position** — i.e. it survives across all future
+   scrollytelling sections once those exist, not just the hero. This is a new
+   dedicated component (a tall vertical strip), not a repositioned `<LocalTime>`
+   — `LocalTime`'s clock logic can be reused, but the layout is new.
+
+4. **Name lockup redesigned, moved to top-right.** Currently the hero shows
+   centered "Melvin" only. New spec:
+   - Position: **top-right** of the hero (not center — center is freed up).
+   - Big line: **"Melvin Chirag"** — with **"Chirag" in a different (accent)
+     colour** than "Melvin".
+   - Smaller line below: **"Karupati"**.
+   - (Note: this is the HERO's name display, separate from `Nav.tsx`'s existing
+     small top-left "Melvin" logo — that logo can stay as-is unless Melvin says
+     otherwise; confirm if unsure.)
+
+5. **Glyph patches too big — shrink from ~1/3 of the mask to ~1/8.** Reduce
+   `GLYPH_COUNT` and/or `hotRadius` and/or `N_HOTSPOTS` in `MaskField.tsx` so
+   the total glyph-covered area is much sparser. This is a tuning pass, not a
+   rebuild — the mechanism (roving hotspots, binary→Telugu→hex cycle) is right,
+   just the current visual coverage is judged too dense.
+
+6. **A control panel — Phase 2, but now with a concrete position and scope.**
+   Position: **center-left of the screen**. Functions:
+   - Toggle **OFF** the camera-mirror option (the opt-in webcam-tracking feature
+     from earlier this session's plan — was never built yet, still Phase 2, but
+     now has a concrete toggle location).
+   - Change the mask's **visual parameters** (the "curated tinker panel" idea —
+     color, density, etc., NOT the raw dev/Leva panel).
+   - **New consideration:** Melvin may introduce **a second face/mask
+     variant** — the control panel's scope should account for possibly
+     switching between multiple masks, not just tuning one. Don't over-build
+     this now; just don't paint the panel into a single-mask-only corner.
+
+7. **Background becomes deep space — nebulae, meteor showers, galaxies, a
+   satellite — all faded, atmospheric, behind the mask.** Melvin's framing:
+   *"the mask is in space — actual space."* Currently the background is flat
+   `#050609`.
+   - **⚠️ Flag, not a block — read before building:** this consciously reopens
+     the earlier hard decision to drop the nebula background (parked
+     2026-07-27 in `parked/hero-nebula/`, rejected then because it read as
+     *"made for someone in Astronomy"* rather than a CS student). **The
+     reasoning is different this time and should hold, but confirm with Melvin
+     if it feels off when built:** the mask (with its binary/Telugu/hex CS
+     signal) is now the strong identity anchor; a *faded, atmospheric* space
+     backdrop behind it is scenery, not the subject — closer to "he happens to
+     be in space" than "he is a space person." That distinction is the whole
+     ballgame — keep it VERY faded/dim, never competing with the mask for
+     attention.
+   - **Reuse opportunity:** `parked/hero-nebula/` already has 5 real NASA/ESA/
+     ESO nebula photographs, already downsampled, with licenses sorted out
+     (2 public domain, 3 CC BY 4.0 — attribution required, see that folder's
+     README). These could be the nebula layer directly, heavily dimmed/blurred,
+     instead of sourcing new imagery.
+   - Meteor showers ≈ the "shooting stars" idea from Melvin's own earlier
+     layered-mask brainstorm this session (back layer = stars/shooting stars,
+     not the old wave/current effect) — this is consistent with, not new
+     versus, that plan.
+   - New element not previously discussed: **a satellite** (faded, presumably
+     small/distant, reinforcing "space" without being a focal object).
+
+8. **A real plan is still needed for About / Work / Vision / Contact /
+   Résumé.** Melvin's own words: *"I need to work out an actual plan."* This
+   is explicitly open — none of these pages have a concept yet beyond
+   `docs/concepts.md`'s reservation of the ink-fluid sim (candidate for
+   Vision). Don't invent concepts for these unprompted; this needs a
+   references-first pass (same method as the hero) when Melvin is ready for it.
+
+### Immediate NEXT steps (superseded in priority by "📋 NEXT CHANGES" above —
+### that section is the real queue; this one is now mostly historical/context)
+1. ~~Type overlay~~ ✅ shipped this session, but its content is now REVISED by
+   item 2/4 above (tagline copy change, name lockup redesign+reposition) — the
+   mechanism (RevealText, LocalTime) is done, the layout/copy is not final.
+2. ~~Liquid-glass info tabs~~ ✅ shipped, but flagged **not good enough** — see
+   "📋 NEXT CHANGES" item 1 above; likely needs the real WebGL2 port.
+3. **Scrollytelling for the hero — still NOT built.** The ONLY page with
    scroll, hard rule. Five sections, each its own theme/transition; the mask +
    name + glass tabs (everything built so far) ARE section 1. Melvin wants to
    try **anime.js** (not installed) and add elements himself first — **do NOT
    build sections 2–5 until he explicitly says so** — but section 1 will still
    need to sit inside whatever scroll-track/pin mechanism (GSAP ScrollTrigger +
    Lenis, already in the stack) ties it to sections 2–5 later, so keep that in
-   mind if you touch Home.tsx's structure.
-4. Then the **other pages** (About/Work/Vision/Contact) — each its own concept,
-   per `docs/concepts.md` (the ink-fluid sim is reserved, likely for Vision).
+   mind if you touch Home.tsx's structure. Note: the new sticky full-height
+   clock sidebar (📋 item 3) is explicitly specced to survive this scroll
+   system, so build it with that in mind even before scrollytelling itself
+   exists.
+4. Then the **other pages** (About/Work/Vision/Contact) — **explicitly still
+   unplanned, per 📋 item 8** — don't invent concepts unprompted.
 5. Mask backlog: push density up via a pre-filtered face-only sub-geometry
    (fixes both the density cap AND the stray glyph-cluster remnant in one move);
    the 6-hour model/colour variation cycle (swap cyborg for other CC-licensed
-   masks + shift colour on a clock). **Glowing eyes: Melvin said DROP, not
-   doing it.** Résumé: still open, "the coolest way to display a resume" —
-   completely separate treatment, not started.
+   masks + shift colour on a clock) — now possibly intersecting with 📋 item 6's
+   "second face" note. **Glowing eyes: Melvin said DROP, not doing it.**
+   Résumé: still open, "the coolest way to display a resume" — completely
+   separate treatment, not started.
 6. Optional glass upgrade: real WebGL2 physical refraction port (see technique
    decision above) — only if Melvin wants to spend real time on it later.
 
