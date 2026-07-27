@@ -174,6 +174,143 @@ body {
   pointer-events: none;
 }
 
+/* ============================================================================
+ * LIQUID GLASS TABS — the hero's info panel (2026-07-27)
+ * ----------------------------------------------------------------------------
+ * A CSS/SVG version of "Apple liquid glass": real refraction-like distortion,
+ * a chromatic-dispersion edge fringe, and a specular glare sweep — the same
+ * physical ideas (refraction, dispersion, fresnel, glare) as the reference
+ * repo iyinchao/liquid-glass-studio (MIT), which is a raw WebGL2 SDF+Snell's-law
+ * shader engine. We deliberately did NOT port that engine wholesale: it needs
+ * its own render-to-texture blur pipeline outside Three.js, and porting untested
+ * shader code under time pressure is exactly the kind of risk that has cost
+ * hours elsewhere in this project. This CSS/SVG technique — feDisplacementMap
+ * for distortion, chained via `backdrop-filter: url(#id) blur(...)` — is the
+ * same approach behind most real "liquid glass" CSS tutorials, is GPU-cheap,
+ * and (unlike a WebGL panel) holds REAL DOM TEXT, so it stays readable and
+ * accessible. See `docs/particle-mask-technique.md` for the reference vs.
+ * clean-rebuild reasoning; same principle applied here.
+ *
+ * The actual <svg><filter id="glass-distort"> that feeds `uses-glass-distort`
+ * lives in `components/GlassFilterDefs.tsx` (rendered once, globally).
+ * ========================================================================= */
+
+.uses-glass-distort {
+  /* Distort (feDisplacementMap) THEN blur THEN boost saturation — order matters:
+   * distorting the sharp backdrop first is what reads as refraction rather than
+   * just a blurry window. Falls back to plain blur if the browser can't parse a
+   * chained url()+blur() backdrop-filter (e.g. older Firefox) — see @supports. */
+  backdrop-filter: url(#glass-distort) blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%); /* Safari ignores SVG url() here */
+}
+@supports not (backdrop-filter: url(#x)) {
+  .uses-glass-distort {
+    backdrop-filter: blur(16px) saturate(150%);
+  }
+}
+
+.glass-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  background: rgba(10, 14, 14, 0.22);
+  /* Dispersion fringe: a faint cool tint top-left, warm tint bottom-right —
+   * cheap stand-in for the reference shader's per-channel (R/G/B) refraction
+   * offset at the glass edge. */
+  box-shadow:
+    inset 1px 1px 0 rgba(140, 255, 240, 0.16),
+    inset -1px -1px 0 rgba(255, 200, 150, 0.1),
+    inset 0 1px 18px rgba(255, 255, 255, 0.05),
+    0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(185, 255, 242, 0.14);
+}
+
+/* The glare pass: a soft diagonal highlight that drifts slowly, standing in for
+ * the reference shader's angle-based specular glare. Ambient, not mouse-driven,
+ * so it never distracts from the text it sits behind. */
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.09) 48%,
+    rgba(255, 255, 255, 0.03) 55%,
+    transparent 70%
+  );
+  animation: glass-glare-drift 9s ease-in-out infinite;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+@keyframes glass-glare-drift {
+  0%,
+  100% {
+    transform: translate(-8%, -4%);
+  }
+  50% {
+    transform: translate(6%, 5%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-panel::after {
+    animation: none;
+  }
+}
+
+/* Fades a freshly-mounted element up into place. Paired with a React `key`
+ * change (see HeroInfoTabs.tsx) so it replays every time a tab switches. */
+.reveal-fade {
+  animation: reveal-fade-in 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes reveal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-fade {
+    animation: none;
+  }
+}
+
+/* A tab pill in the hero's glass rail. */
+.glass-tab {
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(185, 255, 242, 0.12);
+  background: rgba(10, 14, 14, 0.2);
+  color: rgba(236, 231, 221, 0.55);
+  transition:
+    color 300ms ease,
+    border-color 300ms ease,
+    background 300ms ease;
+}
+.glass-tab[data-active='true'] {
+  color: #eafffb;
+  border-color: rgba(185, 255, 242, 0.55);
+  background: rgba(128, 255, 240, 0.1);
+}
+.glass-tab[data-active='true'] .glass-tab-dot {
+  background: #80fff0;
+  box-shadow: 0 0 8px 1px rgba(128, 255, 240, 0.7);
+}
+.glass-tab-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(236, 231, 221, 0.3);
+  transition:
+    background 300ms ease,
+    box-shadow 300ms ease;
+}
+
 /* A soft blur that fades in toward the bottom edge of the viewport. Used
  * instead of a flat dark overlay to separate content from the scene — it adds
  * depth without dimming the scene, which CLAUDE.md explicitly requires. */
