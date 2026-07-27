@@ -17,22 +17,61 @@ we can pick a direction deliberately. Two rounds:
 mix-and-match rather than copy a whole site. When Melvin drops a link, we fill a
 row from a quick pass, then a deeper deconstruction below.
 
-| # | Site | What Melvin likes (the specific part) | Art style | Motion technique | Likely tool stack | Steal / avoid |
-|---|------|----------------------------------------|-----------|------------------|-------------------|---------------|
-| _ | _(paste link)_ | _ | _ | _ | _ | _ |
+Studied 2026-07-27 (Melvin's 4 links). They fall into **two camps** — see below the table.
 
-### Per-site deconstruction (filled after study)
-<!-- Template — copy per site:
-#### <site>
-- **The part Melvin flagged:**
-- **Art style:** (palette, type register, texture, density, mood)
-- **Motion technique:** (scroll-scrub / WebGL shader / CSS transforms / video / physics)
-- **How it was likely built:** (framework, libs, rendering approach — evidence)
-- **Difficulty to reproduce in our stack:** (easy / medium / hard + why)
-- **Verdict:** steal what, avoid what
--->
+| # | Site | Camp | Art style | Motion technique | Tool stack | Steal / avoid |
+|---|------|------|-----------|------------------|------------|---------------|
+| 1 | [enzo-casalini.dev](https://www.enzo-casalini.dev/) | **A · WebGL craft** | Premium, 3D-forward, immersive | Real-time WebGL + hand-written GLSL shaders, GSAP-timed | **React + R3F + Three.js + GLSL + GSAP** — *our exact stack* | STEAL: proof our stack reaches Awwwards; shader-driven hero, R3F architecture |
+| 2 | [lukebaffait.fr](https://lukebaffait.fr/) | **A · WebGL craft** | Cinematic, experimental, playful-confident | Scroll-driven storytelling, page transitions, 3D | React/Next, GSAP, Lenis, **Barba.js** (page transitions), Three.js, **Blender** (3D assets), Vercel | STEAL: transition choreography, cinematic scroll, terse voice ("Basically, I make websites."), `works/ info/ contact/` nav. AVOID: Barba (we route in React); Blender needs asset skill |
+| 3 | [noth.in](https://www.noth.in/) | **B · Editorial brand** | Minimalist, bold type, brand-voice-led, no 3D | Webflow interactions, **glitch/scramble text** ("we are nothin'"), carousel | **Webflow** (no-code) | STEAL: brand voice, glitch text, corner metadata, bracket labels `( 07 )`, loading counter. AVOID: the tool — rebuild the *look* in React |
+| 4 | [cinetica.studio](https://www.cinetica.studio/) | **B · Editorial brand** | Aspirational cinematic, imagery-led, animation-light | Webflow scroll-triggers, parallax imagery, a raster `.gif` sphere (not WebGL) | **Webflow** (no-code) | STEAL: **live clock/date**, cinematic taglines, `(WHO WE ARE)` labels, themed loader copy. AVOID: gif-as-hero (we do it in real-time) |
 
-_(empty — awaiting Melvin's links)_
+### The two camps (this is the whole decision)
+- **Camp A — WebGL craft (Enzo, Luke).** Custom React + Three.js/GLSL + GSAP/Lenis.
+  Abstract motion, cinematic, Awwwards-tier. Highest ceiling, highest effort
+  (GLSL + possibly Blender). **Enzo proves our stack can reach this tier.**
+- **Camp B — Editorial brand system (Noth, Cinetica).** Webflow, type + copy +
+  imagery + small interactions. Restraint, brand voice, corner metadata, live
+  details, glitch type. Fast, safe, recruiter-legible — but not "insane".
+
+**The synthesis Melvin asked for = A × B:** build in *our* stack (Enzo's stack),
+use a **WebGL abstract-motion centerpiece** (Camp A craft) governed by **Camp B's
+editorial discipline** (terse brand voice, corner metadata, bracket/paren labels,
+a live system detail, glitch type). That is literally "abstract + editorial",
+and it's feasible because Enzo shows the stack reaches the ceiling.
+
+### Per-site deconstruction
+
+#### enzo-casalini.dev — the ceiling, in our exact stack
+- **Camp A.** WebFetch returned only the title = a JS-rendered SPA shell, itself
+  a tell of a heavy client-side WebGL app. Awwwards nominee.
+- **Built with:** React + React Three Fiber + Three.js + custom GLSL + GSAP.
+- **Why it matters most:** removes the "can we even do this with what we have?"
+  question. Same tools, so its techniques are directly reproducible. Treat as
+  the north-star for the abstract-motion hero.
+
+#### lukebaffait.fr — cinematic scroll + transitions
+- **Camp A.** Awwwards Honorable Mention. He lists his own stack: React/Next.js,
+  GSAP, Lenis, Barba.js, Three.js/WebGL, Blender, Vercel.
+- **Signature:** "cinematic motion, WebGL and scroll-driven storytelling through
+  experimental interactions and handcrafted elements." Playful terse copy.
+- **For us:** steal the *choreography* (page/section transitions, scroll story),
+  do it with React Router + GSAP instead of Barba; Blender-made 3D is a stretch.
+
+#### noth.in — the editorial brand system
+- **Camp B.** Webflow (`cdn.prod.website-files.com`). No WebGL.
+- **Signature:** paradoxical brand voice ("Nothin' is Everythin'"), corrupted/
+  scramble text, conventional nav + corner metadata, bracket section labels,
+  loading counter to 100.
+- **For us:** the cheapest high-impact layer. All reproducible in React with CSS
+  + a little JS. This is the "editorial skeleton" the WebGL hangs on.
+
+#### cinetica.studio — cinematic brand + live details
+- **Camp B.** Webflow. Animation-light (parallax + a gif sphere).
+- **Signature:** cinematic taglines ("The impossible is only the beginning"), a
+  **live clock/date** on the page, parenthetical labels, themed loading copy.
+- **For us:** take the brand/copy discipline and the live system detail; render
+  its "immersive" promise for real in WebGL rather than via a gif.
 
 ### Axes we're sorting on
 The point of Round 2 is to separate these so we choose each independently:
