@@ -20,10 +20,11 @@
  * ========================================================================= */
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, useGLTF } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
 import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh'
@@ -33,8 +34,18 @@ import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-
 ;(THREE.BufferGeometry.prototype as unknown as { disposeBoundsTree: typeof disposeBoundsTree }).disposeBoundsTree = disposeBoundsTree
 THREE.Mesh.prototype.raycast = acceleratedRaycast
 
-// √particle-count. 512 → 262k particles (first pass; bump toward 1024 later).
-const SIZE = 512
+// √particle-count. 384 → ~147k particles (kept modest so the one-time surface
+// sampling doesn't freeze the main thread; we'll add a pre-filtered mesh to push
+// this higher without the rejection cost).
+const SIZE = 384
+
+// The mask sits fixed on the LEFT (name goes centre). World-space offset applied
+// to both the rendered points and the raycast mesh so cursor interaction lines up.
+const OFFSET = new THREE.Vector3(-0.62, 0, 0)
+
+// Keep only front-facing samples (normal.z above this) → drops the back of the
+// head and the helmet "crown", leaving the face/mask shell.
+const FRONT_FACING = 0.12
 
 /* ---- our simulation shaders (GPUComputationRenderer injects uCurrentPosition,
  * uCurrentVelocity and `resolution` automatically) ------------------------- */
@@ -119,33 +130,59 @@ function MaskParticles() {
   const camera = useThree((s) => s.camera)
   const pointer = useThree((s) => s.pointer)
 
-  // Load the CC-BY cyborg mask (draco-compressed → 2nd arg enables the decoder).
-  const gltf = useGLTF('/models/cyborg.glb', true)
-
-  // Pull the first mesh's geometry out of the loaded model.
-  const maskGeometry = useMemo(() => {
-    let geo: THREE.BufferGeometry | null = null
-    gltf.scene.traverse((o) => {
-      if (!geo && (o as THREE.Mesh).isMesh) geo = (o as THREE.Mesh).geometry
-    })
-    return geo
-  }, [gltf])
+  // Load the CC-BY cyborg mask ourselves (draco-compressed). Manual loader (no
+  // Suspense) so failures surface as console errors instead of a silent hang.
+  const [maskGeometry, setMaskGeometry] = useState<THREE.BufferGeometry | null>(null)
+  useEffect(() => {
+    const draco = new DRACOLoader()
+    draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
+    const loader = new GLTFLoader()
+    loader.setDRACOLoader(draco)
+    loader.load(
+      '/models/cyborg.glb',
+      (gltf) => {
+        let geo: THREE.BufferGeometry | null = null
+        gltf.scene.traverse((o) => {
+          if (!geo && (o as THREE.Mesh).isMesh) geo = (o as THREE.Mesh).geometry
+        })
+        if (!geo) console.error('[MaskField] no mesh found in cyborg.glb')
+        setMaskGeometry(geo)
+      },
+      undefined,
+      (err) => console.error('[MaskField] model load error:', err),
+    )
+    return () => draco.dispose()
+  }, [])
 
   // Build everything once we have geometry + renderer.
   const sim = useMemo(() => {
     if (!maskGeometry) return null
+    if (!maskGeometry.attributes.normal) maskGeometry.computeVertexNormals()
     const mesh = new THREE.Mesh(maskGeometry)
     const sampler = new MeshSurfaceSampler(mesh).build()
+
+    // Height clip: keep only the lower part of the model (face + jaw), dropping
+    // the skull-top, helmet crown and the antenna above the forehead.
+    maskGeometry.computeBoundingBox()
+    const bb = maskGeometry.boundingBox!
+    const yCap = bb.min.y + (bb.max.y - bb.min.y) * 0.66
 
     const count = SIZE * SIZE
     const homeData = new Float32Array(count * 4)
     const refs = new Float32Array(count * 2)
     const p = new THREE.Vector3()
+    const n = new THREE.Vector3()
 
     for (let i = 0; i < SIZE; i++) {
       for (let j = 0; j < SIZE; j++) {
         const idx = i * SIZE + j
-        sampler.sample(p)
+        // resample until we get a front-facing point below the height cap
+        // (drops back of head, crown and antenna → leaves the face shell)
+        let tries = 0
+        do {
+          sampler.sample(p, n)
+          tries++
+        } while ((n.z < FRONT_FACING || p.y > yCap) && tries < 10)
         homeData[idx * 4 + 0] = p.x
         homeData[idx * 4 + 1] = p.y
         homeData[idx * 4 + 2] = p.z
@@ -203,6 +240,7 @@ function MaskParticles() {
     // a hidden mesh (with BVH) purely for cursor→surface raycasting
     ;(maskGeometry as unknown as { computeBoundsTree: () => void }).computeBoundsTree()
     const rayMesh = new THREE.Mesh(maskGeometry)
+    rayMesh.position.copy(OFFSET) // match the rendered points' left offset
     rayMesh.updateMatrixWorld()
 
     return { gpu, posVar, velVar, geometry, material, rayMesh }
@@ -219,7 +257,8 @@ function MaskParticles() {
     raycaster.current.setFromCamera(pointer as THREE.Vector2, camera)
     const hit = raycaster.current.intersectObject(rayMesh)
     if (hit.length > 0) {
-      velVar.material.uniforms.uMouse.value.copy(hit[0].point)
+      // convert world hit → local (sim) space by removing the left offset
+      velVar.material.uniforms.uMouse.value.copy(hit[0].point).sub(OFFSET)
       mouseSpeed.current = 1
     }
     mouseSpeed.current *= 0.9
@@ -232,7 +271,14 @@ function MaskParticles() {
   })
 
   if (!sim) return null
-  return <points geometry={sim.geometry} material={sim.material} frustumCulled={false} />
+  return (
+    <points
+      geometry={sim.geometry}
+      material={sim.material}
+      position={[OFFSET.x, OFFSET.y, OFFSET.z]}
+      frustumCulled={false}
+    />
+  )
 }
 
 export function MaskField() {
@@ -246,7 +292,9 @@ export function MaskField() {
       >
         <color attach="background" args={['#050609']} />
         <MaskParticles />
-        <OrbitControls enableZoom={false} enablePan={false} enableDamping />
+        {/* No OrbitControls — the mask is FIXED, front-facing, on the left. The
+            cursor still disturbs the particles (handled in the sim), but the
+            visitor can't rotate/move the mask itself. */}
         <EffectComposer>
           <Bloom intensity={1.2} luminanceThreshold={0.06} luminanceSmoothing={0.3} mipmapBlur />
         </EffectComposer>
@@ -254,5 +302,3 @@ export function MaskField() {
     </div>
   )
 }
-
-useGLTF.preload('/models/cyborg.glb', true)
