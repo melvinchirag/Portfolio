@@ -293,7 +293,36 @@ Working rule reinforced: **end every session by updating this top section**
 (what changed / what's next / what's blocked) — that's what keeps any tool able
 to continue.
 
-### 🎨 Hero direction (2026-07-27) — "look first", references pending
+### ✅ DIRECTION LOCKED (2026-07-27) — "The Blend" (A × B)
+
+After deconstructing Melvin's 4 reference sites (see `docs/references.md`), they
+split into two camps: **A · WebGL craft** (enzo-casalini.dev, lukebaffait.fr —
+custom React+Three.js+GLSL+GSAP, Awwwards-tier) and **B · Editorial brand**
+(noth.in, cinetica.studio — Webflow, bold type + brand voice + live details).
+
+**Key finding:** enzo-casalini.dev is an Awwwards nominee built on **our exact
+stack** (React + R3F + Three.js + GLSL + GSAP). The ceiling is reachable.
+
+**Locked direction = The Blend:** an **editorial brand skeleton** (Camp B —
+terse voice, corner metadata, bracket/paren labels, a live system detail, glitch
+type) with **ONE signature WebGL abstract-motion centerpiece** (Camp A). Roughly
+60% editorial / 40% WebGL. Chosen over WebGL-forward to concentrate all shader
+risk into a single controllable place — full-WebGL means 5× the perf budgets,
+fallbacks, silent-blank-page failures, and is the hardest thing to delegate to
+other LLMs (the independence plan). Melvin's condition: best output for the
+resources we have. Ceiling stays high; floor rises a lot.
+
+**Sequencing (risk-ordered, matches structure→motion→polish):**
+1. **Editorial hero shell first** — layout, type system, brand voice, corner
+   metadata, bracket labels, live clock, (optional) glitch text. Cheap,
+   deterministic, verifiable, delegable. Built as a standalone prototype with a
+   reserved empty SLOT where the WebGL centerpiece will go.
+2. **The one WebGL centerpiece** — designed/prototyped standalone, then dropped
+   into the slot once approved. Concept TBD (candidates: refine "The Current";
+   the reserved ink-fluid is earmarked elsewhere).
+3. Only then wire into `site/`. Do NOT build hero sections 2–5 until Melvin says.
+
+### 🎨 Hero direction (2026-07-27) — "look first", references studied
 
 - Melvin's steer: **get the LOOK right before worrying about font/content.**
 - A field-agnostic hero **prototype ("The Current")** was built as a standalone
