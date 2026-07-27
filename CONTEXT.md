@@ -275,9 +275,12 @@ Claude) to survive session limits + credit caps. New files support this:
 - **`docs/LLM-INDEPENDENCE.md`** — the full workflow: file roles, per-tool
   playbook, a copy-paste primer for chat tools, and the session-close ritual.
 - **`GEMINI.md`** (root) — thin pointer to `AGENTS.md` + `CONTEXT.md`.
-- **Prereq flagged, NOT yet done:** project is not a git repo. Plan step 1 is
-  `git init` + private GitHub push, so tools can clone context and edits can be
-  rolled back. **Offer to do this next session if Melvin hasn't.**
+- **✅ DONE (2026-07-27):** project is now a git repo, pushed to the **private**
+  repo **https://github.com/melvinchirag/Portfolio** (`main` branch, remote
+  `origin`). `node_modules` etc. gitignored. Tools can now clone the full
+  context; edits can be rolled back. Commit after meaningful changes — the log
+  is a second decision trail. (`gh` CLI is NOT installed; repo was created in
+  the browser. Note the repo name is capitalized `Portfolio`.)
 
 Working rule reinforced: **end every session by updating this top section**
 (what changed / what's next / what's blocked) — that's what keeps any tool able

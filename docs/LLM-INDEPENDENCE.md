@@ -36,20 +36,20 @@ already exists for Claude; add a one-line `GEMINI.md` (for Gemini CLI) and any
 `.antigravity`/rules file that just says *"Read `AGENTS.md` and `CONTEXT.md`
 first."* One brain, many doors.
 
-## 3. Prerequisite: put it under version control (do this first)
-The project is **not yet a git repo.** Without git there's no history, no undo,
-no clean handoff. One-time setup:
+## 3. Version control — ✅ DONE (2026-07-27)
+The project is under git and pushed to the **private** repo
+**https://github.com/melvinchirag/Portfolio** (`main`, remote `origin`).
+`node_modules`/`dist`/env files are gitignored. Any IDE agent (Antigravity,
+Cursor) can now clone the full context, and a bad AI edit can be rolled back.
+
+**Habit to keep:** commit after every meaningful change with a clear message —
+the commit log is a second, automatic decision log. To push:
 ```bash
-cd "C:/Users/mkarupat/Desktop/Portfolio"
-git init
-printf "node_modules/\ndist/\n.DS_Store\n" >> .gitignore   # site/.gitignore already covers its own
-git add -A
-git commit -m "Portfolio: baseline before multi-tool workflow"
+git -C "C:/Users/mkarupat/Desktop/Portfolio" add -A
+git -C "C:/Users/mkarupat/Desktop/Portfolio" commit -m "clear message"
+git -C "C:/Users/mkarupat/Desktop/Portfolio" push
 ```
-Then push to a **private GitHub repo.** This is what lets Antigravity/Cursor/any
-IDE agent clone the full context, and lets you roll back a bad AI edit instantly.
-Commit after every meaningful change with a clear message — the commit log
-becomes a second, automatic decision log.
+Note: `gh` (GitHub CLI) is not installed; new repos are made in the browser.
 
 ## 4. Per-tool playbook — use the right tool for the job
 - **Google Antigravity / Cursor (agentic IDEs)** — best for *building*: multi-file
