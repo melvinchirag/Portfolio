@@ -129,12 +129,17 @@ const renderFragment = /* glsl */ `
  * A mix that encodes Melvin: binary + hexadecimal (the CS signal) and TELUGU
  * letters (his heritage — Kuwait → India → Michigan). They re-shuffle on a ~5s
  * wave so the face keeps "speaking" in code and mother tongue. */
-const GLYPH_CHARS = [
-  '0', '1', // binary
-  '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', // hex
-  'అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', 'న', 'మ', 'ర', 'ల', 'వ', 'స', 'హ', // Telugu
-]
-const GLYPH_COUNT = 5200 // how many of the particles carry a glyph
+// Three categories, kept as contiguous ranges in the atlas so the shader can
+// cycle a particle binary → Telugu → hex by picking within the current range.
+const BINARY = ['0', '1']
+const TELUGU = ['అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', 'న', 'మ', 'ర', 'ల', 'వ', 'స', 'హ']
+const HEX = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
+const GLYPH_CHARS = [...BINARY, ...TELUGU, ...HEX]
+const BIN_START = 0
+const TEL_START = BINARY.length
+const HEX_START = BINARY.length + TELUGU.length
+const GLYPH_COUNT = 6000 // pool spread over the whole face; only patches show at once
+const N_HOTSPOTS = 3 // roving zones where glyphs are currently visible
 
 // Bake all glyphs into one texture atlas (grid of cells) drawn on a canvas.
 function makeGlyphAtlas() {
@@ -165,16 +170,44 @@ function makeGlyphAtlas() {
 }
 
 const glyphVertex = /* glsl */ `
-  uniform sampler2D uPositionTexture;
+  uniform sampler2D uPositionTexture; // live (animated) positions
+  uniform sampler2D uHomeTexture;     // rest positions (stable, for localization)
   uniform float uGlyphSize;
+  uniform float uTime;
+  uniform vec3  uHots[3];   // roving hotspot centres (rest space)
+  uniform float uHotRadius;
+  uniform float uBinStart;
+  uniform float uTelStart;
+  uniform float uHexStart;
   attribute vec2 aRef;
-  attribute float aGlyph;
+  attribute float aSeed;
   varying float vGlyph;
+  varying float vFade;
+
+  float hash(float x) { return fract(sin(x * 127.1) * 43758.5453); }
+
   void main() {
-    vec3 pos = texture2D(uPositionTexture, aRef).xyz;
-    vGlyph = aGlyph;
+    vec3 home = texture2D(uHomeTexture, aRef).xyz;
+    vec3 pos  = texture2D(uPositionTexture, aRef).xyz;
+
+    // localization: only particles near a hotspot show a glyph
+    float md = distance(home, uHots[0]);
+    md = min(md, distance(home, uHots[1]));
+    md = min(md, distance(home, uHots[2]));
+    float vis = 1.0 - smoothstep(uHotRadius * 0.55, uHotRadius, md);
+
+    // type cycle per particle: binary → Telugu → hex (staggered by seed)
+    float phase = mod(uTime * 0.5 + aSeed * 9.0, 3.0);
+    float cat = floor(phase);
+    float start = cat < 0.5 ? uBinStart : (cat < 1.5 ? uTelStart : uHexStart);
+    float cnt   = cat < 0.5 ? 2.0       : (cat < 1.5 ? 16.0      : 16.0);
+    // which character within the category (changes ~once/sec)
+    float r = hash(aSeed * 7.0 + cat * 5.0 + floor(uTime * 1.1));
+    vGlyph = start + floor(r * cnt);
+    vFade = vis;
+
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-    gl_PointSize = uGlyphSize / -mv.z;
+    gl_PointSize = (uGlyphSize / -mv.z) * step(0.03, vis); // size 0 → hidden
     gl_Position = projectionMatrix * mv;
   }
 `
@@ -185,14 +218,16 @@ const glyphFragment = /* glsl */ `
   uniform float uCols;
   uniform vec3 uColor;
   varying float vGlyph;
+  varying float vFade;
   void main() {
+    if (vFade < 0.03) discard;
     float idx = floor(vGlyph + 0.5);
     float cx = mod(idx, uCols);
     float cy = floor(idx / uCols);
     vec2 uv = (vec2(cx, cy) + gl_PointCoord) / uCols;
     vec4 g = texture2D(uAtlas, uv);
     if (g.a < 0.15) discard;
-    gl_FragColor = vec4(uColor, g.a);
+    gl_FragColor = vec4(uColor, g.a * vFade);
   }
 `
 
@@ -308,27 +343,51 @@ function MaskParticles() {
       blending: THREE.AdditiveBlending,
     })
 
-    // ---- glyph layer: a strided subset of particles carrying a glyph id ----
+    // ---- glyph layer: a strided subset carries a seed; hotspots decide which
+    // are visible (localized patches), the shader cycles binary→Telugu→hex ----
     const atlas = makeGlyphAtlas()
     const stride = Math.max(1, Math.floor(count / GLYPH_COUNT))
     const gPositions: number[] = []
     const gRefs: number[] = []
-    const gGlyphArr: number[] = []
+    const gSeeds: number[] = []
     for (let k = 0; k < count; k += stride) {
       gPositions.push(0, 0, 0)
       gRefs.push(refs[k * 2], refs[k * 2 + 1])
-      gGlyphArr.push(Math.floor(Math.random() * GLYPH_CHARS.length))
+      gSeeds.push(Math.random())
     }
     const glyphGeo = new THREE.BufferGeometry()
     glyphGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(gPositions), 3))
     glyphGeo.setAttribute('aRef', new THREE.BufferAttribute(new Float32Array(gRefs), 2))
-    const glyphAttr = new THREE.BufferAttribute(new Float32Array(gGlyphArr), 1)
-    glyphGeo.setAttribute('aGlyph', glyphAttr)
+    glyphGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array(gSeeds), 1))
+
+    // face bounding box (from the accepted samples) → hotspot radius + a pool of
+    // candidate positions the hotspots hop between (chin, eyes, cheek, …)
+    let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity
+    const candidates: THREE.Vector3[] = []
+    for (let k = 0; k < count; k++) {
+      const x = homeData[k * 4], y = homeData[k * 4 + 1], z = homeData[k * 4 + 2]
+      if (x < minx) minx = x
+      if (x > maxx) maxx = x
+      if (y < miny) miny = y
+      if (y > maxy) maxy = y
+      if (k % 700 === 0) candidates.push(new THREE.Vector3(x, y, z))
+    }
+    const hotRadius = Math.max(maxx - minx, maxy - miny) * 0.18
+    const hotspots = Array.from({ length: N_HOTSPOTS }, () =>
+      candidates[(Math.random() * candidates.length) | 0].clone(),
+    )
 
     const glyphMat = new THREE.ShaderMaterial({
       uniforms: {
         uPositionTexture: { value: null },
-        uGlyphSize: { value: 24 },
+        uHomeTexture: { value: homeRef },
+        uGlyphSize: { value: 26 },
+        uTime: { value: 0 },
+        uHots: { value: hotspots },
+        uHotRadius: { value: hotRadius },
+        uBinStart: { value: BIN_START },
+        uTelStart: { value: TEL_START },
+        uHexStart: { value: HEX_START },
         uAtlas: { value: atlas.texture },
         uCols: { value: atlas.cols },
         uColor: { value: new THREE.Color('#b9fff2') },
@@ -347,23 +406,54 @@ function MaskParticles() {
     rayMesh.position.copy(OFFSET) // match the rendered points' left offset
     rayMesh.updateMatrixWorld()
 
-    return { gpu, posVar, velVar, geometry, material, rayMesh, glyphGeo, glyphMat, glyphAttr }
+    return { gpu, posVar, velVar, geometry, material, rayMesh, glyphGeo, glyphMat, hotspots, candidates }
   }, [maskGeometry, gl])
 
   const raycaster = useRef(new THREE.Raycaster())
   const mouseSpeed = useRef(0)
   const glyphTimer = useRef(0)
+  const hotIndex = useRef(0)
+  const groupRef = useRef<THREE.Group>(null)
+  const rot = useRef({ x: 0, y: 0 })
+
+  // Drag anywhere to spin the mask 360° (it stays on the left; we rotate the
+  // group, not the camera). Plain mouse-move still disturbs the particles.
+  useEffect(() => {
+    let active = false, lx = 0, ly = 0
+    const down = (e: PointerEvent) => { active = true; lx = e.clientX; ly = e.clientY }
+    const move = (e: PointerEvent) => {
+      if (!active) return
+      rot.current.y += (e.clientX - lx) * 0.006
+      rot.current.x += (e.clientY - ly) * 0.006
+      rot.current.x = Math.max(-1.1, Math.min(1.1, rot.current.x)) // limit pitch
+      lx = e.clientX; ly = e.clientY
+    }
+    const up = () => { active = false }
+    window.addEventListener('pointerdown', down)
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    return () => {
+      window.removeEventListener('pointerdown', down)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+  }, [])
 
   useFrame((_, delta) => {
     if (!sim) return
-    const { gpu, posVar, velVar, material, glyphMat, glyphAttr, rayMesh } = sim
+    const { gpu, posVar, velVar, material, glyphMat, rayMesh, hotspots, candidates } = sim
 
-    // cursor → 3D point on the mask
+    // apply drag rotation to the visible group AND the raycast mesh so cursor
+    // interaction still lines up after you spin the mask
+    if (groupRef.current) groupRef.current.rotation.set(rot.current.x, rot.current.y, 0)
+    rayMesh.rotation.set(rot.current.x, rot.current.y, 0)
+    rayMesh.updateMatrixWorld()
+
+    // cursor → 3D point on the (possibly rotated) mask → sim-local space
     raycaster.current.setFromCamera(pointer as THREE.Vector2, camera)
     const hit = raycaster.current.intersectObject(rayMesh)
     if (hit.length > 0) {
-      // convert world hit → local (sim) space by removing the left offset
-      velVar.material.uniforms.uMouse.value.copy(hit[0].point).sub(OFFSET)
+      velVar.material.uniforms.uMouse.value.copy(rayMesh.worldToLocal(hit[0].point.clone()))
       mouseSpeed.current = 1
     }
     mouseSpeed.current *= 0.9
@@ -375,22 +465,22 @@ function MaskParticles() {
     material.uniforms.uPositionTexture.value = posTex
     material.uniforms.uVelocityTexture.value = gpu.getCurrentRenderTarget(velVar).texture
     glyphMat.uniforms.uPositionTexture.value = posTex
+    glyphMat.uniforms.uTime.value += delta
 
-    // every ~5s, reshuffle ~35% of the glyphs → a wave of changing code/Telugu
+    // rove one hotspot to a new random face location every ~2.2s
     glyphTimer.current += delta
-    if (glyphTimer.current > 5) {
+    if (glyphTimer.current > 2.2) {
       glyphTimer.current = 0
-      const arr = glyphAttr.array as Float32Array
-      for (let i = 0; i < arr.length; i++) {
-        if (Math.random() < 0.35) arr[i] = Math.floor(Math.random() * GLYPH_CHARS.length)
-      }
-      glyphAttr.needsUpdate = true
+      hotspots[hotIndex.current % hotspots.length].copy(
+        candidates[(Math.random() * candidates.length) | 0],
+      )
+      hotIndex.current++
     }
   })
 
   if (!sim) return null
   return (
-    <group position={[OFFSET.x, OFFSET.y, OFFSET.z]}>
+    <group ref={groupRef} position={[OFFSET.x, OFFSET.y, OFFSET.z]}>
       <points geometry={sim.geometry} material={sim.material} frustumCulled={false} />
       <points geometry={sim.glyphGeo} material={sim.glyphMat} frustumCulled={false} />
     </group>
@@ -412,7 +502,7 @@ export function MaskField() {
             cursor still disturbs the particles (handled in the sim), but the
             visitor can't rotate/move the mask itself. */}
         <EffectComposer>
-          <Bloom intensity={1.2} luminanceThreshold={0.06} luminanceSmoothing={0.3} mipmapBlur />
+          <Bloom intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
         </EffectComposer>
       </Canvas>
     </div>
