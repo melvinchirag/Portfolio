@@ -451,14 +451,38 @@ tagline + `<HeroInfoTabs/>` (right side, glass).
      it's hand-authored content, not fetched.
    - Verified: real glass distortion + edge fringe + glare visible in browser,
      tab content readable, auto-advance works, no console errors.
+   - **Made it actually FLUID (same-session follow-up):** Melvin's first look
+     said it "doesn't look like actual liquid glass, needs to look fluid" — the
+     issue was a *static* noise field (no motion = reads as textured blur, not
+     liquid). Fixed:
+     - `GlassFilterDefs.tsx` now has a `<feOffset>` between the turbulence and
+       the displacement map, driven by a `requestAnimationFrame` loop (two
+       out-of-phase sine drifts on dx/dy) — the noise pattern itself now flows
+       across the panel, so the refraction visibly ripples over time. Respects
+       `prefers-reduced-motion` (loop doesn't start).
+     - `.glass-panel::before` — a NEW rotating conic-gradient rim (7s loop via
+       `@property --rim-angle` + CSS `@keyframes`), so the bright light-catch
+       point travels around the edge instead of sitting still — reads as light
+       moving across a curved liquid surface.
+     - `.glass-panel` border-radius changed from a uniform 22px to uneven
+       `30px 26px 32px 24px` — a small asymmetry that reads as "soft blob" over
+       "rectangle with rounded corners".
+     - **Verified the motion is real** (not just present in code): two
+       screenshots 3s apart show the rim highlight at different angular
+       positions and a different internal distortion pattern.
 
 ### Immediate NEXT steps (Melvin's stated order, as of this handoff)
 1. ~~Type overlay~~ ✅ done this session (name + "CS, and beyond" + caption).
 2. ~~Liquid-glass info tabs~~ ✅ done this session.
-3. **Scrollytelling for the hero** — the ONLY page with scroll, hard rule. Five
-   sections, each its own theme/transition; the mask+tabs belong to section 1.
-   Melvin wants to try **anime.js** (not installed) and add elements himself
-   first — **do NOT build sections 2–5 until he explicitly says so.**
+3. **Scrollytelling for the hero — NOT yet built, Melvin flagged it again this
+   session ("don't forget").** It's next up, not forgotten. The ONLY page with
+   scroll, hard rule. Five sections, each its own theme/transition; the mask +
+   name + glass tabs (everything built so far) ARE section 1. Melvin wants to
+   try **anime.js** (not installed) and add elements himself first — **do NOT
+   build sections 2–5 until he explicitly says so** — but section 1 will still
+   need to sit inside whatever scroll-track/pin mechanism (GSAP ScrollTrigger +
+   Lenis, already in the stack) ties it to sections 2–5 later, so keep that in
+   mind if you touch Home.tsx's structure.
 4. Then the **other pages** (About/Work/Vision/Contact) — each its own concept,
    per `docs/concepts.md` (the ink-fluid sim is reserved, likely for Vision).
 5. Mask backlog: push density up via a pre-filtered face-only sub-geometry
