@@ -1,14 +1,16 @@
 # CONTEXT — Portfolio project handoff
 
-Last updated: 2026-07-26 · Owner: Melvin
-Read this first in any new session — **especially the "Current state" section
-below, which was just rewritten and supersedes older material further down
-this same file.** Companion docs: `PORTFOLIO_VISION.md` (full spec),
-`site/CLAUDE.md` (build rules the coding agent must follow), `docs/concepts.md`
-(**approved visual concepts + which page each is reserved for**),
-`docs/references.md`, `docs/pages/home.md`, `docs/CODEBASE.md` (learning doc —
-how the code works, and code-vs-assets guidance; **not yet updated for the
-2026-07-26 nebula rebuild — do that before trusting it on this topic**).
+Last updated: 2026-07-27 ~16:40 · Owner: Melvin
+**Read `AGENTS.md` first (tool-agnostic entry point), then jump straight to
+the `🤝 HANDOFF` section below — it is the current, authoritative state and
+supersedes everything else in this file.** Everything above/below that block
+is history retained for context, not the live picture. Companion docs:
+`PORTFOLIO_VISION.md` (full spec), `site/CLAUDE.md` (build rules), `docs/
+concepts.md` (approved visual concepts, reserved per page), `docs/references.md`
+(the 4-site study → "The Blend" direction), `docs/artifacts.md` (prototype
+index), `docs/particle-mask-technique.md` (the mask's full technique teardown),
+`docs/pages/home.md`, `docs/CODEBASE.md` (learning doc — **stale, predates
+today's mask/glass work — do not trust it on those topics yet**).
 
 ---
 
@@ -349,12 +351,16 @@ Bloom softened to tame an over-exposed white blob at the chin.
 
 ---
 
-## 🤝 HANDOFF — continue here with any AI (state as of ~2026-07-27 15:55)
+## 🤝 HANDOFF — continue here with any AI (state as of 2026-07-27 ~16:40 EDT)
 
 **Read `AGENTS.md` then this file. Work is on git branch `hero-build`
-(not merged to main).** Everything below is the live picture.
+(not merged to main, but pushed to origin).** Everything below is the live
+picture — the sections further down this file (nebula, old loader rounds,
+face-triptych) are HISTORY, already superseded, kept only for the reasoning
+trail. Melvin is switching AI tools soon (session-limit reasons) — this block
+exists so a new tool can pick up with zero re-explanation.
 
-### How to run + SEE it (important gotchas)
+### How to run + SEE it (important gotchas — read before touching code)
 ```bash
 cd site && npm run dev          # opens on :5176 (or next free port)
 npx tsc --noEmit && npx oxlint  # must both be clean before committing
@@ -363,47 +369,121 @@ npx tsc --noEmit && npx oxlint  # must both be clean before committing
   gets *poisoned* if a component throws mid-edit → black screen that persists in
   that tab; a brand-new tab loads clean. If black persists everywhere: stop the
   dev server, `rm -rf site/node_modules/.vite`, restart, new tab.
-- The model + shaders take a few seconds; wait ~8–10s before judging a load.
+- The model + shaders take longer than you'd think to build (GPU sampling +
+  DRACO decode) — **wait ~10–15s before judging a "blank" load.**
 - Neural-net loader plays ~5s once per tab session before the hero.
+- **Browser-window-collapses-tiny is a known environment quirk** (not a code
+  bug) — if screenshots come back ~150–400px tall, try `resize_window` a couple
+  times (it's flaky, sometimes takes 2-3 tries) or just trust `tsc`/console
+  + ask Melvin to eyeball full-size.
 
-### The hero mask — file: `site/src/components/scene/MaskField.tsx`
-Our own GPGPU particle mask. Tunable knobs (all near the top / in `sim`):
-- `SIZE` (384) — √particle-count (~147k). Raising freezes mount because of
-  rejection sampling — **the right fix is to pre-filter the mesh to a face-only
-  sub-geometry, then sample without rejection** (lets you go 512–768+).
-- `OFFSET` (-0.62,0,0) — mask's left position. `FRONT_FACING` (0.12) + `yCap`
-  (0.66 of height) — the de-crown face clip.
-- Glyphs: `BINARY`/`TELUGU`/`HEX` arrays, `GLYPH_COUNT` (6000), `N_HOTSPOTS` (3),
-  `hotRadius` (0.18×face) — patch size; hotspot hop interval 2.2s (in useFrame);
-  cycle speed `uTime*0.5` in `glyphVertex`. Glyph colour `#b9fff2`.
-- Base dots colour `#80fff0`; `uForce` 0.72 (spring damping); Bloom intensity 0.7.
-- Model: `site/public/models/cyborg.glb` (CC BY 4.0). DRACO decoder loaded from
-  gstatic CDN — **self-host it before production** (offline safety).
+### What's built and WORKING right now on Home (`/`)
+Full pipeline: `App.tsx` mounts `<GlassFilterDefs />` (global) + `<Nav/>` +
+`<Loader/>`; `Home.tsx` renders `<MaskField/>` (background) + centred name/
+tagline + `<HeroInfoTabs/>` (right side, glass).
 
-### Immediate NEXT steps (Melvin's stated order)
-1. **Type overlay on the hero:** his name + tagline **"CS, and beyond"** over/beside
-   the mask (mask is on the LEFT; name goes CENTER). `RevealText` + `LocalTime`
-   are still imported in `Home.tsx` for this.
-2. **Scrollytelling for the hero** — this is the ONLY page with scroll. Five
-   sections, each its own theme/transition; the mask belongs to section 1. Melvin
-   wants to try **anime.js** (not installed) and add elements himself first — do
-   NOT build sections 2–5 until he says.
-3. Then the **other pages** (About/Work/Vision/Contact) — each its own concept.
-4. Backlog on the mask: push density up (pre-filter, see above); remove last
-   top-streak/antenna remnants (same pre-filter); tune the chin brightness;
-   the 6-hour model/colour variation cycle. **Glowing eyes: Melvin said DROP for
-   now.** Résumé still a completely separate "coolest way to show a resume".
+1. **The GPGPU particle mask** — `site/src/components/scene/MaskField.tsx`.
+   Our own clean-room build (MIT libs: GPUComputationRenderer, MeshSurfaceSampler,
+   three-mesh-bvh; NOT the Codrops repo's code — see `docs/particle-mask-
+   technique.md` for the full study). Cyborg "Soulless" model, CC BY 4.0.
+   - **Fixed on the LEFT** of the screen (`OFFSET = (-0.62,0,0)`), de-crowned to
+     just the face (`FRONT_FACING` normal-facing filter + `yCap` height clip).
+   - **Drag anywhere to rotate 360°** (added this session — was missing before).
+   - **Glyph layer, Melvin's idea, refined this session:** NOT the whole mask —
+     **3 roving hotspot patches** (`N_HOTSPOTS`, hop to a new random face point
+     every 2.2s) show particles as glyphs that **cycle binary → Telugu → hex**
+     over time (all in the `glyphVertex`/`glyphFragment` shaders). Rest of the
+     face is plain dots.
+   - Known minor remnant: a small disconnected glyph cluster sometimes appears
+     near the ear/side (leftover geometry past the face clip) — cosmetic, not
+     urgent, same root cause as the "push density up via pre-filtered mesh"
+     TODO below (a proper pre-filtered sub-geometry fixes both at once).
+   - Tunable knobs: `SIZE` (384, ~147k particles — raising freezes mount via
+     rejection-sampling cost; fix = pre-filter mesh first, then sample without
+     rejection, lets you go 512–768+), glyph colour `#b9fff2`, base dots
+     `#80fff0`, `uForce` 0.72, Bloom intensity 0.7 (lowered this session — was
+     blowing out to a white blob at the chin).
+   - DRACO decoder loads from gstatic CDN — **self-host before production**
+     (offline/reliability).
+
+2. **The hero copy layer** — `Home.tsx`. Name "Melvin" (RevealText, centred per
+   Melvin's explicit layout call), tagline **"CS, and beyond"**, a slim caption
+   line (Computer Science · EMU · live clock via `LocalTime`). Outer wrapper is
+   `pointer-events-none` so mouse still reaches the WebGL canvas to disturb the
+   mask; the tabs re-enable `pointer-events-auto` for themselves.
+
+3. **Liquid-glass info tabs — NEW this session** —
+   `site/src/components/HeroInfoTabs.tsx` + `GlassFilterDefs.tsx` + CSS in
+   `index.css` (`.uses-glass-distort`, `.glass-panel`, `.glass-tab`,
+   `.reveal-fade`). Right side of the hero, per Melvin's request to reuse the
+   "Hero Current" artifact's beat-card layout (eyebrow/heading/body) but in real
+   liquid-glass. Four pill tabs (Now/Building/Wins/Beyond), auto-advance every
+   6s (restarts on manual click), each showing a glass content panel.
+   - **Technique decision (read this before "fixing" the glass):** the reference
+     repo `iyinchao/liquid-glass-studio` (MIT) is a raw WebGL2 engine — SDF
+     rounded-rect + Snell's-law refraction + RGB dispersion + Fresnel + glare,
+     PLUS its own two-pass gaussian-blur render-to-texture pipeline outside
+     Three.js. Porting it whole was judged too high-risk/slow for a
+     time-pressured session (exactly the kind of shader port that's already
+     eaten hours today). Instead: an **SVG `feDisplacementMap` filter**
+     (`GlassFilterDefs.tsx`, id `glass-distort`) chained via
+     `backdrop-filter: url(#glass-distort) blur(...) saturate(...)` — the same
+     technique behind most real "liquid glass" CSS tutorials. It encodes the
+     SAME physical ideas (distortion≈refraction, an inset-shadow colour fringe
+     ≈dispersion, a drifting gradient ≈glare) as real DOM, so text stays
+     readable/accessible — GPU-cheap, no render-target plumbing needed.
+     **If Melvin wants pixel-perfect Apple-grade refraction later, porting the
+     real WebGL2 shader is a legitimate follow-up — MIT license, no legal
+     blocker, just a real time investment.** Reference clone is at
+     `scratchpad/liquid-glass-studio/` (gitignored scratchpad, not in repo).
+   - **Content is REAL, sourced from `C:\Users\mkarupat\Desktop\Otto_sys\
+     NOTES.md`** (Melvin's separate automation-project context file — read it
+     for full bio detail). **Load-bearing rule from that file, followed here:**
+     Melvin is *actively building* in CS/AI-ML only; astrophysics/neurotech/
+     aerospace/robotics/quantum/filmmaking are **stated interests**, never to be
+     implied as active work. The "Beyond" tab is written to keep that line
+     honest ("fields he reads into, not fields he's building in. Yet.").
+     Tab facts: **Now** = AI/ML @ EMU, GDG Treasurer, CS50P. **Building** =
+     Osiris (touchless CV device control) + Manas (astrophysics sim engine,
+     in-progress). **Wins** = Lingo (SpartaHack 11) + EventsOS (GrizHacks,
+     Oakland University). **Beyond** = the interest list, explicitly framed as
+     curiosity. If Melvin's real facts change, this is the file to update —
+     it's hand-authored content, not fetched.
+   - Verified: real glass distortion + edge fringe + glare visible in browser,
+     tab content readable, auto-advance works, no console errors.
+
+### Immediate NEXT steps (Melvin's stated order, as of this handoff)
+1. ~~Type overlay~~ ✅ done this session (name + "CS, and beyond" + caption).
+2. ~~Liquid-glass info tabs~~ ✅ done this session.
+3. **Scrollytelling for the hero** — the ONLY page with scroll, hard rule. Five
+   sections, each its own theme/transition; the mask+tabs belong to section 1.
+   Melvin wants to try **anime.js** (not installed) and add elements himself
+   first — **do NOT build sections 2–5 until he explicitly says so.**
+4. Then the **other pages** (About/Work/Vision/Contact) — each its own concept,
+   per `docs/concepts.md` (the ink-fluid sim is reserved, likely for Vision).
+5. Mask backlog: push density up via a pre-filtered face-only sub-geometry
+   (fixes both the density cap AND the stray glyph-cluster remnant in one move);
+   the 6-hour model/colour variation cycle (swap cyborg for other CC-licensed
+   masks + shift colour on a clock). **Glowing eyes: Melvin said DROP, not
+   doing it.** Résumé: still open, "the coolest way to display a resume" —
+   completely separate treatment, not started.
+6. Optional glass upgrade: real WebGL2 physical refraction port (see technique
+   decision above) — only if Melvin wants to spend real time on it later.
 
 ### Credits owed (must appear on the site + README before shipping)
-- Cyborg "Soulless" model — **Ali Rahimi (@Free-Radical-666), CC BY 4.0**.
-- Technique learned from Codrops "Dreamy Particles" by Dominik Fojcik (our code
-  is a clean-room reimplementation using MIT libs — see
+- Cyborg "Soulless" 3D model — **Ali Rahimi (@Free-Radical-666), CC BY 4.0**.
+- Particle-mask technique learned from Codrops "Dreamy Particles" by Dominik
+  Fojcik (our code is a clean-room reimplementation using MIT libs — see
   `docs/particle-mask-technique.md`).
+- Liquid-glass technique referenced from `iyinchao/liquid-glass-studio` (MIT) —
+  our implementation is CSS/SVG, not their code, but the physical concept
+  (refraction/dispersion/fresnel/glare) is credited inspiration.
 
 ### Constraints reminder
 Dark only; comment non-obvious code (Melvin reads it); update this file + the
 README master key when things change; confirm before deploy/delete; don't ship
-unlicensed code. Repo: private github.com/melvinchirag/Portfolio.
+unlicensed code. Repo: private github.com/melvinchirag/Portfolio, branch
+`hero-build` pushed to origin.
 
 ### 🎨 Hero direction (2026-07-27) — "look first", references studied
 

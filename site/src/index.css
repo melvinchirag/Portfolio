@@ -212,7 +212,10 @@ body {
 .glass-panel {
   position: relative;
   overflow: hidden;
-  border-radius: 22px;
+  /* Slightly uneven corners instead of a perfect rectangle — a small amount of
+   * asymmetry is what reads as "a soft blob of liquid" rather than "a UI card
+   * with rounded corners". */
+  border-radius: 30px 26px 32px 24px;
   background: rgba(10, 14, 14, 0.22);
   /* Dispersion fringe: a faint cool tint top-left, warm tint bottom-right —
    * cheap stand-in for the reference shader's per-channel (R/G/B) refraction
@@ -223,6 +226,54 @@ body {
     inset 0 1px 18px rgba(255, 255, 255, 0.05),
     0 20px 60px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(185, 255, 242, 0.14);
+}
+
+/* A rotating rim of light — liquid catching light as it slowly turns, not a
+ * flat static border. Same mask-composite "rim" trick as `.liquid-glass::before`
+ * elsewhere in this file, but with a CONIC gradient that spins, so the bright
+ * point travels continuously around the edge instead of sitting still. */
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--rim-angle, 0deg),
+    rgba(185, 255, 242, 0.05) 0deg,
+    rgba(185, 255, 242, 0.85) 25deg,
+    rgba(255, 255, 255, 0.35) 45deg,
+    rgba(185, 255, 242, 0.05) 90deg,
+    rgba(185, 255, 242, 0.05) 250deg,
+    rgba(255, 200, 150, 0.5) 285deg,
+    rgba(185, 255, 242, 0.05) 320deg,
+    rgba(185, 255, 242, 0.05) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: glass-rim-spin 7s linear infinite;
+}
+@property --rim-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes glass-rim-spin {
+  from {
+    --rim-angle: 0deg;
+  }
+  to {
+    --rim-angle: 360deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-panel::before {
+    animation: none;
+  }
 }
 
 /* The glare pass: a soft diagonal highlight that drifts slowly, standing in for
