@@ -2,6 +2,14 @@
 
 **Parked 2026-07-27. Not dead code — do not delete.**
 
+**Update 2026-07-28:** the 5 photos in `nebula/` were **copied** (not moved —
+these originals stay untouched) into `site/public/space/` for a NEW, different
+concept: `site/src/components/scene/SpaceBackdrop.tsx`, a heavily dimmed
+atmospheric backdrop behind the mask ("the mask is in space"), not a revival of
+this folder's original identity-defining hero. See that file's header comment
+for how the two differ. `NebulaField.tsx` and `SunCursor.tsx` here are still
+unrevived, dead-but-kept code.
+
 ## Why it's here
 This was the Home hero §1 background: a real JWST/Hubble/ESO nebula photograph
 displayed in a WebGL shader (cover-fit, slow drift, pointer parallax), with a

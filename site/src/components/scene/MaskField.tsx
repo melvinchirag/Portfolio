@@ -22,7 +22,8 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { LiquidGlassField } from './LiquidGlassField'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { SpaceBackdrop } from './SpaceBackdrop'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
@@ -489,6 +490,12 @@ function MaskParticles() {
 }
 
 export function MaskField() {
+  // Which nebula photo is active, for the on-screen CC BY credit line (DOM
+  // text, sits outside the Canvas — the credit itself doesn't need to be
+  // refracted by the glass, it just needs to be legible).
+  const [credit, setCredit] = useState('')
+  const handleCredit = useCallback((text: string) => setCredit(text), [])
+
   return (
     /* `absolute`, not `fixed`: this now lives inside Home's sticky hero
        viewport, which does the pinning. `fixed` would escape that container and
@@ -501,17 +508,31 @@ export function MaskField() {
         onCreated={({ gl }) => { gl.toneMapping = THREE.ACESFilmicToneMapping }}
       >
         <color attach="background" args={['#050609']} />
+        {/* Drawn FIRST so it sits behind everything else in the scene graph —
+            the mask particles use depthTest:false, so draw order (not just Z
+            depth) determines what appears on top. Must live inside this same
+            Canvas, not as a DOM layer, so LiquidGlassField's scene capture can
+            see it — see SpaceBackdrop.tsx's header comment for why. */}
+        <SpaceBackdrop onCredit={handleCredit} />
         <MaskParticles />
         {/* No OrbitControls — the mask is FIXED, front-facing, on the left. The
             cursor still disturbs the particles (handled in the sim), but the
             visitor can't rotate/move the mask itself. */}
         {/* The new WebGL liquid glass that refracts the mask */}
         <LiquidGlassField />
-        
+
         <EffectComposer>
           <Bloom intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
         </EffectComposer>
       </Canvas>
+
+      {/* CC BY attribution for the space backdrop — required for 3 of the 5
+          images, kept unconditional for simplicity. Small and out of the way. */}
+      {credit && (
+        <p className="pointer-events-none absolute bottom-3 left-3 z-10 text-[9px] tracking-wide text-white/25">
+          {credit}
+        </p>
+      )}
     </div>
   )
 }

@@ -398,6 +398,56 @@ fixed — needs a real decision on transition language** (this is exactly the
 kind of thing PROMPT.md's rule #1 warns about: don't guess a transition style
 and build it blind — get a reference or a described target first).
 
+### 🌌 DEEP-SPACE BACKGROUND — BUILT 2026-07-28 ~11:47 EDT (📋 item 7)
+Built same session as the glass diagnosis above, directly acting on it. Melvin
+also connected this to the transitions complaint: **"true scrollytelling…
+there needs to be that moving effect"** — the background's own motion IS
+meant to carry scroll motion, not just content cross-fading. Considered and
+declined generating a video for this (no video-gen tool in this environment;
+the parked real astrophotography is proven, zero-cost, and already licensed —
+video remains a valid v2 upgrade if the photo fidelity isn't enough once seen).
+
+**What's built** — `site/src/components/scene/SpaceBackdrop.tsx`:
+- Reuses the 5 real NASA/ESA/ESO nebula photos parked in
+  `parked/hero-nebula/nebula/` — **copied** (not moved) to
+  `site/public/space/`, so the parked originals stay untouched as history.
+  Rotates one per page load via `localStorage['melvin:space-index']` (separate
+  key from the old parked version's, so they don't collide if that ever
+  revives too).
+- **Architectural constraint that matters:** this had to be real WebGL geometry
+  *inside the same `<Canvas>`* as the mask, not a DOM/CSS layer behind it —
+  `LiquidGlassField` captures its background by rendering the Three.js scene to
+  a texture, so it can only refract things that are actually IN that scene.
+  Drawn FIRST in the JSX (before `<MaskParticles/>`) so it sits behind the mask
+  in the (depth-test-disabled) particle draw order.
+- **Two layered motions**, both cheap/read-only: (1) a constant slow "Ken
+  Burns" pan/zoom via `useFrame` + `Math.sin/cos`, and (2) a **scroll-linked**
+  zoom/pan that reads `heroScroll.progress` (the existing one-way contract —
+  zero risk added to the mask/scroll system) so scrolling through the beats
+  feels like drifting further into the nebula. Rendered on an oversized
+  (70×70 unit) plane so panning never reveals an edge.
+- **Dimming — tuned live, not guessed once and left:** first attempt at
+  `DIM = 0.28` was tested in-browser and was **way too bright** — the nebula
+  filled the whole screen near full-strength and fought the mask hard (ACES
+  tonemapping + the Bloom pass both push midtones up more than a flat colour
+  multiply suggests). Dropped to **`DIM = 0.06`**, re-tested, confirmed
+  tasteful — atmospheric colour/depth without competing with the mask. If it
+  ever needs adjusting again, that constant is the one knob.
+- On-screen CC BY credit line (bottom-left, `MaskField.tsx`) — required for 3
+  of the 5 images (orion/eagle/lagoon), rendered unconditionally for
+  simplicity. Confirmed rendering in browser.
+- **Verified live in browser (not just tsc):** mask + nebula + glass all
+  visible together, glass panel now shows a real warm rim highlight and subtle
+  refracted colour (previously flat/black) — **this is the live proof that the
+  earlier glass diagnosis was correct**, not just a plausible theory. No
+  console errors. `tsc`/`oxlint` clean.
+- **Not yet done:** meteor showers and the satellite (rest of 📋 item 7's
+  spec) — deliberately deferred to keep this slice testable; the core
+  mechanism (real photo + layered motion + glass-visible) is proven first.
+  Add those next as a follow-up, not a rebuild.
+- `parked/hero-nebula/README.md` updated to note the photos were reused (not
+  revived) for this different, more restrained concept.
+
 ## 🤝 HANDOFF — continue here with any AI (state as of 2026-07-28 ~11:19 EDT)
 
 **Read `AGENTS.md` then this file. Work is on git branch `hero-build`
@@ -670,7 +720,11 @@ steps" list below it (which was written before this feedback landed).
      switching between multiple masks, not just tuning one. Don't over-build
      this now; just don't paint the panel into a single-mask-only corner.
 
-7. **Background becomes deep space — nebulae, meteor showers, galaxies, a
+7. **🟡 PARTIALLY DONE (2026-07-28) — see "DEEP-SPACE BACKGROUND" above.**
+   Real nebula photo + layered motion (ambient drift + scroll-linked parallax)
+   is live and verified. Still missing: meteor showers, galaxies, the
+   satellite. Original spec below, kept for the remaining scope —
+   **Background becomes deep space — nebulae, meteor showers, galaxies, a
    satellite — all faded, atmospheric, behind the mask.** Melvin's framing:
    *"the mask is in space — actual space."* Currently the background is flat
    `#050609`.
