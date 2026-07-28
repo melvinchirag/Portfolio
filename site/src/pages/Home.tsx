@@ -1,82 +1,44 @@
 /* ============================================================================
- * Home.tsx — the hero
+ * Home.tsx — the hero, as a 5-beat scrollytelling track
  * ----------------------------------------------------------------------------
- * Layout, per Melvin's explicit direction (2026-07-27): the GPGPU particle
- * mask is FIXED on the left (MaskField owns that side via its internal world
- * offset); his name sits centred; the liquid-glass info tabs sit on the right.
- * Sections 2-5 / scrollytelling are NOT built yet — hard rule: don't build
- * them until Melvin says so. This is section 1 only.
+ * STRUCTURE (this is the whole point of this file):
+ *
+ *   <section>            ← the TALL scroll track (BEAT_COUNT × 100vh). This is
+ *     │                    what you actually scroll through.
+ *     └ <div sticky>     ← the PINNED viewport. Stays fixed on screen for the
+ *         ├ <MaskField>    entire track, so the mask never reloads or restarts
+ *         └ <HeroBeats>    while content changes beneath the scroll.
+ *
+ * Why `position: sticky` and not GSAP pinning: sticky is one CSS line, can't
+ * desync, and plays perfectly with Lenis' smooth scroll. GSAP ScrollTrigger is
+ * still available (registered in useLenis) for per-beat scrubbed animations
+ * later — this is the frame those will hang off, not a replacement for them.
+ *
+ * The hero is the ONLY page with scrollytelling — hard rule from the project
+ * architecture. Beats 2-5 are placeholders; see HeroBeats.tsx.
  * ========================================================================= */
 
-import { useEffect, useState } from 'react'
-import { RevealText } from '../components/RevealText'
+import { useRef } from 'react'
 import { MaskField } from '../components/scene/MaskField'
-import { HeroInfoTabs } from '../components/HeroInfoTabs'
-
-/**
- * A live clock, borrowed from Cinetica. Small, useless, and exactly the kind of
- * nuanced eccentricity that reads as craft.
- */
-function LocalTime() {
-  const [time, setTime] = useState('')
-
-  useEffect(() => {
-    const update = () => {
-      setTime(
-        new Intl.DateTimeFormat('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-          timeZone: 'America/Detroit',
-        }).format(new Date()),
-      )
-    }
-    update()
-    const id = window.setInterval(update, 1000)
-    return () => window.clearInterval(id)
-  }, [])
-
-  return <span className="tabular-nums">{time || '--:--:--'}</span>
-}
+import { HeroBeats } from '../components/HeroBeats'
+import { BEAT_COUNT, useHeroScrollTrack } from '../hooks/heroScroll'
 
 export function Home() {
+  const trackRef = useRef<HTMLElement>(null)
+
+  // Measures scroll position through the track and publishes it to the shared
+  // `heroScroll` store. This is the ONLY thing that writes scroll state.
+  useHeroScrollTrack(trackRef)
+
   return (
-    <section className="relative h-screen overflow-hidden">
-      {/* Background layer: the particle mask (fixed inset-0 internally, sits
-          left via its own world-space offset — see MaskField.tsx). */}
-      <MaskField />
+    <section ref={trackRef} className="relative" style={{ height: `${BEAT_COUNT * 100}vh` }}>
+      <div className="sticky top-0 h-screen w-full overflow-hidden">
+        {/* The persistent WebGL layer: particle mask + liquid glass. Mounted
+            once, outside the beat system, so scrolling never remounts it. */}
+        <MaskField />
 
-      {/* Foreground content. `pointer-events-none` on the wrapper so mouse
-          moves still reach the WebGL canvas underneath to disturb the mask;
-          individual interactive children (tabs) opt back in. */}
-      <div className="pointer-events-none relative z-10 flex h-full flex-col justify-between gap-10 px-6 pt-28 pb-10 md:px-14 md:pb-14">
-        {/* Name, centred, per Melvin's layout call. Anchored toward the upper
-            portion (justify-center within flex-1, but flex-1 itself is capped
-            below) so it never drifts down into the tabs' vertical band on
-            shorter viewports. */}
-        <div className="flex flex-1 flex-col items-center justify-center text-center" style={{ maxHeight: '70%' }}>
-          <h1 className="font-display text-white">
-            <RevealText
-              text="Melvin"
-              className="block text-[clamp(3rem,9vw,7rem)] leading-[0.9] tracking-[-0.02em]"
-              delay={0.15}
-              stagger={0.06}
-            />
-          </h1>
-          <p className="mt-4 text-[13px] tracking-[0.32em] text-white/45 uppercase">CS, and beyond</p>
-          <p className="mt-3 text-[13px] text-white/35">
-            Computer Science <span className="mx-1.5 text-white/20">·</span> Eastern Michigan University
-            <span className="mx-1.5 text-white/20">·</span>
-            <LocalTime />
-          </p>
-        </div>
-
-        {/* Liquid-glass info tabs, right side, lower half — clear of both the
-            mask (left) and the name (centre). */}
-        <div className="pointer-events-auto flex justify-center md:justify-end">
-          <HeroInfoTabs />
-        </div>
+        {/* Everything that changes as you scroll. */}
+        <HeroBeats />
       </div>
     </section>
   )

@@ -490,7 +490,10 @@ function MaskParticles() {
 
 export function MaskField() {
   return (
-    <div className="fixed inset-0 z-0 bg-[#050609]">
+    /* `absolute`, not `fixed`: this now lives inside Home's sticky hero
+       viewport, which does the pinning. `fixed` would escape that container and
+       keep the mask on screen past the hero. */
+    <div className="absolute inset-0 z-0 bg-[#050609]">
       <Canvas
         camera={{ position: [0, 0, 1.5], fov: 50, near: 0.1, far: 1000 }}
         dpr={[1, 2]}
