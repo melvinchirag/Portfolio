@@ -22,8 +22,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import { LiquidGlassField } from './LiquidGlassField'
-import { SpaceBackdrop } from './SpaceBackdrop'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
@@ -41,10 +40,10 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast
 // this higher without the rejection cost).
 const SIZE = 384
 
-// The mask sits fixed on the LEFT. World-space offset applied to both the
-// rendered points and the raycast mesh so cursor interaction lines up.
-// +y raises it — it was sitting too low in the frame (Melvin, 2026-07-28).
-const OFFSET = new THREE.Vector3(-0.62, 0.4, 0)
+// The mask sits fixed on the LEFT, VERTICALLY CENTRED (y=0). Melvin (2026-07-28):
+// "perfectly in the center, not too up, not too down." World-space offset applied
+// to both the rendered points and the raycast mesh so cursor interaction lines up.
+const OFFSET = new THREE.Vector3(-0.62, 0, 0)
 
 // Keep only front-facing samples (normal.z above this) → drops the back of the
 // head and the helmet "crown", leaving the face/mask shell.
@@ -491,12 +490,6 @@ function MaskParticles() {
 }
 
 export function MaskField() {
-  // Which nebula photo is active, for the on-screen CC BY credit line (DOM
-  // text, sits outside the Canvas — the credit itself doesn't need to be
-  // refracted by the glass, it just needs to be legible).
-  const [credit, setCredit] = useState('')
-  const handleCredit = useCallback((text: string) => setCredit(text), [])
-
   return (
     /* `absolute`, not `fixed`: this now lives inside Home's sticky hero
        viewport, which does the pinning. `fixed` would escape that container and
@@ -509,31 +502,23 @@ export function MaskField() {
         onCreated={({ gl }) => { gl.toneMapping = THREE.ACESFilmicToneMapping }}
       >
         <color attach="background" args={['#050609']} />
-        {/* Drawn FIRST so it sits behind everything else in the scene graph —
-            the mask particles use depthTest:false, so draw order (not just Z
-            depth) determines what appears on top. Must live inside this same
-            Canvas, not as a DOM layer, so LiquidGlassField's scene capture can
-            see it — see SpaceBackdrop.tsx's header comment for why. */}
-        <SpaceBackdrop onCredit={handleCredit} />
+        {/* NEBULA BACKDROP REMOVED 2026-07-28 — the static photo read as a flat
+            image and "zoom on scroll" wasn't real scrollytelling. Melvin wants a
+            REAL deep-space WebGL environment (à la the Manas project) instead;
+            that's a replan item, not built yet. Background is plain black again.
+            `SpaceBackdrop.tsx` kept on disk (orphaned) for reference. */}
         <MaskParticles />
         {/* No OrbitControls — the mask is FIXED, front-facing, on the left. The
             cursor still disturbs the particles (handled in the sim), but the
             visitor can't rotate/move the mask itself. */}
-        {/* The new WebGL liquid glass that refracts the mask */}
+        {/* Liquid glass — currently inert (no `.sync-glass-rect` targets on
+            screen since the info tabs were removed). Kept mounted + self-gated. */}
         <LiquidGlassField />
 
         <EffectComposer>
           <Bloom intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
         </EffectComposer>
       </Canvas>
-
-      {/* CC BY attribution for the space backdrop — required for 3 of the 5
-          images, kept unconditional for simplicity. Small and out of the way. */}
-      {credit && (
-        <p className="pointer-events-none absolute bottom-3 left-3 z-10 text-[9px] tracking-wide text-white/25">
-          {credit}
-        </p>
-      )}
     </div>
   )
 }

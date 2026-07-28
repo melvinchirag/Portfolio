@@ -31,7 +31,10 @@
  * `--color-ember` automatically enables classes like `text-ember`. */
 @theme {
   /* The display typeface, used for large headings like the hero name. */
-  --font-display: 'Instrument Serif', serif;
+  /* Times New Roman "for now" per Melvin (2026-07-28) — Instrument Serif was
+     rejected as "ugly / vibe-coded". This is a placeholder display face, not a
+     final type decision. */
+  --font-display: 'Times New Roman', Times, serif;
   /* The body typeface, used for everything else. The fallbacks after it apply
    * only if Inter fails to load. */
   --font-sans: 'Inter', system-ui, sans-serif;
@@ -319,11 +322,11 @@ body {
     background 300ms ease;
 }
 .glass-tab[data-active='true'] {
-  color: #eafffb;
+  color: #f4f1ea;
 }
 .glass-tab[data-active='true'] .glass-tab-dot {
-  background: #80fff0;
-  box-shadow: 0 0 8px 1px rgba(128, 255, 240, 0.7);
+  background: #ffffff;
+  box-shadow: 0 0 8px 1px rgba(255, 255, 255, 0.6);
 }
 .glass-tab-dot {
   width: 5px;

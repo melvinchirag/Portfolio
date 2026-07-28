@@ -53,7 +53,7 @@ export function Nav() {
             to="/"
             className="font-display text-lg tracking-tight text-white transition-opacity duration-300 hover:opacity-70 md:text-xl"
           >
-            Melvin <span className="text-[#80fff0]">Chirag</span>
+            Melvin Chirag
           </NavLink>
 
           <div className="flex items-center gap-1 md:gap-2">

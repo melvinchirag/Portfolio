@@ -54,7 +54,7 @@ function BeatRail({ active }: { active: number }) {
         <div className="absolute top-0 bottom-0 left-[3px] w-px bg-white/10">
           <div
             ref={fillRef}
-            className="h-full w-full origin-top bg-gradient-to-b from-[#80fff0] to-[#80fff0]/20"
+            className="h-full w-full origin-top bg-gradient-to-b from-white/70 to-white/15"
           />
         </div>
         {BEATS.map((b, i) => (
@@ -65,12 +65,12 @@ function BeatRail({ active }: { active: number }) {
           <div key={b.id} className="group pointer-events-auto flex cursor-default items-center gap-3">
             <span
               className={`relative z-10 block h-[7px] w-[7px] rounded-full transition-all duration-500 ${
-                i === active ? 'scale-125 bg-[#80fff0] shadow-[0_0_10px_2px_rgba(128,255,240,0.55)]' : 'bg-white/25'
+                i === active ? 'scale-125 bg-white shadow-[0_0_10px_2px_rgba(255,255,255,0.45)]' : 'bg-white/25'
               }`}
             />
             <span
               className={`text-[10px] tracking-[0.22em] whitespace-nowrap uppercase opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${
-                i === active ? 'text-[#80fff0]' : 'text-white/60'
+                i === active ? 'text-white' : 'text-white/60'
               }`}
             >
               {b.label}
@@ -104,20 +104,19 @@ export function HeroBeats() {
             }`}
           >
             {i === 0 ? (
-              /* ---- BEAT 1 — the real hero. Name lockup lives TOP-RIGHT
-                     (Melvin's spec); the centre is left open for the mask. The
-                     glass info tabs were removed. `right-28` clears the
-                     full-height clock rail on the right edge. ---- */
-              <div className="absolute top-24 right-6 z-10 text-right md:top-28 md:right-28">
-                <h1 className="font-display leading-[0.92]">
-                  <span className="block text-[clamp(2.4rem,5.5vw,4.5rem)] tracking-[-0.01em] text-white">
-                    Melvin <span className="text-[#80fff0]">Chirag</span>
+              /* ---- BEAT 1 — the real hero. Name lockup is CENTRED (Melvin's
+                     spec, 2026-07-28). No turquoise — that colour is BANNED
+                     project-wide (see CONTEXT). Times New Roman via --font-display. ---- */
+              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                <h1 className="font-display leading-[0.95] text-white">
+                  <span className="block text-[clamp(3rem,8vw,6.5rem)] tracking-[-0.01em]">
+                    Melvin Chirag
                   </span>
-                  <span className="mt-1 block text-[clamp(1.3rem,3vw,2.4rem)] tracking-[0.02em] text-white/55">
+                  <span className="mt-1 block text-[clamp(1.4rem,3.4vw,2.6rem)] tracking-[0.06em] text-white/60">
                     Karupati
                   </span>
                 </h1>
-                <p className="mt-4 text-[12px] tracking-[0.3em] text-white/45 uppercase">
+                <p className="mt-5 text-[12px] tracking-[0.32em] text-white/45 uppercase">
                   Computer Science and Beyond
                 </p>
                 <p className="mt-1 text-[12px] tracking-[0.05em] text-white/30">
