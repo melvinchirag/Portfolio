@@ -471,7 +471,77 @@ tagline + `<HeroInfoTabs/>` (right side, glass).
        screenshots 3s apart show the rim highlight at different angular
        positions and a different internal distortion pattern.
 
-### 📋 NEXT CHANGES — Melvin's spec, given 2026-07-27 ~17:06 EDT (NOT YET BUILT)
+### ✅ SCROLLYTELLING SKELETON — BUILT 2026-07-28 (~01:30 EDT)
+
+The hero now actually scrolls. Structure only — beats 2-5 are labelled
+placeholders by design; their concepts/styling are still Melvin's to decide.
+
+**Architecture (the important part — read before touching scroll):**
+- `site/src/hooks/heroScroll.ts` — **the ONE contract.** A tall scroll track
+  publishes `{progress 0→1, beat 0-4, beatProgress 0→1}` into a plain mutable
+  object. Everything else READS it; nothing writes back. Deliberately NOT React
+  state (scroll fires ~60fps; state would re-render the hero every frame).
+  `useHeroBeat()` is the React-facing hook and only re-renders on beat CHANGE.
+  **This is why scroll work cannot break the mask** — the mask's GPGPU internals
+  were never touched.
+- `site/src/pages/Home.tsx` — the scroll track: a `500vh` section wrapping a
+  `sticky top-0 h-screen` viewport. `MaskField` mounts ONCE inside the sticky
+  container so it never remounts/reloads while scrolling. Uses CSS `sticky`
+  rather than GSAP pinning (one line, can't desync, plays well with Lenis).
+  GSAP ScrollTrigger stays available for per-beat scrubbed animation later.
+- `site/src/components/HeroBeats.tsx` — beat content + the left beat rail
+  (dots + a fill line driven straight from `heroScroll.progress` via rAF) +
+  a bottom-right `01 / 05` counter. Beat 1 = the real hero (name, tagline,
+  glass tabs). Beats 2-5 = explicit placeholders.
+- Only change to `MaskField.tsx`: wrapper `fixed inset-0` → `absolute inset-0`
+  so it's scoped to the sticky hero instead of escaping it.
+
+**Verified in browser:** all 5 beats advance, rail + counter track correctly,
+content cross-fades, **the mask persists across every beat without reloading**,
+tsc + oxlint clean, no console errors.
+
+**Also applied:** tagline copy fix "CS, and beyond" → **"Computer Science and
+Beyond"** (was 📋 item 2 below).
+
+### 🔬 KEY DIAGNOSIS — why the liquid glass looks flat (2026-07-28)
+
+**It is not the shader. There is nothing behind the glass to refract.**
+The glass panel sits bottom-right over pure black; the mask is on the left.
+Refraction/dispersion/fresnel are all *distortions of what's behind* — over a
+black void they render as a dark rectangle no matter how physically correct the
+shader is. Compare Melvin's own reference screenshot: that glass sits over a
+vivid photo of buildings, which is exactly why it reads as glass.
+
+**Consequence: the deep-space background (📋 item 7) is a PREREQUISITE for the
+glass to look good, not a later polish item.** Build background → then tune
+glass. Doing glass first will keep disappointing regardless of effort spent.
+
+**Melvin's exported settings are in hand and complete:** `C:\Users\mkarupat\
+Downloads\liquid-glass-2026-07-27T22-12-22.json` — a full Liquid Glass Studio
+control dump that maps 1:1 to the shader uniforms (refThickness 20.79,
+refFactor 1.87, refDispersion 5.25, fresnel range/hardness/factor
+42.5/14.98/20, glare range/hardness/factor/convergence/opposite/angle
+16.5/15.48/90/50/80/-45, blurRadius 1, blurEdge true, shadowExpand 21.08,
+shadowFactor 15, shape 200×200 r80 roundness5, mergeRate 0.05, step 9).
+**Note: `tint.a = 0`** → tint is effectively OFF (pure refraction, no colour
+wash) and `blurRadius` is very low — both deliberate, don't "fix" them.
+
+**WIP already in the repo:** `site/src/components/scene/LiquidGlassField.tsx`
+(379 lines) — a real WebGL port with 2-pass Gaussian blur + FBO render targets,
+rendering INSIDE MaskField's canvas, synced to DOM rects via the
+`.sync-glass-rect` class. Compiles clean. It was found UNCOMMITTED and has now
+been committed as a checkpoint.
+
+### ⚠️ NEW ISSUE FOUND — mask takes ~20 seconds to appear
+
+On a cold load the hero is blank for roughly 20s before the mask renders
+(DRACO decode + surface sampling + GPGPU setup on the main thread). A recruiter
+will not wait that long. Not fixed. Likely fixes: pre-filter the mask mesh
+offline so sampling is cheap, lower `SIZE` for first paint then upgrade,
+self-host the DRACO decoder, and/or show the loader until the mask is ready.
+
+### 📋 NEXT CHANGES — Melvin's spec, given 2026-07-27 ~17:06 EDT
+### (item 2 done; item 3-8 still OPEN)
 
 Full itemized feedback from Melvin's last message this session. **None of this
 is implemented yet** — capturing it precisely here so nothing is lost across
