@@ -21,6 +21,7 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
+import { LiquidGlassField } from './LiquidGlassField'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -501,6 +502,9 @@ export function MaskField() {
         {/* No OrbitControls — the mask is FIXED, front-facing, on the left. The
             cursor still disturbs the particles (handled in the sim), but the
             visitor can't rotate/move the mask itself. */}
+        {/* The new WebGL liquid glass that refracts the mask */}
+        <LiquidGlassField />
+        
         <EffectComposer>
           <Bloom intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
         </EffectComposer>

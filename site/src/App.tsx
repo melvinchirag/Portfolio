@@ -1,5 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { GlassFilterDefs } from './components/GlassFilterDefs'
+
 import { Loader } from './components/Loader'
 import { Nav } from './components/Nav'
 import { Chapter } from './pages/Chapter'
@@ -18,9 +18,6 @@ function Shell() {
       {/* No global background scene. Per the hero architecture, each page owns
           its own visual world. The sun cursor + nebula (astronomy concept) were
           parked 2026-07-27; the new abstract/editorial hero is TBD. */}
-      {/* Mounted once, globally — every liquid-glass panel on every page
-          references this filter by id. See GlassFilterDefs.tsx. */}
-      <GlassFilterDefs />
       <Nav />
       <main className="relative z-10">
         <Routes>

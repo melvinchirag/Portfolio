@@ -478,18 +478,9 @@ is implemented yet** — capturing it precisely here so nothing is lost across
 the tool switch. Treat this as the priority queue, ahead of the "Immediate NEXT
 steps" list below it (which was written before this feedback landed).
 
-1. **The liquid glass still isn't good enough.** Melvin's exact words: "the
-   liquid glass is shit." This is AFTER the flowing-noise + rotating-rim fix
-   earlier this session — that fix was a real improvement (verified motion) but
-   apparently not enough. **Recommendation for whoever picks this up:** the
-   CSS/SVG approach may have hit its ceiling; seriously consider actually
-   porting `iyinchao/liquid-glass-studio`'s real WebGL2 shader now (MIT
-   license, no legal blocker — see `docs/references.md`). That repo's approach
-   (SDF rounded-rect + Snell's-law refraction + RGB dispersion + real Fresnel +
-   angular glare, sampling an actual blurred backdrop texture) is a
-   categorically different/better result than any CSS filter can produce. It
-   needs its own render-to-texture blur pass (2-pass gaussian) wired into the
-   R3F canvas — real work, but likely the actual fix this time.
+1. **[RESOLVED 2026-07-27] The liquid glass still isn't good enough.** Melvin's exact words: "the
+   liquid glass is shit." The CSS/SVG approach hit its ceiling.
+   **Action Taken:** Completely ported `iyinchao/liquid-glass-studio`'s WebGL2 shader into React Three Fiber (`LiquidGlassField.tsx`). It now uses SDF rounded-rects, Snell's-law refraction, RGB dispersion, real Fresnel, and angular glare over a 2-pass gaussian blurred background texture. The DOM text is retained on top while the WebGL shader matches their exact `getBoundingClientRect()` bounding boxes via uniforms.
 
 2. **Tagline copy:** "CS, and beyond" → **"Computer Science and Beyond"**
    (spelled out, not the CS abbreviation). File: `Home.tsx`.

@@ -195,37 +195,14 @@ body {
  * lives in `components/GlassFilterDefs.tsx` (rendered once, globally).
  * ========================================================================= */
 
-.uses-glass-distort {
-  /* Distort (feDisplacementMap) THEN blur THEN boost saturation — order matters:
-   * distorting the sharp backdrop first is what reads as refraction rather than
-   * just a blurry window. Falls back to plain blur if the browser can't parse a
-   * chained url()+blur() backdrop-filter (e.g. older Firefox) — see @supports. */
-  backdrop-filter: url(#glass-distort) blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%); /* Safari ignores SVG url() here */
-}
-@supports not (backdrop-filter: url(#x)) {
-  .uses-glass-distort {
-    backdrop-filter: blur(16px) saturate(150%);
-  }
-}
+
 
 .glass-panel {
   position: relative;
-  overflow: hidden;
   /* Slightly uneven corners instead of a perfect rectangle — a small amount of
    * asymmetry is what reads as "a soft blob of liquid" rather than "a UI card
    * with rounded corners". */
   border-radius: 30px 26px 32px 24px;
-  background: rgba(10, 14, 14, 0.22);
-  /* Dispersion fringe: a faint cool tint top-left, warm tint bottom-right —
-   * cheap stand-in for the reference shader's per-channel (R/G/B) refraction
-   * offset at the glass edge. */
-  box-shadow:
-    inset 1px 1px 0 rgba(140, 255, 240, 0.16),
-    inset -1px -1px 0 rgba(255, 200, 150, 0.1),
-    inset 0 1px 18px rgba(255, 255, 255, 0.05),
-    0 20px 60px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(185, 255, 242, 0.14);
 }
 
 /* A rotating rim of light — liquid catching light as it slowly turns, not a
@@ -335,8 +312,6 @@ body {
   position: relative;
   overflow: hidden;
   border-radius: 999px;
-  border: 1px solid rgba(185, 255, 242, 0.12);
-  background: rgba(10, 14, 14, 0.2);
   color: rgba(236, 231, 221, 0.55);
   transition:
     color 300ms ease,
@@ -345,8 +320,6 @@ body {
 }
 .glass-tab[data-active='true'] {
   color: #eafffb;
-  border-color: rgba(185, 255, 242, 0.55);
-  background: rgba(128, 255, 240, 0.1);
 }
 .glass-tab[data-active='true'] .glass-tab-dot {
   background: #80fff0;
