@@ -319,9 +319,20 @@ export function LiquidGlassField() {
 
   useFrame((state) => {
     if (!meshRef.current) return
-    
+
     // Sync DOM elements to uniforms
     const els = document.querySelectorAll('.sync-glass-rect')
+
+    // No glass shapes on screen (e.g. the info tabs were removed) → skip the
+    // ENTIRE render pipeline (scene capture + 2 blur passes). Otherwise we'd
+    // burn 3 full-screen renders every frame for nothing. Hide the quad so it
+    // doesn't draw a stale frame, then bail.
+    if (els.length === 0) {
+      meshRef.current.visible = false
+      glassMat.uniforms.u_numRects.value = 0
+      return
+    }
+    meshRef.current.visible = true
     const rects: THREE.Vector4[] = []
     const radii: number[] = []
     const dpr = window.devicePixelRatio

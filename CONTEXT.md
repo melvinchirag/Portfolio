@@ -398,6 +398,69 @@ fixed — needs a real decision on transition language** (this is exactly the
 kind of thing PROMPT.md's rule #1 warns about: don't guess a transition style
 and build it blind — get a reference or a described target first).
 
+### 🗒️ NEW FEEDBACK BATCH — Melvin, 2026-07-28 ~12:00 EDT (verbatim list)
+Given after reviewing the deep-space build. **Important context: Melvin said
+"there's no changes made, it looks the same" — because SIX stale dev servers
+were running (5173-5178) and he was on an old one. Killed 5173-5177; ONLY
+`:5178` is canonical now.** His actual list (working through step by step):
+
+- **A. Glass info tabs (bottom-right NOW/BUILDING/WINS/BEYOND) → REMOVE.**
+  Verbatim: "it's absolutely ugly, it should be gone." So `HeroInfoTabs` comes
+  OUT of the hero. (The `LiquidGlassField` shader can stay in the tree but is
+  then inert — no `.sync-glass-rect` elements to render — note perf below.)
+- **B. Clock → a full-height right-edge RAIL.** Not inline text (never was
+  built as item 3). Spec: a vertical strip pinned to the right edge of the
+  screen, **full viewport height**, ~1 inch (~72-96px) wide, containing just
+  the clock. Aesthetic choice. Sticky across scroll.
+- **C. Beat rail labels → hidden by default, show on HOVER only.** The 5 dots +
+  connecting line stay visible (they trace scroll progress), but the text
+  labels (Identity/Past/Present/Future/Invitation) must NOT show at rest —
+  only when the cursor hovers a given dot does that dot's label appear.
+- **D. Name — STILL WRONG, must actually change this time.**
+  - Nav logo (top-LEFT): "Melvin" → **"Melvin Chirag"**.
+  - Hero name (📋 item 4): the top-RIGHT lockup **"Melvin Chirag"** (Chirag in
+    accent colour) with **"Karupati"** smaller below. Currently the hero still
+    shows a centred "Melvin" only — item 4 was logged but never built.
+- **E. Mask vertical alignment — sits too low, move it UP** a bit (toward the
+  top). Tune `OFFSET.y` in `MaskField.tsx` (currently y=0; +y = up).
+- **F. Ears + crown STILL THERE — not actually removed.** Verbatim: "when I
+  told you to remove the crown and the ears, you just decreased the density,
+  but they're not actually gone." Correct — the current front-facing + yCap
+  rejection-sampling leaks ear/crown points (tries<10 fallback accepts a bad
+  sample). **Real fix = build a pre-filtered face-only sub-geometry and sample
+  from THAT (no rejection).** Melvin said he'll "pinpoint and show properly
+  later" — so DEFER the precise geometry work, but it's a real bug, not done.
+- Melvin is also still "suspicious about the scrollytelling aspect" generally —
+  expect more direction there.
+
+**DONE this session (verified live on :5178, tsc+oxlint clean, no console
+errors):**
+- A ✅ `HeroInfoTabs` removed from the hero (`HeroBeats.tsx`). NOTE:
+  `HeroInfoTabs.tsx` is now an **orphaned file** (no importers) — left on disk,
+  not deleted, in case glass content is reintroduced. `LiquidGlassField`
+  `useFrame` now **early-returns when there are 0 `.sync-glass-rect` elements**
+  (hides the quad + skips the scene-capture + 2 blur passes) so it costs
+  nothing while inert. It stays mounted, ready if glass returns.
+- B ✅ `HeroClockRail.tsx` — new full-height right-edge clock strip (rotated
+  time, "Michigan"/"EDT" labels, fixed, desktop-only). Rendered from
+  `HeroBeats`. The old inline `LocalTime` in beat 1 was removed (was redundant).
+- C ✅ Beat-rail labels now hover-only (`group` + `group-hover:opacity-100`),
+  dots + progress line stay visible.
+- D ✅ Nav logo → "Melvin **Chirag**" (Chirag in `#80fff0`). Hero name → a
+  top-right lockup: "Melvin **Chirag**" big + "Karupati" smaller below +
+  tagline. Uses plain styled spans (dropped `RevealText` here — it can't do the
+  two-tone name; `RevealText.tsx` still exists for future use).
+- E ✅ `OFFSET.y` 0 → **0.4** — mask raised.
+- F ⏳ DEFERRED (ears/crown) — Melvin will pinpoint.
+
+**Open observations from the live check (for next session / Melvin):**
+- The raised mask now OVERLAPS the left beat-rail dots. Rail renders on top
+  (z-20 > canvas z-0) so it's not hidden, but they're visually close — may want
+  to reposition the rail or the mask.
+- Nebula brightness varies a lot per image (rotation): the darker teal ones sit
+  back nicely at `DIM=0.06`; the brighter Carina/orange one reads more
+  prominent. May want per-image dimming, or curate the set.
+
 ### 🌌 DEEP-SPACE BACKGROUND — BUILT 2026-07-28 ~11:47 EDT (📋 item 7)
 Built same session as the glass diagnosis above, directly acting on it. Melvin
 also connected this to the transitions complaint: **"true scrollytelling…

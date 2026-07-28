@@ -41,9 +41,10 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast
 // this higher without the rejection cost).
 const SIZE = 384
 
-// The mask sits fixed on the LEFT (name goes centre). World-space offset applied
-// to both the rendered points and the raycast mesh so cursor interaction lines up.
-const OFFSET = new THREE.Vector3(-0.62, 0, 0)
+// The mask sits fixed on the LEFT. World-space offset applied to both the
+// rendered points and the raycast mesh so cursor interaction lines up.
+// +y raises it — it was sitting too low in the frame (Melvin, 2026-07-28).
+const OFFSET = new THREE.Vector3(-0.62, 0.4, 0)
 
 // Keep only front-facing samples (normal.z above this) → drops the back of the
 // head and the helmet "crown", leaving the face/mask shell.

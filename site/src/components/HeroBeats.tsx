@@ -14,8 +14,7 @@
 
 import { useEffect, useRef } from 'react'
 import { BEAT_COUNT, heroScroll, useHeroBeat } from '../hooks/heroScroll'
-import { HeroInfoTabs } from './HeroInfoTabs'
-import { RevealText } from './RevealText'
+import { HeroClockRail } from './HeroClockRail'
 
 /** Beat definitions. Beat 0 is live; 1-4 are placeholders awaiting concepts. */
 const BEATS = [
@@ -25,24 +24,6 @@ const BEATS = [
   { id: 'future', label: 'The Future', eyebrow: '( 04 )', placeholder: true },
   { id: 'invitation', label: 'The Invitation', eyebrow: '( 05 )', placeholder: true },
 ]
-
-/** A live clock — the small "system detail" eccentricity from the references. */
-function LocalTime() {
-  const ref = useRef<HTMLSpanElement>(null)
-  useEffect(() => {
-    const fmt = new Intl.DateTimeFormat('en-US', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false, timeZone: 'America/Detroit',
-    })
-    const update = () => {
-      if (ref.current) ref.current.textContent = fmt.format(new Date())
-    }
-    update()
-    const id = window.setInterval(update, 1000)
-    return () => window.clearInterval(id)
-  }, [])
-  return <span ref={ref} className="tabular-nums">--:--:--</span>
-}
 
 /**
  * The left-edge beat rail: which beat you're in, and a line that fills as you
@@ -77,15 +58,19 @@ function BeatRail({ active }: { active: number }) {
           />
         </div>
         {BEATS.map((b, i) => (
-          <div key={b.id} className="flex items-center gap-3">
+          // `group` + `pointer-events-auto`: the label is hidden by default and
+          // only revealed when the cursor hovers THIS dot's row (Melvin's spec —
+          // the rail traces progress via the dots; labels are on-demand, not
+          // permanently on screen).
+          <div key={b.id} className="group pointer-events-auto flex cursor-default items-center gap-3">
             <span
               className={`relative z-10 block h-[7px] w-[7px] rounded-full transition-all duration-500 ${
                 i === active ? 'scale-125 bg-[#80fff0] shadow-[0_0_10px_2px_rgba(128,255,240,0.55)]' : 'bg-white/25'
               }`}
             />
             <span
-              className={`text-[10px] tracking-[0.22em] uppercase transition-colors duration-500 ${
-                i === active ? 'text-white/70' : 'text-white/20'
+              className={`text-[10px] tracking-[0.22em] whitespace-nowrap uppercase opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${
+                i === active ? 'text-[#80fff0]' : 'text-white/60'
               }`}
             >
               {b.label}
@@ -102,6 +87,7 @@ export function HeroBeats() {
 
   return (
     <>
+      <HeroClockRail />
       <BeatRail active={beat} />
 
       {/* Beat content. Each beat is absolutely stacked and cross-fades; only the
@@ -118,29 +104,25 @@ export function HeroBeats() {
             }`}
           >
             {i === 0 ? (
-              /* ---- BEAT 1 — the real, built hero ---- */
-              <div className="flex h-full flex-col justify-between px-6 pt-28 pb-10 md:px-14 md:pb-14">
-                <div className="flex flex-1 flex-col items-center justify-center text-center" style={{ maxHeight: '70%' }}>
-                  <h1 className="font-display text-white">
-                    <RevealText
-                      text="Melvin"
-                      className="block text-[clamp(3rem,9vw,7rem)] leading-[0.9] tracking-[-0.02em]"
-                      delay={0.15}
-                      stagger={0.06}
-                    />
-                  </h1>
-                  <p className="mt-4 text-[13px] tracking-[0.32em] text-white/45 uppercase">
-                    Computer Science and Beyond
-                  </p>
-                  <p className="mt-3 text-[13px] text-white/35">
-                    Computer Science <span className="mx-1.5 text-white/20">·</span> Eastern Michigan University
-                    <span className="mx-1.5 text-white/20">·</span>
-                    <LocalTime />
-                  </p>
-                </div>
-                <div className="pointer-events-auto flex justify-center md:justify-end">
-                  <HeroInfoTabs />
-                </div>
+              /* ---- BEAT 1 — the real hero. Name lockup lives TOP-RIGHT
+                     (Melvin's spec); the centre is left open for the mask. The
+                     glass info tabs were removed. `right-28` clears the
+                     full-height clock rail on the right edge. ---- */
+              <div className="absolute top-24 right-6 z-10 text-right md:top-28 md:right-28">
+                <h1 className="font-display leading-[0.92]">
+                  <span className="block text-[clamp(2.4rem,5.5vw,4.5rem)] tracking-[-0.01em] text-white">
+                    Melvin <span className="text-[#80fff0]">Chirag</span>
+                  </span>
+                  <span className="mt-1 block text-[clamp(1.3rem,3vw,2.4rem)] tracking-[0.02em] text-white/55">
+                    Karupati
+                  </span>
+                </h1>
+                <p className="mt-4 text-[12px] tracking-[0.3em] text-white/45 uppercase">
+                  Computer Science and Beyond
+                </p>
+                <p className="mt-1 text-[12px] tracking-[0.05em] text-white/30">
+                  Eastern Michigan University
+                </p>
               </div>
             ) : (
               /* ---- BEATS 2-5 — placeholders, awaiting their concepts ---- */
@@ -172,8 +154,9 @@ export function HeroBeats() {
         </div>
       </div>
 
-      {/* Beat counter, bottom-right — structural readout while building. */}
-      <div className="pointer-events-none absolute right-6 bottom-8 z-20 hidden text-[10px] tracking-[0.25em] text-white/25 tabular-nums md:block">
+      {/* Beat counter, bottom — structural readout while building. Offset from
+          the right edge so it clears the clock rail. */}
+      <div className="pointer-events-none absolute right-28 bottom-8 z-20 hidden text-[10px] tracking-[0.25em] text-white/25 tabular-nums md:block">
         {String(beat + 1).padStart(2, '0')} / {String(BEAT_COUNT).padStart(2, '0')}
       </div>
     </>
