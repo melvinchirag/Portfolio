@@ -351,6 +351,53 @@ Bloom softened to tame an over-exposed white blob at the chin.
 
 ---
 
+## 📏 STANDING RULE (set 2026-07-28 ~11:32 EDT) — log every change, immediately
+Melvin: **every change from now on gets logged to `CONTEXT.md` right after it
+happens** — not batched at session end. `CONTEXT.md` remains the single log;
+no separate logging doc. If you make a change and the session ends before you
+log it, that's the failure mode this rule exists to prevent — log AS YOU GO.
+
+### 🔬 GLASS DIAGNOSIS — CONFIRMED with a live test (2026-07-28 ~11:30 EDT)
+Melvin: "the glass isn't the way it needs to be." Investigated properly instead
+of guessing:
+- **Read the actual shader body** (`LiquidGlassField.tsx`) line by line —
+  confirmed the refraction/dispersion/Fresnel/glare math is real and correctly
+  wired (not a stub).
+- **Found a concrete bug:** the drop-shadow pass (`outColor.rgb -= dShadow`)
+  darkens pixels *toward black* to fake a shadow — but the scene background is
+  already `#050609` (near-black). You cannot visibly darken something that's
+  already black. This part of the effect is currently mathematically inert,
+  not just "weak." Not fixed yet — fixing it has no visible effect until there
+  is non-black content for the shadow to fall on, so it's parked with the
+  background work, not a standalone fix.
+- **Ran a live, reversible test** to settle the "is it the shader or the scene"
+  question for real: temporarily swapped `MaskField.tsx`'s scene clear colour
+  from `#050609` to a bright test blue (`#3d6fb8`), screenshotted the glass
+  panel, then reverted (confirmed clean revert via `git diff` + `tsc`).
+  **Result: with real contrast behind it, the glass genuinely looks like real
+  liquid glass** — visible blur, a soft rim highlight, a glare streak. This is
+  no longer a hypothesis — **the shader works. The scene has nothing to show
+  through it.** Confirms and upgrades the earlier "KEY DIAGNOSIS" section
+  above from theory to verified fact.
+- **Conclusion or anyone touching glass next:** do not keep tuning shader
+  uniforms. The fix is the deep-space background (📋 item 7). Build that, then
+  judge the glass against it — most of the "disappointing" complaint should
+  resolve on its own once there's something to refract.
+
+### 🎬 TRANSITION QUALITY — assessed, confirmed weak (2026-07-28 ~11:32 EDT)
+Melvin asked about beat-to-beat transition quality. Watched it scroll live:
+**currently just a 700ms CSS opacity cross-fade** (`HeroBeats.tsx`, the
+`transition-opacity duration-700` classes) — content fades in/out in place.
+No movement, no parallax, no stagger between individual elements (eyebrow/
+heading/body all fade as one block), and the mask itself does not react to
+which beat is active — it just sits there running its own idle physics
+regardless of scroll position. This was always known to be skeleton-only (see
+"SCROLLYTELLING SKELETON" below — beats 2-5 are explicit placeholders), but
+worth being honest: even beat 1's real content transitions plainly. **Not yet
+fixed — needs a real decision on transition language** (this is exactly the
+kind of thing PROMPT.md's rule #1 warns about: don't guess a transition style
+and build it blind — get a reference or a described target first).
+
 ## 🤝 HANDOFF — continue here with any AI (state as of 2026-07-28 ~11:19 EDT)
 
 **Read `AGENTS.md` then this file. Work is on git branch `hero-build`
