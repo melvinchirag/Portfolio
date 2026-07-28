@@ -38,12 +38,17 @@ expressed through *craft* (motion, 3D, detail), never by making a visitor work.
    + what each was used for** (see its "Code / technique repos" section).
 5. `docs/artifacts.md` — index of every prototype/artifact link + what each is for.
 6. `docs/concepts.md` — approved visual concepts and which page each is reserved for.
-7. `docs/particle-mask-technique.md` — full teardown of the hero mask's
+7. `docs/LESSONS.md` — honest retrospective of mistakes made + what to do
+   better. **Read this — it's how we stop repeating errors.**
+8. `docs/PAGE-PLAN.md` — all 5 pages' structure + content + the
+   FOUNDATIONS-vs-PIZZAZZ fidelity split (what Antigravity may build vs what's
+   reserved for the strongest model). Read before doing page work.
+9. `docs/particle-mask-technique.md` — full teardown of the hero mask's
    technique (GPGPU particles on a 3D mesh) + the clean-rebuild plan we followed.
-8. `docs/CODEBASE.md` — how the code works (learning doc; **stale as of
+10. `docs/CODEBASE.md` — how the code works (learning doc; **stale as of
    2026-07-27, predates the mask/glass work — trust `CONTEXT.md` + the source
    over it until it's updated**).
-9. `docs/pages/home.md` — the Home/hero spec.
+11. `docs/pages/home.md` — the Home/hero spec.
 
 ## 3. Current priority (2026-07-27)
 - The **hero direction is being chosen**: abstract / editorial / "insane" —

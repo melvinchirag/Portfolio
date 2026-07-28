@@ -572,6 +572,30 @@ band-aid the layout until that's decided.
    palette that varies by screen position (e.g. red low, white high, gold mid) —
    a coordinated field, not one mask. Noted for later; do not build now.
 
+### ✅ DECISIONS from the replan (2026-07-28 ~12:35 EDT)
+- **Hero = three.js/R3F procedural deep-space ENGINE, not video.** Rationale:
+  for scrollytelling a live scroll-driven 3D scene beats scrubbing a video; it's
+  lightweight, interactive, and reads as "his own engineering" (shock-and-awe).
+  **Confirmed achievable** — studied the Manas repo (`C:\Users\mkarupat\Desktop\
+  Manas`): pure three.js v0.178, fully procedural (deterministic starfield via a
+  point-shader, soft nebula gradient-blobs on canvas, procedural planet textures,
+  UnrealBloom). Same engine family as our R3F. So the promise is grounded, not
+  hopeful. The engine will be STYLISED (like Manas), not photoreal — that ceiling
+  is real and Melvin's own reference is stylised, so it matches.
+- **The mask stays** (its survival was conditional on a real deep-space env; that
+  condition is now met). Mask + engine could ALSO anchor About/Vision later.
+- **Workflow split (Melvin's plan, adopted):** FOUNDATIONS (page content,
+  structure, plain UI, planning) → Melvin + Antigravity/cheaper tools; PIZZAZZ
+  (deep-space engine, mask, scrollytelling motion, real liquid glass, shaders) →
+  strongest model (Claude) in focused sessions. Foundations first, then pizzazz.
+- **New docs created this session for the handoff:** `docs/LESSONS.md` (honest
+  retrospective of every mistake + what to do better — Melvin explicitly asked
+  for this) and `docs/PAGE-PLAN.md` (all 5 pages' structure + drafted content +
+  the foundations-vs-pizzazz fidelity boundary AGY must respect). Both added to
+  the `AGENTS.md` read-list.
+- Deep-space engine itself = NOT started (deliberately — it's Claude/pizzazz
+  work for a fresh-credit session; this session set up the foundations handoff).
+
 **Recommended replan stance (for the assistant): do NOT keep iterating on the
 current single-mask-on-black hero.** The honest fork is (a) commit to building
 a real animated deep-space WebGL environment (feasible as a STYLISED scene —
