@@ -1,6 +1,6 @@
 # CONTEXT — Portfolio project handoff
 
-Last updated: 2026-07-27 ~16:40 · Owner: Melvin
+Last updated: 2026-07-28 ~11:19 EDT · Owner: Melvin
 **Read `AGENTS.md` first (tool-agnostic entry point), then jump straight to
 the `🤝 HANDOFF` section below — it is the current, authoritative state and
 supersedes everything else in this file.** Everything above/below that block
@@ -351,7 +351,7 @@ Bloom softened to tame an over-exposed white blob at the chin.
 
 ---
 
-## 🤝 HANDOFF — continue here with any AI (state as of 2026-07-27 ~16:40 EDT)
+## 🤝 HANDOFF — continue here with any AI (state as of 2026-07-28 ~11:19 EDT)
 
 **Read `AGENTS.md` then this file. Work is on git branch `hero-build`
 (not merged to main, but pushed to origin).** Everything below is the live
@@ -378,9 +378,11 @@ npx tsc --noEmit && npx oxlint  # must both be clean before committing
   + ask Melvin to eyeball full-size.
 
 ### What's built and WORKING right now on Home (`/`)
-Full pipeline: `App.tsx` mounts `<GlassFilterDefs />` (global) + `<Nav/>` +
-`<Loader/>`; `Home.tsx` renders `<MaskField/>` (background) + centred name/
-tagline + `<HeroInfoTabs/>` (right side, glass).
+Full pipeline: `App.tsx` mounts `<Nav/>` + `<Loader/>`; `Home.tsx` is now a
+**5-beat scroll track** (see "SCROLLYTELLING SKELETON" below) whose beat 1
+renders `<MaskField/>` (background, persists across all beats) + centred name/
+tagline + `<HeroInfoTabs/>` (right side, glass). `GlassFilterDefs` is **no
+longer mounted** — see item 3 below, its approach was superseded.
 
 1. **The GPGPU particle mask** — `site/src/components/scene/MaskField.tsx`.
    Our own clean-room build (MIT libs: GPUComputationRenderer, MeshSurfaceSampler,
@@ -412,64 +414,88 @@ tagline + `<HeroInfoTabs/>` (right side, glass).
    `pointer-events-none` so mouse still reaches the WebGL canvas to disturb the
    mask; the tabs re-enable `pointer-events-auto` for themselves.
 
-3. **Liquid-glass info tabs — NEW this session** —
-   `site/src/components/HeroInfoTabs.tsx` + `GlassFilterDefs.tsx` + CSS in
-   `index.css` (`.uses-glass-distort`, `.glass-panel`, `.glass-tab`,
-   `.reveal-fade`). Right side of the hero, per Melvin's request to reuse the
-   "Hero Current" artifact's beat-card layout (eyebrow/heading/body) but in real
-   liquid-glass. Four pill tabs (Now/Building/Wins/Beyond), auto-advance every
-   6s (restarts on manual click), each showing a glass content panel.
-   - **Technique decision (read this before "fixing" the glass):** the reference
-     repo `iyinchao/liquid-glass-studio` (MIT) is a raw WebGL2 engine — SDF
-     rounded-rect + Snell's-law refraction + RGB dispersion + Fresnel + glare,
-     PLUS its own two-pass gaussian-blur render-to-texture pipeline outside
-     Three.js. Porting it whole was judged too high-risk/slow for a
-     time-pressured session (exactly the kind of shader port that's already
-     eaten hours today). Instead: an **SVG `feDisplacementMap` filter**
-     (`GlassFilterDefs.tsx`, id `glass-distort`) chained via
-     `backdrop-filter: url(#glass-distort) blur(...) saturate(...)` — the same
-     technique behind most real "liquid glass" CSS tutorials. It encodes the
-     SAME physical ideas (distortion≈refraction, an inset-shadow colour fringe
-     ≈dispersion, a drifting gradient ≈glare) as real DOM, so text stays
-     readable/accessible — GPU-cheap, no render-target plumbing needed.
-     **If Melvin wants pixel-perfect Apple-grade refraction later, porting the
-     real WebGL2 shader is a legitimate follow-up — MIT license, no legal
-     blocker, just a real time investment.** Reference clone is at
-     `scratchpad/liquid-glass-studio/` (gitignored scratchpad, not in repo).
-   - **Content is REAL, sourced from `C:\Users\mkarupat\Desktop\Otto_sys\
-     NOTES.md`** (Melvin's separate automation-project context file — read it
-     for full bio detail). **Load-bearing rule from that file, followed here:**
+3. **Liquid-glass info tabs** — `site/src/components/HeroInfoTabs.tsx`.
+   Right side of the hero, reusing the "Hero Current" artifact's beat-card
+   layout (eyebrow/heading/body). Four pill tabs (Now/Building/Wins/Beyond),
+   auto-advance every 6s (restarts on manual click), each showing a glass
+   content panel. **The glass RENDERING TECHNIQUE has changed since it was
+   first built — read this in full before touching glass code:**
+
+   **Attempt 1 (superseded, kept as dead code, do not resurrect):**
+   an SVG `feDisplacementMap` CSS filter (`GlassFilterDefs.tsx`, id
+   `glass-distort`, class `.uses-glass-distort`) chained via `backdrop-filter`,
+   animated via a `requestAnimationFrame` loop. Built because a full WebGL port
+   of the reference repo seemed too risky under time pressure. Melvin's verdict
+   after seeing it: **"the liquid glass is shit."** `GlassFilterDefs.tsx` is
+   **still on disk but no longer imported anywhere** (not in `App.tsx`) — dead
+   code, same category as the old `SceneCanvas`/`ParticleField` orphans. Its
+   `.uses-glass-distort` CSS class in `index.css` is likewise unused in any JSX.
+
+   **Attempt 2 (current, live) — a REAL WebGL port:**
+   `site/src/components/scene/LiquidGlassField.tsx` (379 lines), mounted
+   inside `MaskField.tsx`'s `<Canvas>` (after `<MaskParticles/>`, before
+   `<EffectComposer><Bloom/></EffectComposer>` — so Bloom applies to the
+   composited result including the glass). This is a genuine, complete,
+   physically-based port of `iyinchao/liquid-glass-studio`'s shader (MIT
+   license) — confirmed by direct code read, not a stub:
+   - **Full pipeline per frame:** hides the glass quad → renders the R3F scene
+     to an FBO (`sceneFBO`) → two-pass Gaussian blur (vertical then horizontal,
+     separate FBOs) → shows the glass quad again → draws a full-screen shader
+     that reads both the sharp and blurred captures.
+   - **The fragment shader has:** an SDF rounded-rect (`roundedRectSDF`) merged
+     across up to 10 shapes with a metaball `smin` blend (matches the
+     reference's "shapes merge" behaviour), a real per-pixel surface normal via
+     finite differences, **Snell's-law refraction** (`safeAsin`/`thetaI`/
+     `thetaT`/`edgeFactor`), **RGB chromatic dispersion**
+     (`getTextureDispersion`, tri-channel sampling offset), a **Fresnel edge**
+     term, and an **angle-based glare** term (`vec2ToAngle`, `glareConvergence`).
+     This is the real physics, not an approximation.
+   - **Already parameterized to Melvin's exported spec.** His Liquid Glass
+     Studio JSON export (`C:\Users\mkarupat\Downloads\liquid-glass-2026-07-27T
+     22-12-22.json`) is hard-coded into the uniforms almost verbatim: e.g.
+     `u_tint` alpha is `0.0` (tint intentionally OFF — don't "fix" this),
+     `u_shadowExpand 21.08`, `u_glareAngle -45°`. Cross-check the uniform block
+     (top of the file) against the JSON before changing any value — most of
+     the work of matching his spec is already done.
+   - **Shapes come from real DOM elements, not hardcoded positions:** each
+     frame it queries `document.querySelectorAll('.sync-glass-rect')` (applied
+     to both `.glass-tab` and `.glass-panel` in `HeroInfoTabs.tsx`), reads each
+     element's live `getBoundingClientRect()` + computed `border-radius`, and
+     feeds up to 10 of them into the shader's `u_rects`/`u_radii` arrays. This
+     means the glass shapes automatically track wherever the DOM tabs/panel
+     actually are on screen — including through the new scrollytelling beats,
+     though that hasn't been tested since beats were added.
+   - **⚠️ THE ROOT CAUSE OF "IT STILL LOOKS BAD" (found 2026-07-28, read the
+     "KEY DIAGNOSIS" section right below this list) — it is very likely NOT a
+     shader bug.** The shader refracts/blurs whatever the R3F scene actually
+     contains, which right now is: pure black + the particle mask. Real
+     refraction over a black void necessarily renders as a dark, low-contrast
+     rectangle — that is correct optics, not broken code. **Do not "fix" the
+     shader further before the deep-space background exists** — verify the
+     diagnosis by temporarily testing the glass over something visually busy
+     (e.g. the DOM's own colourful content, or a test texture) before assuming
+     more shader tuning is needed.
+   - **Not yet re-verified working after the scrollytelling skeleton landed**
+     (both were built same session, glass wasn't re-screenshotted after). Given
+     it reads live DOM rects every frame it SHOULD keep working across beats,
+     but confirm before trusting that.
+   - Content is REAL, sourced from `C:\Users\mkarupat\Desktop\Otto_sys\
+     NOTES.md` (Melvin's separate automation-project context file — read it for
+     full bio detail). **Load-bearing rule from that file, followed here:**
      Melvin is *actively building* in CS/AI-ML only; astrophysics/neurotech/
-     aerospace/robotics/quantum/filmmaking are **stated interests**, never to be
-     implied as active work. The "Beyond" tab is written to keep that line
-     honest ("fields he reads into, not fields he's building in. Yet.").
-     Tab facts: **Now** = AI/ML @ EMU, GDG Treasurer, CS50P. **Building** =
-     Osiris (touchless CV device control) + Manas (astrophysics sim engine,
-     in-progress). **Wins** = Lingo (SpartaHack 11) + EventsOS (GrizHacks,
-     Oakland University). **Beyond** = the interest list, explicitly framed as
-     curiosity. If Melvin's real facts change, this is the file to update —
-     it's hand-authored content, not fetched.
-   - Verified: real glass distortion + edge fringe + glare visible in browser,
-     tab content readable, auto-advance works, no console errors.
-   - **Made it actually FLUID (same-session follow-up):** Melvin's first look
-     said it "doesn't look like actual liquid glass, needs to look fluid" — the
-     issue was a *static* noise field (no motion = reads as textured blur, not
-     liquid). Fixed:
-     - `GlassFilterDefs.tsx` now has a `<feOffset>` between the turbulence and
-       the displacement map, driven by a `requestAnimationFrame` loop (two
-       out-of-phase sine drifts on dx/dy) — the noise pattern itself now flows
-       across the panel, so the refraction visibly ripples over time. Respects
-       `prefers-reduced-motion` (loop doesn't start).
-     - `.glass-panel::before` — a NEW rotating conic-gradient rim (7s loop via
-       `@property --rim-angle` + CSS `@keyframes`), so the bright light-catch
-       point travels around the edge instead of sitting still — reads as light
-       moving across a curved liquid surface.
-     - `.glass-panel` border-radius changed from a uniform 22px to uneven
-       `30px 26px 32px 24px` — a small asymmetry that reads as "soft blob" over
-       "rectangle with rounded corners".
-     - **Verified the motion is real** (not just present in code): two
-       screenshots 3s apart show the rim highlight at different angular
-       positions and a different internal distortion pattern.
+     aerospace/robotics/quantum/filmmaking are **stated interests**, never
+     implied as active work. The "Beyond" tab keeps that line honest ("fields
+     he reads into, not fields he's building in. Yet."). Tab facts: **Now** =
+     AI/ML @ EMU, GDG Treasurer, CS50P. **Building** = Osiris (touchless CV
+     device control) + Manas (astrophysics sim engine, in-progress). **Wins** =
+     Lingo (SpartaHack 11) + EventsOS (GrizHacks, Oakland University).
+     **Beyond** = the interest list, explicitly framed as curiosity. If
+     Melvin's real facts change, this is the file to update — hand-authored
+     content, not fetched.
+   - The DOM-side `.glass-panel`/`.glass-tab` CSS (shape, hover states,
+     `.reveal-fade` text transitions) in `index.css` is still live and used —
+     only the *distortion rendering* moved from CSS/SVG to WebGL, not the
+     panel layout/shape/interaction styling.
 
 ### ✅ SCROLLYTELLING SKELETON — BUILT 2026-07-28 (~01:30 EDT)
 
@@ -503,34 +529,31 @@ tsc + oxlint clean, no console errors.
 **Also applied:** tagline copy fix "CS, and beyond" → **"Computer Science and
 Beyond"** (was 📋 item 2 below).
 
-### 🔬 KEY DIAGNOSIS — why the liquid glass looks flat (2026-07-28)
+### 🔬 KEY DIAGNOSIS — why the liquid glass STILL looks disappointing (2026-07-28)
 
-**It is not the shader. There is nothing behind the glass to refract.**
-The glass panel sits bottom-right over pure black; the mask is on the left.
-Refraction/dispersion/fresnel are all *distortions of what's behind* — over a
-black void they render as a dark rectangle no matter how physically correct the
-shader is. Compare Melvin's own reference screenshot: that glass sits over a
-vivid photo of buildings, which is exactly why it reads as glass.
+The WebGL port (item 3 above, `LiquidGlassField.tsx`) is a genuine, complete,
+physically-based shader — confirmed by direct code read, not a guess. Melvin
+still called the result disappointing after it was built. **Read this before
+touching the shader again — the likely explanation is optics, not a bug:**
 
-**Consequence: the deep-space background (📋 item 7) is a PREREQUISITE for the
-glass to look good, not a later polish item.** Build background → then tune
-glass. Doing glass first will keep disappointing regardless of effort spent.
+**There is nothing behind the glass to refract.** The glass panel sits
+bottom-right over pure black; the mask is on the left. Refraction, dispersion,
+and Fresnel are all *distortions of what's behind the glass* — over a black
+void they necessarily render as a dark, low-contrast rectangle, no matter how
+correct the shader is. Compare Melvin's own reference screenshot: that glass
+sits over a vivid photo of colourful buildings, which is exactly why it reads
+as glass there.
 
-**Melvin's exported settings are in hand and complete:** `C:\Users\mkarupat\
-Downloads\liquid-glass-2026-07-27T22-12-22.json` — a full Liquid Glass Studio
-control dump that maps 1:1 to the shader uniforms (refThickness 20.79,
-refFactor 1.87, refDispersion 5.25, fresnel range/hardness/factor
-42.5/14.98/20, glare range/hardness/factor/convergence/opposite/angle
-16.5/15.48/90/50/80/-45, blurRadius 1, blurEdge true, shadowExpand 21.08,
-shadowFactor 15, shape 200×200 r80 roundness5, mergeRate 0.05, step 9).
-**Note: `tint.a = 0`** → tint is effectively OFF (pure refraction, no colour
-wash) and `blurRadius` is very low — both deliberate, don't "fix" them.
+**Consequence: the deep-space background (📋 item 7 below) is a PREREQUISITE
+for the glass to look good, not a later polish item.** Build the background
+FIRST, then evaluate/tune the glass against it. Continuing to tune the shader
+before the background exists risks another round of "still doesn't look right"
+for a reason no shader change can fix.
 
-**WIP already in the repo:** `site/src/components/scene/LiquidGlassField.tsx`
-(379 lines) — a real WebGL port with 2-pass Gaussian blur + FBO render targets,
-rendering INSIDE MaskField's canvas, synced to DOM rects via the
-`.sync-glass-rect` class. Compiles clean. It was found UNCOMMITTED and has now
-been committed as a checkpoint.
+**Before spending more time on the shader itself:** sanity-check this
+diagnosis by temporarily pointing the glass at something visually busy (a test
+texture, or the DOM's own colour) — if it suddenly looks right, the diagnosis
+is confirmed and the fix is 100% "add the background", zero shader work needed.
 
 ### ⚠️ NEW ISSUE FOUND — mask takes ~20 seconds to appear
 
@@ -548,9 +571,18 @@ is implemented yet** — capturing it precisely here so nothing is lost across
 the tool switch. Treat this as the priority queue, ahead of the "Immediate NEXT
 steps" list below it (which was written before this feedback landed).
 
-1. **[RESOLVED 2026-07-27] The liquid glass still isn't good enough.** Melvin's exact words: "the
-   liquid glass is shit." The CSS/SVG approach hit its ceiling.
-   **Action Taken:** Completely ported `iyinchao/liquid-glass-studio`'s WebGL2 shader into React Three Fiber (`LiquidGlassField.tsx`). It now uses SDF rounded-rects, Snell's-law refraction, RGB dispersion, real Fresnel, and angular glare over a 2-pass gaussian blurred background texture. The DOM text is retained on top while the WebGL shader matches their exact `getBoundingClientRect()` bounding boxes via uniforms.
+1. **STILL OPEN — the liquid glass isn't good enough, even after a real fix
+   attempt.** Melvin's words, first round: "the liquid glass is shit" (about
+   the CSS/SVG version). **Action taken:** a genuine, complete WebGL2 port of
+   `iyinchao/liquid-glass-studio`'s shader into React Three Fiber
+   (`LiquidGlassField.tsx`) — SDF rounded-rects, Snell's-law refraction, RGB
+   dispersion, real Fresnel, angular glare, over a 2-pass Gaussian-blurred
+   scene capture; DOM text stays on top, WebGL shapes track the DOM elements'
+   real bounding boxes every frame. **Melvin's next-session feedback was still
+   "really disappointing."** Per the KEY DIAGNOSIS section above, the most
+   likely cause is NOT the shader — it's that the shader has nothing but black
+   to refract. **Do not assume the shader itself needs more work until the
+   deep-space background (item 7) exists and has been tried against it.**
 
 2. **Tagline copy:** "CS, and beyond" → **"Computer Science and Beyond"**
    (spelled out, not the CS abbreviation). File: `Home.tsx`.
@@ -625,35 +657,10 @@ steps" list below it (which was written before this feedback landed).
    Vision). Don't invent concepts for these unprompted; this needs a
    references-first pass (same method as the hero) when Melvin is ready for it.
 
-### Immediate NEXT steps (superseded in priority by "📋 NEXT CHANGES" above —
-### that section is the real queue; this one is now mostly historical/context)
-1. ~~Type overlay~~ ✅ shipped this session, but its content is now REVISED by
-   item 2/4 above (tagline copy change, name lockup redesign+reposition) — the
-   mechanism (RevealText, LocalTime) is done, the layout/copy is not final.
-2. ~~Liquid-glass info tabs~~ ✅ shipped, but flagged **not good enough** — see
-   "📋 NEXT CHANGES" item 1 above; likely needs the real WebGL2 port.
-3. **Scrollytelling for the hero — still NOT built.** The ONLY page with
-   scroll, hard rule. Five sections, each its own theme/transition; the mask +
-   name + glass tabs (everything built so far) ARE section 1. Melvin wants to
-   try **anime.js** (not installed) and add elements himself first — **do NOT
-   build sections 2–5 until he explicitly says so** — but section 1 will still
-   need to sit inside whatever scroll-track/pin mechanism (GSAP ScrollTrigger +
-   Lenis, already in the stack) ties it to sections 2–5 later, so keep that in
-   mind if you touch Home.tsx's structure. Note: the new sticky full-height
-   clock sidebar (📋 item 3) is explicitly specced to survive this scroll
-   system, so build it with that in mind even before scrollytelling itself
-   exists.
-4. Then the **other pages** (About/Work/Vision/Contact) — **explicitly still
-   unplanned, per 📋 item 8** — don't invent concepts unprompted.
-5. Mask backlog: push density up via a pre-filtered face-only sub-geometry
-   (fixes both the density cap AND the stray glyph-cluster remnant in one move);
-   the 6-hour model/colour variation cycle (swap cyborg for other CC-licensed
-   masks + shift colour on a clock) — now possibly intersecting with 📋 item 6's
-   "second face" note. **Glowing eyes: Melvin said DROP, not doing it.**
-   Résumé: still open, "the coolest way to display a resume" — completely
-   separate treatment, not started.
-6. Optional glass upgrade: real WebGL2 physical refraction port (see technique
-   decision above) — only if Melvin wants to spend real time on it later.
+### ~~Immediate NEXT steps~~ — RETIRED, folded into "📋 NEXT CHANGES" above
+This block used to duplicate the priority queue and had gone stale (it still
+said scrollytelling wasn't built after it was). Everything still open now
+lives in the single "📋 NEXT CHANGES" list above — check there, not here.
 
 ### Credits owed (must appear on the site + README before shipping)
 - Cyborg "Soulless" 3D model — **Ali Rahimi (@Free-Radical-666), CC BY 4.0**.
@@ -670,7 +677,14 @@ README master key when things change; confirm before deploy/delete; don't ship
 unlicensed code. Repo: private github.com/melvinchirag/Portfolio, branch
 `hero-build` pushed to origin.
 
-### 🎨 Hero direction (2026-07-27) — "look first", references studied
+### ⏹️ FULLY SUPERSEDED — kept for history only, do not treat as live
+The two sub-sections immediately below ("Hero direction — look first" and
+"Open questions") predate the reference study, "The Blend" direction lock, the
+built mask, scrollytelling skeleton, and the glass work — every question in
+them has since been answered and every blocker resolved. They're left as-is
+below only so the reasoning trail isn't lost. **Do not act on anything in them.**
+
+### 🎨 ~~Hero direction — "look first", references studied~~ (RESOLVED)
 
 - Melvin's steer: **get the LOOK right before worrying about font/content.**
 - A field-agnostic hero **prototype ("The Current")** was built as a standalone
@@ -678,22 +692,17 @@ unlicensed code. Repo: private github.com/melvinchirag/Portfolio, branch
   https://claude.ai/code/artifact/dfabfa71-13fe-48d6-a619-825987bf081f · source
   `scratchpad/hero-current.html`. Melvin: *"it's good but it can use massive
   improvements."* Directionally OK, not the target yet.
-- **BLOCKED on Melvin's reference sites.** He said he'd send sites he likes so we
-  can reverse-engineer approach + tool stack + art style and pick a direction;
-  the URLs did not arrive in that message. **First thing: get the links, then
-  deconstruct each into a "pick your direction" menu.**
+- ~~BLOCKED on Melvin's reference sites.~~ **Resolved** — he supplied them, they
+  were studied (see "DIRECTION LOCKED" above), and the resulting direction
+  ("The Blend") is what everything since has been built toward.
 
-### ❓ Open questions to resolve with Melvin
+### ❓ ~~Open questions to resolve with Melvin~~ (BOTH ANSWERED)
 
-1. **"Under construction" launch version?** Melvin leans **NO** — first
-   portfolio, wants to *"start with a bang and shock everyone"* rather than ship
-   a half-built holding page. Not final; revisit if scope balloons.
-2. **The direction itself is still unchosen.** Prior attempt: concept-explorer
-   artifacts (didn't land the decision) → then asking Melvin which sites he
-   likes and *which parts* (more productive). He offered to re-supply those
-   references. **Next step: collect the reference sites + the specific parts he
-   likes, then converge on the abstract/editorial hero concept from those —
-   don't build a guess first.**
+1. **"Under construction" launch version?** ~~Melvin leans NO~~ — **settled: no
+   holding page**, build and ship the real thing directly.
+2. ~~The direction itself is still unchosen.~~ **Resolved — "The Blend" locked**
+   (see "DIRECTION LOCKED" section above), and the hero mask + scrollytelling
+   skeleton + glass tabs are the direct result of that decision.
 
 ---
 
