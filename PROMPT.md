@@ -98,6 +98,9 @@ this project, without Melvin re-explaining anything.
 >     re-explaining. Update `README.md` (the "master key") when a feature lands.
 >
 > **DESIGN GUIDELINES**
+> - 🚫 TURQUOISE / TEAL / CYAN is BANNED for all fonts and UI, site-wide (I find
+>   it cliché and I hate it). Never use it as an accent. Pick something else and
+>   ask me.
 > - Dark only, near-black base, never pure black.
 > - Generous space · one accent colour used rarely · few type weights · one
 >   focal point per screen · one ask per page.

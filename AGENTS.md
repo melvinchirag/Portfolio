@@ -70,6 +70,9 @@ Each page owns its own visual world; there is no global background scene.
 **Only the hero has scrollytelling — hard rule.**
 
 ## 5. Hard rules (full list in `site/CLAUDE.md`)
+- 🚫 **TURQUOISE / TEAL / CYAN IS BANNED** (Melvin, 2026-07-28) for all fonts
+  and UI, site-wide, forever unless he lifts it. Never use `#80fff0` or any
+  teal/cyan accent. See CONTEXT's "HARD BAN" section.
 - Dark only. Near-black base `#06070d`, never pure black. No light mode.
 - Custom GLSL for signature scenes; quality bar is raymarched/volumetric, not
   flat "web art". AI-generated stills may only feed a shader as source, never ship.

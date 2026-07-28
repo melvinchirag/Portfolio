@@ -351,6 +351,20 @@ Bloom softened to tame an over-exposed white blob at the chin.
 
 ---
 
+## 🚫 HARD BAN — TURQUOISE / TEAL / CYAN (set 2026-07-28 ~12:20 EDT)
+Melvin, verbatim: **"I'm officially banning the use of turquoise. Never under
+any circumstances use turquoise for any of the font. It is banned."** He finds
+it cliché and hates it. This applies to ALL fonts and UI chrome, site-wide, on
+every page, forever unless he personally lifts it. The old accent `#80fff0`
+(and relatives `#b9fff2`, `rgba(128,255,240,…)`, `#eafffb`) have been purged
+from nav, name, beat rail, clock, glass-tab CSS. **Do not reintroduce any
+turquoise/teal/cyan accent.** When an accent colour is needed, pick something
+else and confirm with Melvin — do NOT default back to teal.
+- ⚠️ **Still teal, flagged:** the MASK particles are `#80fff0`/`#b9fff2`
+  (`MaskField.tsx`). Left as-is only because the mask's whole future is under
+  review (see replan below). If the mask survives, its colour MUST change off
+  teal too.
+
 ## 📏 STANDING RULE (set 2026-07-28 ~11:32 EDT) — log every change, immediately
 Melvin: **every change from now on gets logged to `CONTEXT.md` right after it
 happens** — not batched at session end. `CONTEXT.md` remains the single log;
@@ -510,6 +524,62 @@ video remains a valid v2 upgrade if the photo fidelity isn't enough once seen).
   Add those next as a follow-up, not a rebuild.
 - `parked/hero-nebula/README.md` updated to note the photos were reused (not
   revived) for this different, more restrained concept.
+
+## 🛑 STOP-AND-REPLAN — Melvin very unhappy, 2026-07-28 ~12:20 EDT
+Melvin reviewed the deep-space + name-lockup build and strongly disliked it
+("absolutely disgusting", "horrible", "vibe coded", "really disappointed").
+Called for a full stop and replan. **Done immediately (this session, verified
+live, committed):** removed the static nebula → black; font → Times New Roman
+(placeholder); name lockup → CENTRED (was wrongly top-right); ALL turquoise
+purged from fonts/UI (now hard-banned, see above); mask vertically centred
+(y=0 — he meant "sitting too low, centre it", NOT "move to the top", which is
+what the previous +0.4 did). Clock rail kept per his request.
+
+**Known issue created by centring the name:** the centred "Melvin Chirag"
+overlaps the left-positioned mask. This is the direct tension between "name in
+the centre" + "mask on the left" — NOT resolved, because it's entangled with
+the unresolved question of whether the mask stays at all (below). Don't
+band-aid the layout until that's decided.
+
+### The strategic questions Melvin raised (NEEDS HIS DECISION — do not build blind)
+1. **The static-image nebula was fundamentally wrong.** It "looks like a static
+   image." What he actually wants (his words): a **real deep-space WebGL
+   environment like the one built for the Manas project** — a 3D deep-space
+   simulation with stars, floating nebulae, planets, depth — so the mask looks
+   like it's genuinely *in* deep space. Not a photo. He said the Manas repo is
+   in a local directory and to browse it. (Manas lives at
+   `C:\Users\mkarupat\Desktop\Manas` per this file's top section.)
+2. **"That's not scrollytelling."** Zoom-into-a-photo ≠ scrollytelling. His
+   definition: as you scroll, **the whole background/scene moves and interacts —
+   a full living scene**, not content fading over a static image. He notes this
+   needs real animation. (True scrollytelling = the scene itself is animated and
+   scroll-driven.)
+3. **The mask might be CUT.** He's seriously considering removing the particle
+   mask entirely: *"unless you can promise me you can create a real deep space
+   environment for the mask to exist, we should not move forward with it."* He
+   floated that **a video / animation for the hero might be better** than the
+   current mask. → OPEN DECISION: keep the mask (only if a real deep-space env
+   is delivered) vs. drop it for a video/animation hero.
+4. **Glass was NOT ignored — he still wants it, done RIGHT.** He's frustrated
+   that removing the info tabs removed the only glass surface, and that the real
+   WebGL glass (matching his JSON export + the reference screenshot) isn't
+   visible. The liquid-glass UI is still a firm requirement — it needs a proper
+   home/surface in the hero, built to his spec. (The `LiquidGlassField` shader
+   IS built and correct — see earlier logs — it just has no shapes to render
+   now. Reintroduce a tasteful glass surface, not the old ugly tabs.)
+5. **Future idea (About or Vision page, NOT the hero):** a deep-space scene with
+   **50-60 small masks**, properly positioned, colours synced to a chosen
+   palette that varies by screen position (e.g. red low, white high, gold mid) —
+   a coordinated field, not one mask. Noted for later; do not build now.
+
+**Recommended replan stance (for the assistant): do NOT keep iterating on the
+current single-mask-on-black hero.** The honest fork is (a) commit to building
+a real animated deep-space WebGL environment (feasible as a STYLISED scene —
+procedural starfield + depth + parallax + volumetric-ish clouds + planets +
+scroll-driven camera; NOT photoreal, that ceiling is real and known), then the
+mask can live in it; or (b) pivot the hero to a video/animation. This is
+Melvin's call — present both honestly with the Manas repo as evidence of what's
+achievable. Study `Manas` before promising anything.
 
 ## 🤝 HANDOFF — continue here with any AI (state as of 2026-07-28 ~11:19 EDT)
 
