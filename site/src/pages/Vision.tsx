@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
 
 const INTERESTS = [
-  'Robotics',
-  'Neurotech',
+  'Mathematics & Logic',
+  'Neural Networks',
+  'Neuroscience',
+  'Memory Architecture',
   'Astrophysics',
-  'Quantum Computing',
   'Aerospace',
-  'Filmmaking',
 ]
 
 export function Vision() {
@@ -31,20 +31,19 @@ export function Vision() {
           <div>
             <h2 className="mb-4 text-xs tracking-[0.2em] text-white/50 uppercase">The Objective</h2>
             <p className="text-xl leading-relaxed font-light text-white/90 md:text-2xl">
-              Building toward an AI Engineering role to push the boundaries of what models can do.
+              Building toward true Artificial General Intelligence by bridging the gap between logic and physical memory.
             </p>
             <p className="mt-4 text-sm leading-relaxed text-white/50">
-              Targeting impact at mission-driven organizations like Anthropic, OpenAI, and Google DeepMind.
+              My life's mission is to create AGI that possesses true intelligence, rather than just contextual intelligence.
             </p>
           </div>
 
           <div>
-            <h2 className="mb-4 text-xs tracking-[0.2em] text-white/50 uppercase">Active Focus vs. Curiosity</h2>
+            <h2 className="mb-4 text-xs tracking-[0.2em] text-white/50 uppercase">The Missing Link</h2>
             <p className="text-sm leading-relaxed text-white/70">
-              My active building and engineering work is strictly focused on{' '}
-              <span className="text-white font-medium">Computer Science and AI/ML</span>.
+              Present AI, heavily reliant on transformers, is fundamentally limited. It lacks true, grounded intelligence. I believe the missing piece is <span className="text-white font-medium">Memory</span>—specifically, how memory maps physically in the brain, how it interacts with decision-making, and how it anchors context over time.
               <br /><br />
-              However, I believe the best engineers are intensely curious across disciplines. The fields below are where I read, study, and draw inspiration from—they form the context of my work, even if I'm not building in them yet.
+              My work focuses on the intersection of deep neural networks, mathematics, and neuroscience to solve this fundamental architecture problem.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {INTERESTS.map((interest) => (

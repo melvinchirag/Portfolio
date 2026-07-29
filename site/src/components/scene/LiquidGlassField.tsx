@@ -286,24 +286,24 @@ export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
       u_resolution: { value: new THREE.Vector2(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio) },
       u_dpr: { value: window.devicePixelRatio },
       // Glass properties based on provided JSON
-      u_refThickness: { value: 58.0 }, // JSON is 20.79 for 200px shapes; scaled up for our large DOM cards so the refracting glass band is proportional (looks like the reference, not a hairline rim)
-      u_refFactor: { value: 1.87 },
-      u_refScale: { value: 4.0 }, // lens bend strength (tuning knob, not in JSON)
-      u_refDispersion: { value: 5.25 },
-      u_refFresnelRange: { value: 42.5 },
-      u_refFresnelHardness: { value: 14.98 },
+      u_refThickness: { value: 50.66 },
+      u_refFactor: { value: 1.83 },
+      u_refScale: { value: 4.0 },
+      u_refDispersion: { value: 5.49 },
+      u_refFresnelRange: { value: 34.79 },
+      u_refFresnelHardness: { value: 21.48 },
       u_refFresnelFactor: { value: 20.0 },
-      u_refDispersionVal: { value: 5.25 },
-      u_glareRange: { value: 16.5 },
+      u_refDispersionVal: { value: 5.49 },
+      u_glareRange: { value: 24.0 },
       u_glareHardness: { value: 15.48 },
-      u_glareFactor: { value: 90.0 },
+      u_glareFactor: { value: 30.6 },
       u_glareConvergence: { value: 50.0 },
-      u_glareOppositeFactor: { value: 80.0 },
-      u_glareAngle: { value: -45.0 * (Math.PI / 180.0) },
-      u_shadowExpand: { value: 21.08 },
+      u_glareOppositeFactor: { value: 56.0 },
+      u_glareAngle: { value: -18.0 * (Math.PI / 180.0) },
+      u_shadowExpand: { value: 15.3 },
       u_shadowFactor: { value: 15.0 },
       u_shadowPosition: { value: new THREE.Vector2(0, -10) },
-      u_tint: { value: new THREE.Vector4(8/255, 102/255, 165/255, 0.0) }, // alpha 0 per JSON
+      u_tint: { value: new THREE.Vector4(8/255, 102/255, 165/255, 0.0) },
       u_glassOnly: { value: 0.0 },
       // DOM rects tracking
       u_numRects: { value: 0 },
@@ -317,8 +317,8 @@ export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
 
   // Update sizes on resize
   useEffect(() => {
-    vBlurMat.uniforms.v.value = 2.0 / size.height // blur radius tweak
-    hBlurMat.uniforms.h.value = 2.0 / size.width
+    vBlurMat.uniforms.v.value = 1.0 / size.height
+    hBlurMat.uniforms.h.value = 1.0 / size.width
     glassMat.uniforms.u_resolution.value.set(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
     glassMat.uniforms.u_dpr.value = window.devicePixelRatio
   }, [size, vBlurMat, hBlurMat, glassMat])

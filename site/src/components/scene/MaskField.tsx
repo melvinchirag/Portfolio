@@ -259,7 +259,7 @@ export function MaskParticles() {
       undefined,
       (err) => console.error('[MaskField] model load error:', err),
     )
-    return () => draco.dispose()
+    return () => { draco.dispose() }
   }, [])
 
   // Build everything once we have geometry + renderer.
@@ -303,7 +303,7 @@ export function MaskParticles() {
     // GPU sim
     const gpu = new GPUComputationRenderer(SIZE, SIZE, gl)
     const homeTex = gpu.createTexture()
-    homeTex.image.data.set(homeData)
+    homeTex.image.data!.set(homeData)
     const velTex = gpu.createTexture() // starts at 0
 
     const posVar = gpu.addVariable('uCurrentPosition', simPosition, homeTex)
@@ -313,7 +313,7 @@ export function MaskParticles() {
 
     // clone the home texture so it's a stable "original" reference
     const homeRef = gpu.createTexture()
-    homeRef.image.data.set(homeData)
+    homeRef.image.data!.set(homeData)
     velVar.material.uniforms.uHome = { value: homeRef }
     velVar.material.uniforms.uMouse = { value: new THREE.Vector3(999, 999, 999) }
     velVar.material.uniforms.uMouseSpeed = { value: 0 }

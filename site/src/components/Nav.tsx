@@ -13,7 +13,7 @@ const pages = [
 ]
 
 export function Nav() {
-  const [scrolled, setScrolled] = useState(false)
+  const [, setScrolled] = useState(false)
   const [hidden, setHidden] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const lastY = useRef(0)

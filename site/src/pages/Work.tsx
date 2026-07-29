@@ -3,10 +3,10 @@ import { useEffect, useState } from 'react'
 const FLAGSHIPS = [
   {
     title: 'Manas',
-    role: 'Creator',
+    role: 'Creator & Lead Developer',
     status: 'In Progress',
-    description: 'An astrophysics simulation engine featuring a pulsar model and black-hole environment.',
-    context: 'Manas is built to render true-to-life physics simulations of extreme astrophysical phenomena. Still in active development, it leverages custom shaders to visualize relativistic effects and gravitational lensing around a black hole without compromising real-time performance.',
+    description: 'An AGI simulation engine designed to evolve intelligence through interacting simulated agents.',
+    context: 'Manas is a stepping stone toward true Artificial General Intelligence. It creates a simulated environment where intelligent agents (simulated humans) can interact, learn, and evolve. The goal is to study how memory and complex interactions drive the emergence of general intelligence.',
   },
 ]
 
@@ -31,7 +31,7 @@ const HACKATHONS = [
 
 const LEADERSHIP = [
   {
-    role: 'Treasurer',
+    role: 'Executive Member & Treasurer',
     org: 'Google Developer Group @ EMU',
   },
   {
