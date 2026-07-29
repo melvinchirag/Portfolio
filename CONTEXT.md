@@ -14,6 +14,276 @@ today's mask/glass work — do not trust it on those topics yet**).
 
 ---
 
+## ⚠️ [AGY] SESSION LOG (2026-07-28 ~16:50 EDT) — FAILURE REPORT
+**What AGY Failed to Accomplish:**
+- **Liquid Glass is completely broken and not showing.** The `LiquidGlassField` was extracted from Home to `GlobalScene.tsx` in an attempt to make it work globally and refract the video, but it is currently invisible/broken on the About page. 
+- **Video Background is completely broken and not showing.** Attempted to implement a scrollytelling video background (`about-bg.mp4`) inside WebGL so the glass could refract it. Tried 5 different technical implementations (ScreenQuad, useAspect, viewport scaling, HTML fallback, custom THREE.Texture) and failed. The video is pitching black, failing to load, or choking the browser decoder due to 60fps scroll-scrubbing.
+
+**What Else Was Attempted (UI Polish):**
+- Removed "The Past" eyebrow text from `About.tsx`.
+- Removed the glass background styling from `Nav.tsx` so it stays transparent on scroll.
+
+**Handoff to Claude (Current State):**
+- The site currently has **NO working video background** and **NO working liquid glass** on the About page. Both are fundamentally broken and missing from the screen.
+- The next model (Claude) needs to take over the video/glass implementation. Recommended path: decoupling the video scrubbing (e.g., using a pre-rendered image sequence or a non-scrubbing video) and fully repairing the `LiquidGlassField` render pipeline so the glass boxes reappear.
+
+## ✅ [CLAUDE] About video + glass — FIXED 2026-07-28 ~17:25 EDT (dev on :5174)
+Both AGY failures are resolved and verified live in-browser (video + glass +
+content coexisting on `/about`, no console errors, tsc + oxlint clean).
+
+**Root causes found (by isolation testing in the browser, not guessing):**
+1. **Video was scroll-scrubbing** — the old `VideoBackground` set
+   `video.currentTime` every frame to scrub the mp4 to scroll position. Seeking
+   a 23MB compressed video ~60×/s thrashes the browser decoder → black. Also no
+   `!video.seeking` guard, and the plane was under-scaled (`viewport*1.2`) so it
+   couldn't fill a plane sitting at z=-1.
+2. **Glass painted the whole screen black** — this was the real "broken glass".
+   Isolation proved it: glass OFF → video shows; force-output raw `u_bg` → black;
+   swap video for a solid-red plane → red IS captured. Conclusion: the glass's
+   scene-capture (`gl.render(scene)` → FBO) works for normal meshes but **will
+   not sample a `VideoTexture`** in that manual pass (forcing `needsUpdate` every
+   frame did NOT fix it — it's not an upload-timing issue). This also explains the
+   long-standing "glass looks black/disappointing" history: the capture only ever
+   grabbed the CLEAR COLOR, never scene geometry (the old bright-blue test only
+   proved it captures the clear colour).
+
+**The fix (architectural — how the original liquid-glass reference works anyway):**
+- **Video now just PLAYS** (looping `THREE.VideoTexture`, muted autoplay) instead
+  of scrubbing. Rock-solid, still moving behind the glass. Owned by `GlobalScene`
+  (`useAboutVideoTexture`) so the SAME texture feeds both the plane and the glass.
+- **Glass refracts the video texture DIRECTLY** (bypasses the broken scene
+  capture). `LiquidGlassField` now takes an optional `bgTexture` prop; when set it
+  blurs + refracts that texture and runs in a new **glass-only alpha mode**
+  (`u_glassOnly`) — the quad draws ONLY the card shapes and is transparent
+  elsewhere, so the real dimmed video plane shows through and a glass failure can
+  never black out the page again. No `bgTexture` → original scene-capture path
+  (unchanged, for Home).
+- Files: `VideoBackground.tsx` (now exports `VideoPlane`, a pure textured plane),
+  `GlobalScene.tsx` (owns the video texture + wiring), `LiquidGlassField.tsx`
+  (bgTexture prop + `u_glassOnly` shader mode).
+
+**Update ~17:55 EDT — Melvin's specs applied (verified live):**
+- **Scroll-scrub scrollytelling — FORWARD ONLY** (Melvin changed his mind after
+  seeing forward+rewind: "make it only move in one direction"). The driving
+  progress is now a monotonic ratchet (`maxProgress`) so scrolling down advances
+  the video and scrolling back up HOLDS it (no rewind). Implemented in
+  `GlobalScene.useAboutVideoTexture`: currentTime driven by `window.scrollY`,
+  eased, with a `!video.seeking` guard so it does NOT thrash the decoder (that
+  guard is the fix that makes scrubbing viable where the old every-frame lerp
+  failed). Confirmed in-browser: scroll up holds the frame, does not rewind.
+  - ⚠️ **Scrub feels choppy — accepted, NOT a code bug.** Melvin: "the video is
+    weird and the scroll is not working properly… I think it might be an issue
+    with how the video was recorded. That's okay we can leave it like that." The
+    clip is encoded with sparse keyframes, so seeking to arbitrary times is
+    inherently janky. The WIN Melvin cares about is that **video + liquid glass
+    now coexist** (AGY's failed job). Full teardown of how/why + the AGY
+    post-mortem is written up in `docs/LESSONS.md` §10 (per Melvin's request to
+    log it for AGY).
+- **Trim** — first 3s and last 3s trimmed (`TRIM=3`, range `[3, dur-3]`); skips the
+  intro/play-button frame and the tail.
+- **Glass rewritten to the JSON as a clear liquid lens** — the inside-glass branch
+  now refracts the SHARP background in the clear centre and blends to the blurred
+  copy only at the refracting rim (`blurEdge`), with chromatic dispersion + Fresnel
+  rim + directional glare, all from the JSON uniforms. Added `u_refScale` (bend
+  knob) and scaled `u_refThickness` 20.79→58 (the JSON value was for 200px editor
+  shapes; our DOM cards are ~700px wide so the band must scale up to stay
+  proportional to the reference).
+
+**Honest status / still to tune:**
+- The glass now clearly reads as a lit glass panel (rim + rounded glass corners +
+  edge refraction) but the **refraction drama is limited by the video content**:
+  a smoky low-contrast red haze has few hard edges to bend, so refraction shows
+  far less than Melvin's high-contrast building reference. This is content, not a
+  shader bug. Options open with Melvin: push glare/rim harder for an obvious
+  "glass tile" look regardless of content; add a whole-shape magnification; or use
+  higher-contrast footage. Do NOT tune further blind — get his direction (LESSONS #1).
+- Video brightness/text contrast (`dim=0.55` + Bloom) still a tuning item.
+
+**[CLAUDE] Update ~20:45 EDT — new About footage swapped in (Melvin):**
+- Melvin replaced the video. Gotcha: he saved it as `about-pg.mp4` (typo for
+  `-bg`), while the code loads `/about-bg.mp4` (which had become a stray 0-byte
+  file). Fix = renamed `about-pg.mp4` → `about-bg.mp4` (209 MB); **no code
+  change** (path was already correct). Verified live on :5175.
+- **The glass now clearly reads as liquid glass.** The new footage is
+  high-contrast (astronaut + detailed rocky asteroids in dark space), so the
+  refraction + chromatic dispersion are visibly bending hard edges at the card
+  boundaries — exactly the "needs edges behind it" point from before. Same shader,
+  same JSON, better content. This resolves the "glass looks subtle" concern.
+- ⚠️ **209 MB is far too heavy for production** — a real visitor would wait a long
+  time and scrubbing buffers slowly. Before ship: compress/transcode (H.264/H.265
+  or AV1, target < ~15–25 MB) AND re-encode with DENSE keyframes so the scroll
+  scrub is smooth (fixes the earlier choppiness too). Flag for the polish pass.
+
+**[CLAUDE] Update ~21:20 EDT — scroll fixes + video compressed (Melvin: "fix these now"):**
+- **Scrub reverted to BIDIRECTIONAL** (Melvin changed his mind again): scroll down
+  = forward, scroll up = rewind. Removed the monotonic ratchet; lighter easing
+  (0.35) so the video tracks scroll more closely. `GlobalScene.useAboutVideoTexture`.
+- **Filler content added to `About.tsx`** so the page is ~3× taller (a "The
+  threads" section: Storytelling/Curiosity/Practice/People/Now + closing spacer,
+  all placeholder, labelled as such). This gives the video room to scrub end-to-end
+  AND shrinks each per-scroll seek (smoother). All new cards use `.sync-glass-rect`.
+- **Glass shader fixed for many cards** — it caps at 10 shapes; now it only feeds
+  the shader the ON-SCREEN cards (viewport filter in `LiquidGlassField` useFrame),
+  so glass rides whichever cards are visible instead of the first 10 in DOM order.
+- **✅ VIDEO COMPRESSED (the real lag fix) — Melvin approved installing ffmpeg.**
+  - Installed **ffmpeg** via `winget` (Gyan.FFmpeg 8.1.2). Binary at
+    `%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg_...\ffmpeg-8.1.2-full_build\bin\`.
+  - The source was **3840×2160 (4K!)**, 30fps, 20.9s → that's why it was 209 MB.
+  - Original backed up OUT of `public/` to `Portfolio/video-source/about-bg-source.mp4`
+    (so the 209 MB file is NOT served/deployed). Kept as the master.
+  - Transcoded to `public/about-bg.mp4`: **720p, H.264 high, CRF 27, `-g 6` dense
+    keyframes (every 6 frames → any scrub lands near a keyframe = fast seeks),
+    `+faststart`, audio stripped** → **4.6 MB** (45× smaller). Loads instantly,
+    scrubs smoothly. Verified frames via ffmpeg extraction + in-browser pixel probe.
+  - Re-encode command is in git history / can be re-run from the source master.
+- **Note on the footage:** the clip has genuinely DARK stretches (t≈3-5 opening and
+  t≈13-18 are mostly black space; t≈8 is the bright astronaut hero shot). So some
+  scroll positions land on near-black frames — that's the content, not a bug. If
+  Melvin wants it bright throughout, that's a footage/color-grade choice.
+- Debug note: the automation browser window kept COLLAPSING to a sliver (known env
+  quirk), which broke the scroll→video math and produced false "all black"
+  screenshots mid-debug. Confirmed working once the window held full size.
+
+---
+
+# [CLAUDE] PLAYBOOK — Scroll-driven video + liquid glass on a page (replicable)
+*Written by Claude, 2026-07-28, at Melvin's request so this exact process can be
+re-run (e.g. with AGY) on another page. This is the authoritative "how it was
+built"; the dated update notes above are the running trail that led here.*
+
+## The goal, in one line
+A page whose **background is a video that plays as you scroll** (scrollytelling),
+with **liquid-glass cards floating over it that actually refract the video** —
+all inside one WebGL canvas, performant enough to ship.
+
+## The mental model (read this first — it's the whole thing)
+There is ONE shared `<Canvas>` for the site (`GlobalScene.tsx`), mounted above the
+router so it persists across pages. Inside it, three things stack, back to front:
+
+1. **A video plane** at `z = -1` — the moving background.
+2. **The page's DOM** (`z-10`, normal HTML) — headings, the timeline, the cards.
+   The cards are nearly transparent (`bg-white/[0.02]`), so you SEE the WebGL
+   through them.
+3. **A liquid-glass quad** (full-screen, in the canvas) that reads where the DOM
+   cards are and draws a refraction of the video *inside those card rectangles*.
+
+The trick that makes glass "sit on" HTML cards: the glass doesn't know about the
+cards as objects — every frame it reads the cards' real on-screen positions from
+the DOM (`getBoundingClientRect()` of every `.sync-glass-rect`) and feeds those
+rectangles to the shader. So the WebGL glass and the HTML card are always locked
+together, even as the page scrolls.
+
+## Part 1 — the video, inside WebGL (not a plain <video> behind the page)
+It HAS to be a texture in the Three.js scene, because the glass refracts by
+sampling a texture — it can't bend a DOM element sitting behind the canvas.
+- `GlobalScene.tsx → useAboutVideoTexture(active)` creates a detached
+  `<video>` element and wraps it in `THREE.VideoTexture` (colorSpace = sRGB).
+  It lives OUTSIDE the canvas (a texture is a plain object) so the SAME texture
+  can be handed to both the plane and the glass.
+- `VideoBackground.tsx → VideoPlane` renders that texture on a plane at `z=-1`,
+  sized with trig to exactly fill the camera frustum at that depth (a plane
+  behind the z=0 focus plane must be scaled UP or you get black borders).
+- Every frame (`SceneContents` `useFrame`) we set `videoTexture.needsUpdate =
+  true` so the GPU copy stays in sync with the playing/seeking video.
+
+## Part 2 — the liquid glass refracting the video (the key integration)
+`LiquidGlassField.tsx` is a ported physically-based glass shader (SDF rounded
+rects + Snell refraction + RGB dispersion + Fresnel + glare, all driven by
+Melvin's exported JSON uniforms). Two changes made it work over the video:
+
+1. **Feed the video texture straight in — do NOT capture the scene.**
+   The generic version refracts by rendering the whole 3D scene to an FBO and
+   bending that. That capture **cannot sample a `VideoTexture`** (proven by
+   isolation — see method below). So the component now takes a `bgTexture` prop:
+   when present, it skips the scene capture entirely and uses the video texture
+   directly as `u_bg`, blurring that same texture for the frosted-edge copy
+   (`u_blurredBg`). This is also how the original liquid-glass reference works —
+   it refracts a *background texture*, never a captured 3D scene.
+2. **"Glass-only" alpha mode (`u_glassOnly`).** The glass quad is full-screen.
+   In this mode it outputs **transparent everywhere except inside the card
+   shapes**, so the real (dimmed) video plane shows through untouched and the
+   quad only *adds* the refraction on the cards. Consequence: if the glass ever
+   breaks, it can't black out the page — worst case the cards just look flat.
+- The look: inside each card the shader refracts the SHARP video in the clear
+  centre and blends to the blurred copy only at the rim (`blurEdge`), so it reads
+  as a clear liquid lens with a frosted, dispersing edge — not a frosted panel.
+  Refraction is only visible over content with hard EDGES (why it looked weak
+  over the old smoky-red clip and great over the asteroid clip).
+
+## Part 3 — scroll = the video timeline (the scrollytelling)
+In `useAboutVideoTexture`, a `requestAnimationFrame` loop maps scroll to time:
+```
+progress = clamp(window.scrollY / (scrollHeight - innerHeight), 0, 1)   // 0..1
+target   = TRIM + progress * (duration - 2*TRIM)                        // trims 3s each end
+smooth  += (progress - smooth) * 0.35                                   // light easing
+if (!video.seeking && |video.currentTime - target| > 0.033)            // THE GUARD
+    video.currentTime = target
+```
+- **Bidirectional:** scroll down raises `progress` → time goes forward; scroll up
+  lowers it → the video rewinds. (A one-direction variant just ratchets `progress`
+  with `Math.max` so it never decreases.)
+- **`!video.seeking` is load-bearing.** It refuses to issue a new seek until the
+  last one finished. Without it, setting `currentTime` ~60×/s piles up seeks and
+  thrashes the decoder to BLACK (this was AGY's failure and the earlier bug).
+- The video is never `play()`-ed; scroll drives `currentTime`. First/last 3s are
+  trimmed so you never see the intro/play-button frame or the tail.
+
+## Part 4 — performance (the difference between "toy" and "shippable")
+Scrubbing quality is 90% about the FILE, not the code:
+- The source was **4K, 209 MB** → seeks fetched huge byte-ranges → lag + black.
+- Re-encode with ffmpeg (installed via winget) to a small, scrub-friendly file:
+```
+ffmpeg -i source.mp4 -vf "scale=1280:720:flags=lanczos" -c:v libx264 \
+  -profile:v high -pix_fmt yuv420p -crf 27 \
+  -g 6 -keyint_min 6 -sc_threshold 0 \
+  -preset veryfast -movflags +faststart -an  out.mp4
+```
+  → **4.6 MB (45× smaller).** The knobs that matter for SCRUBBING:
+  - `-g 6 -keyint_min 6 -sc_threshold 0` = a keyframe every 6 frames. Seeking
+    only has to decode from the nearest keyframe, so any scrub lands fast. (Denser
+    = smoother scrub but bigger file. `-g 1` = every frame a keyframe = perfectly
+    smooth but large.)
+  - `-movflags +faststart` = moves the index to the front so playback can start
+    before the whole file downloads.
+  - `scale=1280:720` + `-an` (drop audio) = the bulk of the size win.
+- Keep the master OUT of `public/` (it would ship). Original is in
+  `Portfolio/video-source/`; only the 4.6 MB file is in `public/`.
+
+## The debugging method that actually found the bug (do THIS, not guessing)
+When the composited page went fully black, I did NOT keep tweaking the shader.
+I **isolated one layer at a time**:
+1. Turned the glass OFF → the video appeared → so the glass was the culprit.
+2. Forced the shader to output its raw capture → near-black → the *capture* was empty.
+3. Swapped the video for a solid-red plane → the capture showed red → capture
+   works for normal meshes, but silently NOT for a `VideoTexture`.
+That took minutes and pointed straight at "don't capture — feed the texture in."
+Guessing ("try another Texture approach") is what cost AGY an afternoon.
+
+## Replication checklist (to do this on another page, e.g. with AGY)
+1. Put the target video in the shared Canvas as a `VideoTexture` on a full-frame
+   plane; set `needsUpdate` each frame. Own the texture above the canvas so it can
+   be shared.
+2. Give the glass component the video texture via `bgTexture`; run it in
+   `u_glassOnly` mode so it only draws the card shapes.
+3. Mark the page's glass cards with `class="sync-glass-rect"` and keep them nearly
+   transparent so the WebGL shows through. (Shader holds 10 shapes; it auto-picks
+   the on-screen ones.)
+4. Drive `video.currentTime` from scroll in a rAF loop WITH the `!video.seeking`
+   guard. Trim the ends. Make the page tall enough that the whole video fits the
+   scroll (also makes each seek smaller = smoother).
+5. Compress the video (ffmpeg command above) — dense keyframes + faststart + 720p.
+   This is non-negotiable for smooth scrubbing.
+6. Verify by ISOLATING layers, and check on a full-size window (a collapsed
+   automation window breaks the scroll math and lies to you).
+
+— Claude 🤖 (Opus 4.8), 2026-07-28. Files touched: `GlobalScene.tsx`,
+`VideoBackground.tsx` (`VideoPlane`), `LiquidGlassField.tsx` (`bgTexture` +
+`u_glassOnly` + `u_refScale`), `About.tsx` (filler + `.sync-glass-rect` cards).
+- Architecture note: the single global `<Canvas>` (`GlobalScene`) + About video
+  was Melvin's deliberate test, not AGY improvising — he confirmed it. Still
+  collides with the doc rule "each page owns its own world / only hero scrolls";
+  revisit whether this stays.
+
 ## ✅ Working directory issue — RESOLVED 2026-07-24
 
 **Original problem (2026-07-23):** this project's conversation was started
@@ -751,6 +1021,15 @@ longer mounted** — see item 3 below, its approach was superseded.
      only the *distortion rendering* moved from CSS/SVG to WebGL, not the
      panel layout/shape/interaction styling.
 
+### ✅ NATIVE FOUNDATIONS BUILT (About, Work, Vision, Contact) — 2026-07-28
+
+Built out the 4 inner pages natively using React + Tailwind, replacing the placeholder `Chapter.tsx`. This is the structural content pass — WebGL interactions / scrollytelling for these pages are reserved for later.
+
+1. **`/about`**: Vertical milestone timeline (Kuwait → India → Michigan).
+2. **`/work`**: Case study cards (Osiris, Manas), Hackathon wins (Lingo, EventsOS), and Leadership roles. Includes a placeholder for the "3D skills constellation".
+3. **`/vision`**: Manifesto text for AI Engineering role + Interests section making clear distinction between active building and curiosity. Placeholder left for future Navier-Stokes sim.
+4. **`/contact`**: Link layout (Email, LinkedIn, GitHub, Resume) looping back to home.
+
 ### ✅ SCROLLYTELLING SKELETON — BUILT 2026-07-28 (~01:30 EDT)
 
 The hero now actually scrolls. Structure only — beats 2-5 are labelled
@@ -1316,10 +1595,10 @@ Melvin's photo. The `aTarget` mechanism is already wired for it.
 - [ ] Identity line (the hero currently ships a visible placeholder)
 - [ ] "Who I am" — 3–4 sentences, real voice
 - [ ] A portrait photo to feed the particle system
-- [ ] Featured projects: Manas + 2 — name, one-liner, stack, role, links
-- [ ] 6–10 About milestones (Kuwait → India → Michigan)
+- [x] Featured projects: Manas + 2 — name, one-liner, stack, role, links
+- [x] 6–10 About milestones (Kuwait → India → Michigan)
 - [ ] Skills grouped into constellations
-- [ ] Vision: the manifesto (bullets are fine)
+- [x] Vision: the manifesto (bullets are fine)
 - [ ] Résumé PDF (nav links `/resume.pdf`, which does not exist yet), email,
       socials, domain name
 

@@ -59,6 +59,7 @@ uniform vec2 u_resolution;
 uniform float u_dpr;
 uniform float u_refThickness;
 uniform float u_refFactor;
+uniform float u_refScale;
 uniform float u_refDispersion;
 uniform float u_refFresnelRange;
 uniform float u_refFresnelHardness;
@@ -73,6 +74,11 @@ uniform float u_shadowExpand;
 uniform float u_shadowFactor;
 uniform vec2 u_shadowPosition;
 uniform vec4 u_tint;
+// When 1.0, everything OUTSIDE the glass shapes is output fully transparent so the
+// real background plane (e.g. the About video) shows through untouched, and the
+// quad only contributes refraction inside the shapes. When 0.0 (scene-capture
+// mode) the quad is opaque and reproduces the whole captured scene.
+uniform float u_glassOnly;
 
 uniform int u_numRects;
 uniform vec4 u_rects[10]; // x, y, width, height (in CSS pixels, from center of screen)
@@ -81,9 +87,10 @@ uniform float u_radii[10]; // corner radii
 varying vec2 v_uv;
 
 const float PI = 3.14159265359;
-const float N_R = 1.0 - 0.02;
-const float N_G = 1.0;
-const float N_B = 1.0 + 0.02;
+uniform float u_refDispersionVal;
+#define N_R (1.0 - u_refDispersionVal * 0.01)
+#define N_G 1.0
+#define N_B (1.0 + u_refDispersionVal * 0.01)
 
 // SDF functions
 float roundedRectSDF(vec2 p, vec2 center, float width, float height, float cornerRadius) {
@@ -170,58 +177,57 @@ void main() {
 
   float merged = mainSDF(v_uv); // SDF distance in pixels
   vec4 outColor = vec4(0.0);
+  float outA = 1.0; // final alpha (dropped to 0 outside the glass in glass-only mode)
 
   if (merged < 0.0) {
-    // Inside the glass
+    // ---- Inside the glass: refract the background like a liquid lens ----
     vec2 normal = getNormal(v_uv);
-    float nmerged = -merged; // Positive distance inside
-    
-    // Snell's Law refraction
-    float x_R_ratio = 1.0 - nmerged / u_refThickness;
+    float nmerged = -merged; // positive depth inside the shape
+
+    // Snell's-law bend: strong near the thin rim, ~0 across the flat centre —
+    // this is what makes the centre read as CLEAR glass and the edges as a lens.
+    float x_R_ratio = clamp(1.0 - nmerged / u_refThickness, 0.0, 1.0);
     float thetaI = safeAsin(pow(x_R_ratio, 2.0));
-    float thetaT = safeAsin(1.0 / u_refFactor * sin(thetaI));
-    float edgeFactor = -1.0 * tan(thetaT - thetaI);
-    if (nmerged >= u_refThickness) {
-      edgeFactor = 0.0;
-    }
-    
+    float thetaT = safeAsin((1.0 / u_refFactor) * sin(thetaI));
+    float edgeFactor = -tan(thetaT - thetaI);
+    if (nmerged >= u_refThickness) edgeFactor = 0.0;
+
+    // Displace the sample point along the surface normal so the background
+    // visibly bends/magnifies through the glass (the "liquid" read). Scaled in
+    // pixels then converted to UV, so it is resolution-independent. u_refScale is
+    // the single tuning knob for how hard the lens bends.
+    vec2 offset = (normal * edgeFactor * u_refThickness * u_refScale) / u_resolution;
+
+    // blurEdge (JSON): the centre samples the SHARP background (clear), and only
+    // the refracting rim blends toward the blurred copy — a frosted rim, clear
+    // core. Chromatic dispersion splits R/G/B along the same offset.
+    float edgeBlur = clamp(edgeFactor * 5.0, 0.0, 1.0);
+    outColor = getTextureDispersion(u_bg, u_blurredBg, edgeBlur, offset, u_refDispersion);
+
+    // Optional glass tint (alpha is 0 in the JSON → this is a no-op, kept for spec parity).
+    outColor = mix(outColor, vec4(u_tint.rgb, 1.0), u_tint.a);
+
+    // Fresnel rim — a bright hairline where the glass turns away at the edge.
     float fresnelFactor = clamp(
       pow(1.0 + merged / 1500.0 * pow(500.0 / u_refFresnelRange, 2.0) + u_refFresnelHardness, 5.0),
       0.0, 1.0
     );
-    
+    outColor.rgb += vec3(fresnelFactor * (u_refFresnelFactor * 0.01));
+
+    // Directional glare highlight (angle straight from the JSON).
     float glareGeoFactor = clamp(
       pow(1.0 + merged / 1500.0 * pow(500.0 / u_glareRange, 2.0) + u_glareHardness, 5.0),
       0.0, 1.0
     );
-
-    if (edgeFactor <= 0.0) {
-      outColor = texture2D(u_blurredBg, v_uv);
-      // Tint center
-      outColor = mix(outColor, vec4(u_tint.rgb, 1.0), u_tint.a * 0.8);
-    } else {
-      float glareAngle = (vec2ToAngle(normal) - PI / 4.0 + u_glareAngle) * 2.0;
-      float glareFarside = 0.0;
-      if (glareAngle > PI * 1.5 && glareAngle < PI * 3.5 || glareAngle < -PI * 0.5) {
-        glareFarside = 1.0;
-      }
-      glareAngle = clamp(cos(glareAngle), 0.0, 1.0);
-      float glareIntensity = pow(glareAngle, u_glareConvergence);
-      
-      vec2 offset = -normal * edgeFactor * 0.05;
-      vec4 blurPixel = getTextureDispersion(u_blurredBg, u_blurredBg, 1.0, offset, u_refDispersion);
-      outColor = blurPixel;
-      
-      // Tint edge
-      outColor = mix(outColor, vec4(u_tint.rgb, 1.0), u_tint.a * 0.5);
-      
-      // Fresnel
-      outColor = mix(outColor, vec4(1.0), fresnelFactor * u_refFresnelFactor * 0.7);
-      
-      // Glare
-      float finalGlare = glareGeoFactor * glareIntensity * mix(u_glareFactor, u_glareOppositeFactor, glareFarside) * 1.4;
-      outColor = mix(outColor, vec4(1.0), clamp(finalGlare, 0.0, 1.0));
+    float glareAngle = (vec2ToAngle(normal) - PI / 4.0 + u_glareAngle) * 2.0;
+    float glareFarside = 0.0;
+    if ((glareAngle > PI * 1.5 && glareAngle < PI * 3.5) || glareAngle < -PI * 0.5) {
+      glareFarside = 1.0;
     }
+    glareAngle = clamp(cos(glareAngle), 0.0, 1.0);
+    float glareIntensity = pow(glareAngle, u_glareConvergence);
+    float finalGlare = glareGeoFactor * glareIntensity * mix(u_glareFactor * 0.01, u_glareOppositeFactor * 0.01, glareFarside);
+    outColor.rgb += vec3(clamp(finalGlare, 0.0, 1.0));
   } else {
     // Outside the glass - drop shadow
     outColor = texture2D(u_bg, v_uv);
@@ -234,19 +240,31 @@ void main() {
       float dShadow = shadowIntensity * (u_shadowFactor * 0.01);
       outColor.rgb -= dShadow;
     }
+    // In glass-only mode the surrounding area is not ours to draw — let the real
+    // background plane show. (Keep a faint drop shadow contribution via alpha.)
+    if (u_glassOnly > 0.5) {
+      outA = 0.0;
+    }
   }
 
-  gl_FragColor = vec4(outColor.rgb, 1.0);
+  gl_FragColor = vec4(outColor.rgb, outA);
 }
 `
 
-export function LiquidGlassField() {
+/**
+ * @param bgTexture When provided (e.g. the About video), the glass refracts THIS
+ *   texture directly instead of capturing the 3D scene. The scene-capture path
+ *   cannot reliably sample a VideoTexture, so on video pages we hand the texture
+ *   straight to the shader and let the quad draw ONLY the glass shapes
+ *   (transparent elsewhere), over the real background plane.
+ */
+export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
   const { size } = useThree()
   
   // Render targets
-  const sceneFBO = useFBO(size.width, size.height)
-  const vBlurFBO = useFBO(size.width, size.height)
-  const hBlurFBO = useFBO(size.width, size.height)
+  const sceneFBO = useFBO(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
+  const vBlurFBO = useFBO(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
+  const hBlurFBO = useFBO(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
   
   // Materials
   const vBlurMat = useMemo(() => new THREE.ShaderMaterial({
@@ -265,25 +283,28 @@ export function LiquidGlassField() {
     uniforms: {
       u_bg: { value: null },
       u_blurredBg: { value: null },
-      u_resolution: { value: new THREE.Vector2(size.width, size.height) },
+      u_resolution: { value: new THREE.Vector2(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio) },
       u_dpr: { value: window.devicePixelRatio },
       // Glass properties based on provided JSON
-      u_refThickness: { value: 20.79 },
+      u_refThickness: { value: 58.0 }, // JSON is 20.79 for 200px shapes; scaled up for our large DOM cards so the refracting glass band is proportional (looks like the reference, not a hairline rim)
       u_refFactor: { value: 1.87 },
+      u_refScale: { value: 4.0 }, // lens bend strength (tuning knob, not in JSON)
       u_refDispersion: { value: 5.25 },
       u_refFresnelRange: { value: 42.5 },
       u_refFresnelHardness: { value: 14.98 },
-      u_refFresnelFactor: { value: 20.0 / 100.0 }, // normalized
+      u_refFresnelFactor: { value: 20.0 },
+      u_refDispersionVal: { value: 5.25 },
       u_glareRange: { value: 16.5 },
       u_glareHardness: { value: 15.48 },
-      u_glareFactor: { value: 90.0 / 100.0 },
+      u_glareFactor: { value: 90.0 },
       u_glareConvergence: { value: 50.0 },
-      u_glareOppositeFactor: { value: 80.0 / 100.0 },
+      u_glareOppositeFactor: { value: 80.0 },
       u_glareAngle: { value: -45.0 * (Math.PI / 180.0) },
       u_shadowExpand: { value: 21.08 },
       u_shadowFactor: { value: 15.0 },
       u_shadowPosition: { value: new THREE.Vector2(0, -10) },
       u_tint: { value: new THREE.Vector4(8/255, 102/255, 165/255, 0.0) }, // alpha 0 per JSON
+      u_glassOnly: { value: 0.0 },
       // DOM rects tracking
       u_numRects: { value: 0 },
       u_rects: { value: Array(10).fill(new THREE.Vector4()) },
@@ -298,7 +319,7 @@ export function LiquidGlassField() {
   useEffect(() => {
     vBlurMat.uniforms.v.value = 2.0 / size.height // blur radius tweak
     hBlurMat.uniforms.h.value = 2.0 / size.width
-    glassMat.uniforms.u_resolution.value.set(size.width, size.height)
+    glassMat.uniforms.u_resolution.value.set(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
     glassMat.uniforms.u_dpr.value = window.devicePixelRatio
   }, [size, vBlurMat, hBlurMat, glassMat])
 
@@ -336,28 +357,65 @@ export function LiquidGlassField() {
     const rects: THREE.Vector4[] = []
     const radii: number[] = []
     const dpr = window.devicePixelRatio
-    
-    els.forEach((el, i) => {
-      if (i >= 10) return
+    const vh = window.innerHeight
+
+    // The shader holds at most 10 shapes. A long page can have many more
+    // `.sync-glass-rect` cards than that, so only feed the shader the ones that
+    // are actually ON SCREEN (or just off it) — otherwise the first 10 in DOM
+    // order eat all the slots and visible cards lower down get no glass.
+    els.forEach((el) => {
+      if (rects.length >= 10) return
       const rect = el.getBoundingClientRect()
+      if (rect.bottom < -50 || rect.top > vh + 50) return // fully off-screen → skip
       const style = window.getComputedStyle(el)
       const radius = parseFloat(style.borderRadius) || 0
-      
+
       // Multiply everything by DPR so the shader works in physical pixels
       rects.push(new THREE.Vector4(
-        rect.left * dpr, 
-        (window.innerHeight - rect.bottom) * dpr, // flip Y using window height
-        rect.width * dpr, 
+        rect.left * dpr,
+        (vh - rect.bottom) * dpr, // flip Y using window height
+        rect.width * dpr,
         rect.height * dpr
       ))
       radii.push(radius * dpr)
     })
+
+    // Everything scrolled off-screen → nothing to draw this frame.
+    if (rects.length === 0) {
+      meshRef.current.visible = false
+      glassMat.uniforms.u_numRects.value = 0
+      return
+    }
     
     glassMat.uniforms.u_numRects.value = rects.length
     for(let i=0; i<rects.length; i++) {
       glassMat.uniforms.u_rects.value[i] = rects[i]
       glassMat.uniforms.u_radii.value[i] = radii[i]
     }
+
+    if (bgTexture) {
+      // DIRECT-TEXTURE MODE (video pages). Refract the supplied texture straight
+      // — no scene capture (which can't grab a VideoTexture). The quad draws only
+      // the glass shapes; everything outside is transparent so the real dimmed
+      // background plane shows through. The blur is run on the source texture.
+      glassMat.uniforms.u_glassOnly.value = 1.0
+
+      vBlurMat.uniforms.tDiffuse.value = bgTexture
+      state.gl.setRenderTarget(vBlurFBO)
+      state.gl.render(vBlurScene, blurCamera)
+
+      hBlurMat.uniforms.tDiffuse.value = vBlurFBO.texture
+      state.gl.setRenderTarget(hBlurFBO)
+      state.gl.render(hBlurScene, blurCamera)
+
+      state.gl.setRenderTarget(null)
+      glassMat.uniforms.u_bg.value = bgTexture
+      glassMat.uniforms.u_blurredBg.value = hBlurFBO.texture
+      return
+    }
+
+    // SCENE-CAPTURE MODE (generic). Opaque quad reproduces the whole scene.
+    glassMat.uniforms.u_glassOnly.value = 0.0
 
     // Hide glass to capture background
     meshRef.current.visible = false

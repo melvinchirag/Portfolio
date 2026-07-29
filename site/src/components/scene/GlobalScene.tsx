@@ -1,0 +1,144 @@
+import { useEffect, useRef, useState } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
+import * as THREE from 'three'
+import { useLocation } from 'react-router-dom'
+import { MaskParticles } from './MaskField'
+import { LiquidGlassField } from './LiquidGlassField'
+import { VideoPlane } from './VideoBackground'
+
+/**
+ * Creates the looping VideoTexture for the About background. Lives OUTSIDE the
+ * <Canvas> (a VideoTexture is a plain THREE object, not a hook) so the same
+ * texture can be handed to BOTH the background plane and the liquid glass. The
+ * per-frame GPU re-upload runs inside the canvas (SceneContents).
+ */
+function useAboutVideoTexture(active: boolean) {
+  const [tex, setTex] = useState<THREE.VideoTexture | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    const video = document.createElement('video')
+    video.src = '/about-bg.mp4'
+    video.muted = true // required for autoplay
+    video.loop = true
+    video.playsInline = true
+    video.crossOrigin = 'anonymous'
+    videoRef.current = video
+
+    const t = new THREE.VideoTexture(video)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.minFilter = THREE.LinearFilter
+    t.magFilter = THREE.LinearFilter
+    setTex(t)
+
+    return () => {
+      video.pause()
+      video.removeAttribute('src')
+      video.load()
+      t.dispose()
+      videoRef.current = null
+    }
+  }, [])
+
+  // Scroll-SCRUB the video while About is showing — BIDIRECTIONAL. Scroll down
+  // runs it forward, scroll up rewinds it (currentTime tracks scroll position
+  // both ways). First/last 3s are trimmed (skips the intro/play-button + tail).
+  // The video is never play()'d — we drive currentTime from scroll. The
+  // `!v.seeking` guard is load-bearing: it refuses a new seek until the previous
+  // finished, so the decoder never thrashes to black (the original bug).
+  //
+  // NOTE on lag: seeking a large / sparse-keyframe mp4 is slow, so the video can
+  // trail fast scrolls. The biggest lever (short of re-encoding with dense
+  // keyframes) is page LENGTH — a taller About page means each scroll tick maps
+  // to a smaller video-time jump = smaller, faster seeks. The easing is kept low
+  // so the video stays close to the scroll rather than floating behind it.
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v || !active) return
+    v.pause()
+    v.preload = 'auto'
+
+    const TRIM = 3 // seconds trimmed off each end
+    let raf = 0
+    let smooth = -1 // -1 until first sample
+
+    const tick = () => {
+      const dur = v.duration
+      if (dur && !Number.isNaN(dur)) {
+        const start = TRIM
+        const end = Math.max(start + 0.1, dur - TRIM)
+        const max = document.documentElement.scrollHeight - window.innerHeight
+        const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
+        if (smooth < 0) smooth = progress
+        // Light smoothing only — enough to de-jitter, not enough to float behind.
+        smooth += (progress - smooth) * 0.35
+        const target = start + smooth * (end - start)
+        if (!v.seeking && Math.abs(v.currentTime - target) > 0.033) {
+          v.currentTime = target
+        }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [active, tex])
+
+  return tex
+}
+
+/** Everything that lives inside the shared <Canvas>. */
+function SceneContents({
+  isHome,
+  isAbout,
+  aboutTex,
+}: {
+  isHome: boolean
+  isAbout: boolean
+  aboutTex: THREE.VideoTexture | null
+}) {
+  // Force the video texture to re-upload the current frame each render so both
+  // the background plane and the glass see live video.
+  useFrame(() => {
+    if (aboutTex) aboutTex.needsUpdate = true
+  })
+
+  return (
+    <>
+      {isAbout && aboutTex && <VideoPlane texture={aboutTex} />}
+
+      {isHome && <MaskParticles />}
+
+      {/* On About, hand the video texture straight to the glass (it refracts THAT
+          rather than capturing the scene — see LiquidGlassField). Elsewhere it
+          falls back to scene capture. */}
+      <LiquidGlassField bgTexture={isAbout ? aboutTex ?? undefined : undefined} />
+
+      <EffectComposer>
+        <Bloom intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
+      </EffectComposer>
+    </>
+  )
+}
+
+export function GlobalScene() {
+  const loc = useLocation()
+  const isHome = loc.pathname === '/'
+  const isAbout = loc.pathname === '/about'
+  const aboutTex = useAboutVideoTexture(isAbout)
+
+  return (
+    <div className="fixed inset-0 z-0 bg-[#050609]">
+      <Canvas
+        camera={{ position: [0, 0, 1.5], fov: 50, near: 0.1, far: 1000 }}
+        gl={{ antialias: true, alpha: false }}
+        onCreated={({ gl }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping
+        }}
+      >
+        <color attach="background" args={['#050609']} />
+        <SceneContents isHome={isHome} isAbout={isAbout} aboutTex={aboutTex} />
+      </Canvas>
+    </div>
+  )
+}

@@ -15,6 +15,7 @@
 import { useEffect, useRef } from 'react'
 import { BEAT_COUNT, heroScroll, useHeroBeat } from '../hooks/heroScroll'
 import { HeroClockRail } from './HeroClockRail'
+import { HeroInfoTabs } from './HeroInfoTabs'
 
 /** Beat definitions. Beat 0 is live; 1-4 are placeholders awaiting concepts. */
 const BEATS = [
@@ -106,22 +107,33 @@ export function HeroBeats() {
             {i === 0 ? (
               /* ---- BEAT 1 — the real hero. Name lockup is CENTRED (Melvin's
                      spec, 2026-07-28). No turquoise — that colour is BANNED
-                     project-wide (see CONTEXT). Times New Roman via --font-display. ---- */
-              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-                <h1 className="font-display leading-[0.95] text-white">
-                  <span className="block text-[clamp(3rem,8vw,6.5rem)] tracking-[-0.01em]">
-                    Melvin Chirag
-                  </span>
-                  <span className="mt-1 block text-[clamp(1.4rem,3.4vw,2.6rem)] tracking-[0.06em] text-white/60">
-                    Karupati
-                  </span>
-                </h1>
-                <p className="mt-5 text-[12px] tracking-[0.32em] text-white/45 uppercase">
-                  Computer Science and Beyond
-                </p>
-                <p className="mt-1 text-[12px] tracking-[0.05em] text-white/30">
-                  Eastern Michigan University
-                </p>
+                     project-wide (see CONTEXT). Times New Roman via --font-display.
+                     HeroInfoTabs on the right provides the glass targets. ---- */
+              <div className="flex h-full items-center justify-center px-6">
+                <div className="flex w-full max-w-6xl items-center justify-between gap-12">
+                  {/* Left/centre: name lockup */}
+                  <div className="flex flex-1 flex-col items-center text-center">
+                    <h1 className="font-display leading-[0.95] text-white">
+                      <span className="block text-[clamp(3rem,8vw,6.5rem)] tracking-[-0.01em]">
+                        Melvin Chirag
+                      </span>
+                      <span className="mt-1 block text-[clamp(1.4rem,3.4vw,2.6rem)] tracking-[0.06em] text-white/60">
+                        Karupati
+                      </span>
+                    </h1>
+                    <p className="mt-5 text-[12px] tracking-[0.32em] text-white/45 uppercase">
+                      Computer Science and Beyond
+                    </p>
+                    <p className="mt-1 text-[12px] tracking-[0.05em] text-white/30">
+                      Eastern Michigan University
+                    </p>
+                  </div>
+                  {/* Right: glass info tabs — provides the `.sync-glass-rect`
+                      DOM targets the LiquidGlassField shader reads each frame */}
+                  <div className="pointer-events-auto hidden md:block">
+                    <HeroInfoTabs />
+                  </div>
+                </div>
               </div>
             ) : (
               /* ---- BEATS 2-5 — placeholders, awaiting their concepts ---- */

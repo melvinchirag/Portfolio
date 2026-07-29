@@ -2,9 +2,12 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 import { Loader } from './components/Loader'
 import { Nav } from './components/Nav'
-import { Chapter } from './pages/Chapter'
 import { Home } from './pages/Home'
+import { About } from './pages/About'
+import { Work } from './pages/Work'
+import { Vision } from './pages/Vision'
 import { useLenis } from './hooks/useLenis'
+import { GlobalScene } from './components/scene/GlobalScene'
 
 /**
  * Routes use conventional names; the three-tenses concept lives in each page's
@@ -15,6 +18,7 @@ function Shell() {
 
   return (
     <>
+      <GlobalScene />
       {/* No global background scene. Per the hero architecture, each page owns
           its own visual world. The sun cursor + nebula (astronomy concept) were
           parked 2026-07-27; the new abstract/editorial hero is TBD. */}
@@ -22,46 +26,9 @@ function Shell() {
       <main className="relative z-10">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route
-            path="/about"
-            element={
-              <Chapter
-                eyebrow="The past"
-                title="About"
-                blurb="Kuwait to India to Michigan — the milestone scrollytelling lands here."
-              />
-            }
-          />
-          <Route
-            path="/work"
-            element={
-              <Chapter
-                eyebrow="The present"
-                title="Work"
-                blurb="Manas as flagship, project cards, and the skills constellation land here."
-              />
-            }
-          />
-          <Route
-            path="/vision"
-            element={
-              <Chapter
-                eyebrow="The future"
-                title="Vision"
-                blurb="The scroll-assembled manifesto lands here."
-              />
-            }
-          />
-          <Route
-            path="/contact"
-            element={
-              <Chapter
-                eyebrow="Say hello"
-                title="Contact"
-                blurb="Email, socials, and résumé land here."
-              />
-            }
-          />
+          <Route path="/about" element={<About />} />
+          <Route path="/work" element={<Work />} />
+          <Route path="/vision" element={<Vision />} />
         </Routes>
       </main>
       <div className="progressive-blur" />

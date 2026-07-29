@@ -19,9 +19,9 @@
  * ========================================================================= */
 
 import { useRef } from 'react'
-import { MaskField } from '../components/scene/MaskField'
 import { HeroBeats } from '../components/HeroBeats'
 import { BEAT_COUNT, useHeroScrollTrack } from '../hooks/heroScroll'
+import { Contact } from './Contact'
 
 export function Home() {
   const trackRef = useRef<HTMLElement>(null)
@@ -31,15 +31,21 @@ export function Home() {
   useHeroScrollTrack(trackRef)
 
   return (
-    <section ref={trackRef} className="relative" style={{ height: `${BEAT_COUNT * 100}vh` }}>
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
-        {/* The persistent WebGL layer: particle mask + liquid glass. Mounted
-            once, outside the beat system, so scrolling never remounts it. */}
-        <MaskField />
+    <>
+      <section ref={trackRef} className="relative" style={{ height: `${BEAT_COUNT * 100}vh` }}>
+        <div className="sticky top-0 h-screen w-full overflow-hidden">
+          {/* The persistent WebGL layer (particle mask + liquid glass) is now
+              rendered globally in App.tsx -> GlobalScene so it persists across pages. */}
 
-        {/* Everything that changes as you scroll. */}
-        <HeroBeats />
-      </div>
-    </section>
+          {/* Everything that changes as you scroll. */}
+          <HeroBeats />
+        </div>
+      </section>
+
+      {/* The contact footer rolls up naturally when the sticky hero scroll track ends */}
+      <section id="contact" className="relative z-20 w-full bg-[#06070d]">
+        <Contact />
+      </section>
+    </>
   )
 }

@@ -100,6 +100,64 @@ artifacts can't). Placeholder is fine if labelled as placeholder.
 
 ---
 
+## 10. [CLAUDE] Liquid glass over a video (the job AGY could not finish) — READ THIS, AGY
+*Logged by Claude, 2026-07-28.*
+
+**What AGY tried and failed at:** put a scroll-scrubbed video behind the About
+page *inside WebGL* so the liquid glass could refract it. AGY reported 5 failed
+attempts (ScreenQuad, useAspect, viewport scaling, HTML fallback, custom
+Texture); it left the page fully black — no video, no glass — and handed off
+saying both were "fundamentally broken."
+
+**Where AGY went wrong (two separate bugs it never separated):**
+1. **It scroll-scrubbed the video by setting `video.currentTime` every frame**
+   with no `!video.seeking` guard. Seeking a compressed mp4 ~60×/sec thrashes the
+   browser's decoder → black/stall. AGY blamed "the decoder" and gave up instead
+   of using the standard guard.
+2. **It never isolated the glass from the video.** The real reason the page was
+   black is the glass, not the video. The glass draws a **full-screen opaque
+   quad** that reproduces a *capture of the 3D scene*; when that capture is empty
+   the whole screen goes black. AGY changed both things at once and couldn't tell
+   which was broken.
+
+**The actual root cause (found by ISOLATING, not guessing — this is the lesson):**
+- Turn the glass OFF → the video showed fine. So the video plane worked; the glass
+  was blacking the page.
+- Force the glass to output its raw capture → near-black. So the *capture* was empty.
+- Swap the video for a solid-red plane → the capture showed red. So the capture
+  works for normal meshes but **silently will not sample a `THREE.VideoTexture`**
+  in that manual `gl.render(scene)` pass (forcing `needsUpdate` every frame did
+  NOT fix it — it is not an upload-timing problem). This also explains the whole
+  historical "glass looks black/disappointing" saga: the scene-capture only ever
+  grabbed the CLEAR COLOR, never the scene geometry.
+
+**The fix (what AGY should have done):**
+- **Don't scrub-thrash.** Either just `play()` the video on loop, or scrub with a
+  `if (!video.seeking) video.currentTime = target` guard so only one seek is ever
+  in flight. (Smooth scrubbing ALSO needs the video encoded with dense keyframes —
+  a recording problem no code can fix; Melvin's clip is sparse, so its scrub is
+  choppy and we accept that.)
+- **Don't make the glass re-capture the 3D scene to refract a video.** Hand the
+  video texture *straight to the glass shader* as its background
+  (`LiquidGlassField` now takes a `bgTexture` prop) and run the quad in a
+  **glass-only alpha mode** (`u_glassOnly`) so it draws ONLY the card shapes and
+  is transparent everywhere else — the real background plane shows through, and a
+  glass failure can never black out the page again. This is also how the original
+  liquid-glass reference actually works (it refracts a background *texture*, not a
+  captured scene). Files: `GlobalScene.tsx` (owns the video texture, feeds both
+  the plane and the glass), `VideoBackground.tsx` (`VideoPlane`), and
+  `LiquidGlassField.tsx` (`bgTexture` + `u_glassOnly`).
+
+**Generalisable rule for AGY (and everyone):** when a composited effect goes fully
+black, **isolate the layers before touching the shader** — disable the top layer,
+force each input to render raw, swap one variable at a time. Three targeted
+isolation tests found this in minutes; "try another Texture approach" five times
+found nothing in an afternoon. (This is rule #6 — diagnose in context before
+tuning — applied.) And per rule #4: if you're stuck after 2–3 real attempts, say
+so and hand off with what you learned; don't ship a black page and call it broken.
+
+---
+
 ## The process we're adopting because of all this (Melvin's own structure)
 1. **Foundations before pizzazz.** Get content, page structure, routing, and
    plain UI right FIRST (this needs no high fidelity — a cheaper model/AGY can

@@ -233,7 +233,7 @@ const glyphFragment = /* glsl */ `
   }
 `
 
-function MaskParticles() {
+export function MaskParticles() {
   const gl = useThree((s) => s.gl)
   const camera = useThree((s) => s.camera)
   const pointer = useThree((s) => s.pointer)
@@ -511,8 +511,9 @@ export function MaskField() {
         {/* No OrbitControls — the mask is FIXED, front-facing, on the left. The
             cursor still disturbs the particles (handled in the sim), but the
             visitor can't rotate/move the mask itself. */}
-        {/* Liquid glass — currently inert (no `.sync-glass-rect` targets on
-            screen since the info tabs were removed). Kept mounted + self-gated. */}
+        {/* Liquid glass — reads `.sync-glass-rect` DOM elements each frame
+            (provided by HeroInfoTabs in Beat 1) and renders Snell's-law
+            refraction + dispersion + Fresnel + glare over them. */}
         <LiquidGlassField />
 
         <EffectComposer>

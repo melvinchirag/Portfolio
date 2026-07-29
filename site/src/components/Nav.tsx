@@ -7,10 +7,9 @@ import { NavLink } from 'react-router-dom'
  * work. The three-tenses concept lives in each page's eyebrow line instead.
  */
 const pages = [
-  { to: '/about', label: 'About' },
   { to: '/work', label: 'Work' },
   { to: '/vision', label: 'Vision' },
-  { to: '/contact', label: 'Contact' },
+  { to: '/about', label: 'About' },
 ]
 
 export function Nav() {
@@ -41,13 +40,7 @@ export function Nav() {
     >
       {/* Nearly frameless over the hero; the glass earns its background only
           once there is content behind it. */}
-      <div
-        className={`transition-all duration-500 ${
-          scrolled
-            ? 'border-b border-white/[0.06] bg-[#06070d]/55 backdrop-blur-xl'
-            : 'border-b border-transparent bg-transparent'
-        }`}
-      >
+      <div className="transition-all duration-500 border-b border-transparent bg-transparent">
         <nav className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6 md:h-20 md:px-10">
           <NavLink
             to="/"
