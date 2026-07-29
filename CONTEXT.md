@@ -276,6 +276,63 @@ Guessing ("try another Texture approach") is what cost AGY an afternoon.
 6. Verify by ISOLATING layers, and check on a full-size window (a collapsed
    automation window breaks the scroll math and lies to you).
 
+---
+
+## [CLAUDE] Black first frame on About — root cause found, fix ⚠️ NOT VISUALLY VERIFIED
+*2026-07-28 ~21:45 EDT. Melvin: "the first frame is black and dark, that's my
+fault… trim the first 2 secs."*
+
+**It was NOT his fault, and trimming was the wrong fix.** Measured rather than
+guessed — extracted frames with ffmpeg and used per-frame JPEG size as a
+detail/brightness proxy across the first 5s of the clip:
+
+| t (s) | 0 | 0.5 | 1 | 1.5 | 2 | 2.4 | 2.6 | 2.8 | **3.0** | 3.2 | 3.4 | 4 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| KB | 37 | 38 | 39 | 45 | 43 | 39 | 37 | 25 | **9** | 41 | 40 | 42 |
+
+- The clip **opens on its best frame** (t=0: the wide astronaut-with-Earth shot).
+- There is a ~0.3s dark dip centred on **t≈3.0**, where a foreground asteroid
+  wipes across the lens (confirmed visually: t=2.6 and t=3.2 are the same
+  continuous camera move, so it is an occlusion, not a scene cut).
+- **My `TRIM = 3` (inherited from the previous clip, which needed a play-button
+  intro skipped) landed exactly in that dip.** That is what made the page open
+  black. Trimming 2s more would have started at t=2.0 and pushed the dark
+  occlusion to ~6% scroll — worse.
+
+**Fix applied** (`GlobalScene.tsx`):
+- `TRIM` split into `START_TRIM = 0` / `END_TRIM = 3`. The page now opens on the
+  hero frame; the tail is still dropped.
+- **`video.load()` + `preload='auto'` set before `src`.** Latent bug this exposed:
+  the element is detached and never `play()`ed, so with `START_TRIM = 0` the
+  target equals `currentTime` (both 0) and the delta check never fires — meaning
+  *no seek is ever issued*, and nothing kicks off the fetch. The old `TRIM = 3`
+  was accidentally priming the load. `load()` makes it explicit.
+- **One-time `primed` seek** in the rAF loop (`target + 0.001`) so a frame is
+  guaranteed to decode and upload to the texture even at scroll 0.
+- Asset renamed `about-bg.mp4` → **`about-bg-720.mp4`** (this path had served a
+  0-byte file, a 209MB 4K cut, and now the 720p encode; versioning the name
+  guarantees no stale cached copy). Bump the suffix on any future re-encode.
+
+**⚠️ HONEST STATUS — could not visually confirm.** Midway through debugging, the
+automation browser's **media pipeline wedged**: after I created too many probe
+`<video>` elements (one probe froze the renderer), Chrome stopped loading video
+*anywhere* — `readyState 0` / `duration NaN` in fresh tabs, AND **Chrome's own
+native mp4 viewer hung at 0:00** on the raw file URL. Proof it is browser-side,
+not the site: the same file returns `206` with a correct `ftyp…moov` header in
+4ms via `fetch`, and ffmpeg decodes every frame. **Next session: restart Chrome,
+load `/about`, and confirm the first frame is the astronaut-and-Earth shot.**
+The frame data above is solid; the code change follows directly from it, but it
+has not been seen rendering.
+
+**Lesson (added to the debugging habits):** don't spawn multiple `<video>`
+elements pointed at the same large file to probe state — it can exhaust Chrome's
+media stack and produce fake "everything is black" results that look exactly like
+an app bug. Probe with ONE element, or read frames offline with ffmpeg.
+
+— Claude 🤖 (Opus 4.8)
+
+---
+
 — Claude 🤖 (Opus 4.8), 2026-07-28. Files touched: `GlobalScene.tsx`,
 `VideoBackground.tsx` (`VideoPlane`), `LiquidGlassField.tsx` (`bgTexture` +
 `u_glassOnly` + `u_refScale`), `About.tsx` (filler + `.sync-glass-rect` cards).
