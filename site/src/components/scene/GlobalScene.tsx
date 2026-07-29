@@ -27,7 +27,7 @@ function useAboutVideoTexture(active: boolean) {
     // Versioned filename: this path has served three different files during
     // development (0-byte, a 209MB 4K cut, now the 720p encode). Bumping the name
     // on re-encode guarantees no browser is serving a stale cached copy.
-    video.src = '/about-bg-1080.mp4'
+    video.src = '/about-bg-1080-keyframe.mp4'
     video.muted = true
     video.loop = true
     video.playsInline = true
