@@ -93,7 +93,7 @@ export function HeroInfoTabs() {
 
       {/* Content panel — swaps content, itself never remounts (keeps the glass
           distortion/glare steady instead of flickering on every switch). */}
-      <div className="glass-panel sync-glass-rect px-7 py-6 md:px-8 md:py-7">
+      <div className="px-7 py-6 md:px-8 md:py-7">
         <p key={tab.id + '-eyebrow'} className="reveal-fade text-[11px] tracking-[0.3em] text-white/45 uppercase">
           {tab.eyebrow}
         </p>

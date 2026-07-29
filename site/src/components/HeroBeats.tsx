@@ -15,7 +15,6 @@
 import { useEffect, useRef } from 'react'
 import { BEAT_COUNT, heroScroll, useHeroBeat } from '../hooks/heroScroll'
 import { HeroClockRail } from './HeroClockRail'
-import { HeroInfoTabs } from './HeroInfoTabs'
 
 /** Beat definitions. Beat 0 is live; 1-4 are placeholders awaiting concepts. */
 const BEATS = [
@@ -127,11 +126,6 @@ export function HeroBeats() {
                     <p className="mt-1 text-[12px] tracking-[0.05em] text-white/30">
                       Eastern Michigan University
                     </p>
-                  </div>
-                  {/* Right: glass info tabs — provides the `.sync-glass-rect`
-                      DOM targets the LiquidGlassField shader reads each frame */}
-                  <div className="pointer-events-auto hidden md:block">
-                    <HeroInfoTabs />
                   </div>
                 </div>
               </div>
