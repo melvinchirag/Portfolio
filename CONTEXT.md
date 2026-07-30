@@ -144,6 +144,59 @@ content coexisting on `/about`, no console errors, tsc + oxlint clean).
   quirk), which broke the scroll→video math and produced false "all black"
   screenshots mid-debug. Confirmed working once the window held full size.
 
+## ✅ [AGY] SESSION LOG (2026-07-30 ~01:40–11:34 EDT)
+
+**Changes made this session:**
+
+1. **Video scroll-scrubbing restored + smoothed.**
+   - A previous agent had ripped out Claude's scroll-scrubbing logic and replaced
+     it with a simple `video.play()` loop. Reverted to Claude's exact bidirectional
+     scrub implementation (`GlobalScene.tsx → useAboutVideoTexture`).
+   - Reduced the smoothing factor from `0.35` → `0.06` for a buttery glide that
+     absorbs discrete mouse-wheel clicks instead of jumping.
+   - Added `video.preload = 'auto'` + `video.load()` to force Chrome to fetch
+     metadata for the detached video element (without this, Chrome suspends loading
+     and `duration` stays `NaN`, keeping the scrubber dead on refresh).
+   - Switched video source back to the 4.6 MB 720p version (`about-bg-720.mp4`)
+     from Claude's original encode — a previous agent had swapped it to a 17 MB
+     1080p version that Chrome was aborting (`ERR_ABORTED`).
+
+2. **Git config fixed.**
+   - Local repo git config was set to `Melvin / mlvinhere@gmail.com`. Changed to
+     `melvinchirag / melvinchirag@gmail.com` to match the GitHub account that owns
+     the repo. Future commits now show the correct profile.
+
+3. **Browser tab title updated.**
+   - `<title>` in `site/index.html` changed from
+     "Melvin — Computer Science, Eastern Michigan University" →
+     **"Melvin Chirag Karupati"**.
+   - Added `<meta name="description">` tag (replaces the TODO comment).
+
+4. **Vercel 404 on refresh — FIXED (Lesson 11).**
+   - The site uses React Router (client-side routing). Refreshing on any route
+     except `/` sent a real HTTP request to Vercel, which returned 404 because
+     there's no physical file at `/about`, `/work`, etc.
+   - Fix: created `site/vercel.json` with an SPA rewrite rule:
+     `{ "source": "/(.*)", "destination": "/index.html" }`.
+   - **Key gotcha:** `vercel.json` must live inside `site/` (the Vercel Root
+     Directory), not at the repo root. The "Skip deployments" toggle also silently
+     dropped commits that only changed files outside `site/`.
+   - Full post-mortem logged in `docs/LESSONS.md` §11 `[AGY]`.
+
+5. **Lesson 11 logged in `docs/LESSONS.md`** — Vercel SPA refresh 404 debugging,
+   tagged `[AGY]`.
+
+**Files changed:**
+- `site/src/components/scene/GlobalScene.tsx` — video smoothing + load fix
+- `site/index.html` — title + meta description
+- `site/vercel.json` — NEW, SPA rewrite rule
+- `vercel.json` — repo-root copy (unused but committed)
+- `docs/LESSONS.md` — Lesson 11
+
+**Current state:** About page video + liquid glass + scroll scrubbing all
+working. Refresh works on all routes (Vercel rewrite). Tab shows
+"Melvin Chirag Karupati".
+
 ---
 
 # [CLAUDE] PLAYBOOK — Scroll-driven video + liquid glass on a page (replicable)
