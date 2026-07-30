@@ -106,8 +106,7 @@ export function HeroBeats() {
             {i === 0 ? (
               /* ---- BEAT 1 — the real hero. Name lockup is CENTRED (Melvin's
                      spec, 2026-07-28). No turquoise — that colour is BANNED
-                     project-wide (see CONTEXT). Times New Roman via --font-display.
-                     HeroInfoTabs on the right provides the glass targets. ---- */
+                     project-wide (see CONTEXT). Times New Roman via --font-display. ---- */
               <div className="flex h-full items-center justify-center px-6">
                 <div className="flex w-full max-w-6xl items-center justify-between gap-12">
                   {/* Left/centre: name lockup */}

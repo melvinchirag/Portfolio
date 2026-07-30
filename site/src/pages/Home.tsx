@@ -6,8 +6,9 @@
  *   <section>            ← the TALL scroll track (BEAT_COUNT × 100vh). This is
  *     │                    what you actually scroll through.
  *     └ <div sticky>     ← the PINNED viewport. Stays fixed on screen for the
- *         ├ <MaskField>    entire track, so the mask never reloads or restarts
- *         └ <HeroBeats>    while content changes beneath the scroll.
+ *         └ <HeroBeats>    entire track. The mask + liquid glass are NOT here —
+ *                           they render globally in GlobalScene.tsx (mounted in
+ *                           App.tsx) so they persist across route changes.
  *
  * Why `position: sticky` and not GSAP pinning: sticky is one CSS line, can't
  * desync, and plays perfectly with Lenis' smooth scroll. GSAP ScrollTrigger is

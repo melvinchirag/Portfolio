@@ -19,9 +19,7 @@
  * speed, so the mask glows brighter where it's disturbed. Bloom finishes it.
  * ========================================================================= */
 
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bloom, EffectComposer } from '@react-three/postprocessing'
-import { LiquidGlassField } from './LiquidGlassField'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -518,37 +516,3 @@ export function MaskParticles() {
   )
 }
 
-export function MaskField() {
-  return (
-    /* `absolute`, not `fixed`: this now lives inside Home's sticky hero
-       viewport, which does the pinning. `fixed` would escape that container and
-       keep the mask on screen past the hero. */
-    <div className="absolute inset-0 z-0 bg-[#050609]">
-      <Canvas
-        camera={{ position: [0, 0, 1.5], fov: 50, near: 0.1, far: 1000 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: false }}
-        onCreated={({ gl }) => { gl.toneMapping = THREE.ACESFilmicToneMapping }}
-      >
-        <color attach="background" args={['#050609']} />
-        {/* NEBULA BACKDROP REMOVED 2026-07-28 — the static photo read as a flat
-            image and "zoom on scroll" wasn't real scrollytelling. Melvin wants a
-            REAL deep-space WebGL environment (à la the Manas project) instead;
-            that's a replan item, not built yet. Background is plain black again.
-            `SpaceBackdrop.tsx` kept on disk (orphaned) for reference. */}
-        <MaskParticles />
-        {/* No OrbitControls — the mask is FIXED, front-facing, on the left. The
-            cursor still disturbs the particles (handled in the sim), but the
-            visitor can't rotate/move the mask itself. */}
-        {/* Liquid glass — reads `.sync-glass-rect` DOM elements each frame
-            (provided by HeroInfoTabs in Beat 1) and renders Snell's-law
-            refraction + dispersion + Fresnel + glare over them. */}
-        <LiquidGlassField />
-
-        <EffectComposer>
-          <Bloom intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
-        </EffectComposer>
-      </Canvas>
-    </div>
-  )
-}

@@ -199,6 +199,78 @@ working. Refresh works on all routes (Vercel rewrite). Tab shows
 
 ---
 
+## 🔎 [CLAUDE] REVIEW OF AGY'S SESSION (2026-07-30 ~11:45 EDT)
+Melvin asked for a read of the repo after AGY's work. Verified state:
+`main` (hero-build merged in), working tree clean, **`tsc` + `oxlint` both clean**.
+
+**AGY's work checks out — good session.** Confirmed in the code: my scroll-scrub
+fixes all survived intact (`START_TRIM = 0`, `preload`+`load()`, the one-time
+`primed` seek, the versioned `about-bg-720.mp4` filename). AGY only retuned the
+easing 0.35 → 0.06, restored the scrub after *a third agent* had replaced it with
+a `play()` loop, and fixed the Vercel SPA 404 with an honest post-mortem
+(`LESSONS.md` §11). About page redesigned (two-column, Henry Ford College split
+out from EMU, "The threads", Pac-Man accent — yellow `#FACC15`, not banned teal).
+
+**⚠️ Cruft found (not yet fixed — awaiting Melvin's go-ahead):**
+1. **~25 MB of unused video committed & deployed.** `about-bg-1080.mp4` (8 MB)
+   and `about-bg-1080-keyframe.mp4` (17.8 MB) are in git and shipped to Vercel,
+   but **nothing references them** — only `about-bg-720.mp4` is used.
+2. **Duplicate `vercel.json` at the repo root.** AGY's own §11 says the root copy
+   is ignored by Vercel (Root Directory is `site/`). Keeping it invites someone
+   editing the wrong file later.
+3. **Contradictory comment** in `GlobalScene.tsx`: the block comment still says
+   "the easing is kept low so the video stays close to the scroll", but the value
+   is now 0.06 and the inline comment calls it "heavy smoothing".
+4. **Orphaned code/assets:** `SpaceBackdrop.tsx` (+ 5 nebula JPGs in
+   `public/space/`), `HeroInfoTabs.tsx`, `GlassFilterDefs.tsx`, `RevealText.tsx`
+   are imported by 0 files.
+5. **Turquoise still in the mask** (`MaskField.tsx` `#80fff0` / `#b9fff2`) — the
+   long-standing flagged exception, still pending the hero decision.
+
+**Also established this session:** the automation browser CANNOT play video at
+all (proven with an 11 KB test clip) — see `LESSONS.md` §12. Video must be
+eyeballed by Melvin in his own browser; everything else stays verifiable.
+
+---
+
+## 🧹 [CLAUDE] CLEANUP (2026-07-30 ~12:00 EDT) — the 5 items above, done
+
+Melvin approved the cleanup list from the review above. All 5 done, verified
+(`tsc` clean, `oxlint` clean, `npm run build` clean, both Home and About checked
+live with no console errors), and committed.
+
+1. **Removed ~25 MB of dead video** — `about-bg-1080.mp4` (8 MB) and
+   `about-bg-1080-keyframe.mp4` (17.8 MB) were committed and deploying to Vercel
+   but nothing referenced them (only `about-bg-720.mp4` is used). Deleted.
+2. **Removed the duplicate repo-root `vercel.json`** — AGY's own Lesson 11 says
+   Vercel ignores it (Root Directory is `site/`); only `site/vercel.json` matters.
+3. **Fixed the contradictory scroll-easing comment** in `GlobalScene.tsx` — it
+   still said "kept low" after AGY changed the value to heavy smoothing (0.06).
+4. **Removed orphaned files** (0 importers, confirmed by grep before deleting):
+   `SpaceBackdrop.tsx`, `HeroInfoTabs.tsx`, `GlassFilterDefs.tsx`,
+   `RevealText.tsx`, and the 5 nebula JPGs in `public/space/` they used.
+   - This cascaded further than expected: `MaskField.tsx` had a whole **second,
+     dead `MaskField()` Canvas-wrapper function** (34 lines) that referenced the
+     deleted files and was superseded by `GlobalScene.tsx`'s own Canvas months
+     ago but never removed — 0 importers, confirmed before deleting. Its now-
+     unused imports (`Canvas`, `EffectComposer`, `Bloom`, `LiquidGlassField`)
+     were cleaned up too.
+   - `index.css` had a ~160-line dead "LIQUID GLASS TABS" block
+     (`.glass-panel`, its rim/glare pseudo-elements, `.reveal-fade`, `.glass-tab`,
+     `.glass-tab-dot`) — all 0 usages in any `.tsx` file, confirmed before
+     deleting. `.glass-cta` and `.scroll-cue` were checked and ARE still used —
+     left alone.
+   - Fixed two stale comments left pointing at the deleted files: the
+     architecture diagram in `Home.tsx`'s header, and a `HeroInfoTabs` mention in
+     `HeroBeats.tsx`.
+5. **Turquoise in the mask** — left as-is (still the known, tracked exception
+   pending the hero-engine decision — not part of this cleanup's scope).
+
+**Also cleaned up operationally:** 6 stale dev servers (5173–5178) killed, back
+to ONE canonical server (now `:5173`), per Lesson 7.
+
+---
+
 # [CLAUDE] PLAYBOOK — Scroll-driven video + liquid glass on a page (replicable)
 *Written by Claude, 2026-07-28, at Melvin's request so this exact process can be
 re-run (e.g. with AGY) on another page. This is the authoritative "how it was

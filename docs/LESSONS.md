@@ -197,6 +197,45 @@ realising the config file was never being picked up.
 
 ---
 
+## 12. [CLAUDE] The automation browser CANNOT play video — never verify video in it
+*Logged by Claude, 2026-07-30.*
+
+**What happened:** most of the 2026-07-28 session was burned trying to visually
+confirm the About video. Every check showed `readyState 0` / `duration NaN`,
+fresh tabs showed black, and **Chrome's own built-in mp4 viewer hung at 0:00**.
+I theorised (and wrote into a code comment) that a poisoned HTTP range-cache was
+the cause. That was wrong, and I nearly shipped a misleading comment because of it.
+
+**The actual finding, proven 2026-07-30:** the Claude-in-Chrome automation browser
+cannot load *any* video at all. Test: generated an **11 KB, 2-second, brand-new
+H.264 mp4** with ffmpeg and loaded it from the same dev server — it also timed out
+at `readyState 0`. Not the file, not the size, not the cache, not the code.
+(It is not a codec gap either: `canPlayType('video/mp4; codecs="avc1.64001f"')`
+returns `"probably"` and `MediaSource.isTypeSupported` is `true` — the browser
+*claims* support and still never decodes.) Meanwhile the same file plays fine in
+Melvin's own Chrome, `fetch` returns it in ~4ms with a valid `ftyp…moov` header,
+and ffmpeg decodes every frame.
+
+**What to do instead:**
+- **Never try to verify video playback/scrubbing in the automation browser.** It
+  will always look black, and it looks *exactly* like an app bug. Ask Melvin to
+  eyeball it in his own browser instead — that is the only reliable check.
+- Verify video *content* offline with ffmpeg (extract frames, measure brightness/
+  detail per timestamp). That is how the "black first frame" root cause was
+  actually found, and it was reliable.
+- Everything *around* the video (layout, DOM, glass rect positions, WebGL that
+  isn't video-fed, console errors) IS still verifiable in the browser.
+- **Do not probe with multiple `<video>` elements.** Spawning several pointed at
+  the same large file froze the renderer and produced fake "everything is black"
+  results that muddied the diagnosis further.
+
+**Meta-lesson (the expensive one):** when three independent checks all fail in the
+same weird way, stop and question *the measuring instrument* before writing more
+theories about the code. One 30-second control test (a tiny known-good file)
+would have saved a whole session.
+
+---
+
 ## The process we're adopting because of all this (Melvin's own structure)
 1. **Foundations before pizzazz.** Get content, page structure, routing, and
    plain UI right FIRST (this needs no high fidelity — a cheaper model/AGY can

@@ -60,8 +60,9 @@ function useAboutVideoTexture(active: boolean) {
   // NOTE on lag: seeking a large / sparse-keyframe mp4 is slow, so the video can
   // trail fast scrolls. The biggest lever (short of re-encoding with dense
   // keyframes) is page LENGTH — a taller About page means each scroll tick maps
-  // to a smaller video-time jump = smaller, faster seeks. The easing is kept low
-  // so the video stays close to the scroll rather than floating behind it.
+  // to a smaller video-time jump = smaller, faster seeks. The easing is now heavy
+  // (0.06, see below) so discrete scroll-wheel ticks blend into a smooth glide
+  // instead of jumping — this trades a little responsiveness for smoothness.
   useEffect(() => {
     const v = videoRef.current
     if (!v || !active) return
