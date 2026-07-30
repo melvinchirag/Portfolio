@@ -142,7 +142,7 @@ export function About() {
 
   return (
     <div className="relative z-10 w-full px-6 pt-32 pb-40 md:px-10">
-      {/* ── SECTION 1: "Get to know me" — header left, milestone cards right ── */}
+      {/* ── SECTION 1: "Get to know me !" — header left, milestone cards right ── */}
       <div className="grid grid-cols-1 gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="max-w-2xl flex flex-col items-center justify-center">
           <header>
