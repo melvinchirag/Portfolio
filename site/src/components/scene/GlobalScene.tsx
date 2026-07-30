@@ -90,8 +90,8 @@ function useAboutVideoTexture(active: boolean) {
         const max = document.documentElement.scrollHeight - window.innerHeight
         const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
         if (smooth < 0) smooth = progress
-        // Light smoothing only — enough to de-jitter, not enough to float behind.
-        smooth += (progress - smooth) * 0.35
+        // Heavy smoothing (0.06) absorbs discrete scroll-wheel ticks, creating a buttery glide.
+        smooth += (progress - smooth) * 0.06
         const target = start + smooth * (end - start)
         if (!v.seeking) {
           if (!primed) {
