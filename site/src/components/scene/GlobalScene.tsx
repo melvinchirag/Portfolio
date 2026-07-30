@@ -18,21 +18,19 @@ function useAboutVideoTexture(active: boolean) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
   useEffect(() => {
+    if (!active) return
+
     const video = document.createElement('video')
-    // preload BEFORE src, then an explicit load(): this element is detached from
-    // the DOM and is never play()'d (scroll drives it), and in that state Chrome
-    // will happily sit at readyState 0 forever unless something explicitly kicks
-    // off the fetch. load() is that kick.
-    video.preload = 'auto'
-    // Versioned filename: this path has served three different files during
-    // development (0-byte, a 209MB 4K cut, now the 720p encode). Bumping the name
-    // on re-encode guarantees no browser is serving a stale cached copy.
-    video.src = '/about-bg-1080-keyframe.mp4'
+    video.src = '/about-bg-720.mp4'
     video.muted = true
     video.loop = true
     video.playsInline = true
     video.crossOrigin = 'anonymous'
-    video.load()
+    // Claude's fix: Video now just PLAYS. This forces Chrome to load the video
+    // even though it's detached from the DOM, and avoids decoder thrash.
+    video.play().catch(() => {
+      // Autoplay might be blocked until interaction, but muted usually succeeds.
+    })
     videoRef.current = video
 
     const t = new THREE.VideoTexture(video)
@@ -48,69 +46,7 @@ function useAboutVideoTexture(active: boolean) {
       t.dispose()
       videoRef.current = null
     }
-  }, [])
-
-  // Scroll-SCRUB the video while About is showing — BIDIRECTIONAL. Scroll down
-  // runs it forward, scroll up rewinds it (currentTime tracks scroll position
-  // both ways). The tail is trimmed; the head is not (see START_TRIM below).
-  // The video is never play()'d — we drive currentTime from scroll. The
-  // `!v.seeking` guard is load-bearing: it refuses a new seek until the previous
-  // finished, so the decoder never thrashes to black (the original bug).
-  //
-  // NOTE on lag: seeking a large / sparse-keyframe mp4 is slow, so the video can
-  // trail fast scrolls. The biggest lever (short of re-encoding with dense
-  // keyframes) is page LENGTH — a taller About page means each scroll tick maps
-  // to a smaller video-time jump = smaller, faster seeks. The easing is kept low
-  // so the video stays close to the scroll rather than floating behind it.
-  useEffect(() => {
-    const v = videoRef.current
-    if (!v || !active) return
-    v.pause()
-    v.preload = 'auto'
-
-    // Where in the clip the scroll starts and ends.
-    // START_TRIM is 0 on purpose: this footage OPENS on its best frame (the wide
-    // astronaut-and-Earth shot), so we show it from the very first pixel. The
-    // earlier value of 3 was inherited from the previous clip (which had a
-    // play-button intro frame to skip) and it happened to land exactly on a dark
-    // moment at t≈3.0s, where a foreground asteroid wipes across the lens — that
-    // is what made the page open black. Measured, not guessed: frame detail is
-    // ~37KB/frame at t=0–2.6 and drops to ~9KB at t=3.0.
-    const START_TRIM = 0
-    const END_TRIM = 3 // still drop the tail
-    let raf = 0
-    let smooth = -1 // -1 until first sample
-    let primed = false // has a frame been forced to decode at least once?
-
-    const tick = () => {
-      const dur = v.duration
-      if (dur && !Number.isNaN(dur)) {
-        const start = START_TRIM
-        const end = Math.max(start + 0.1, dur - END_TRIM)
-        const max = document.documentElement.scrollHeight - window.innerHeight
-        const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
-        if (smooth < 0) smooth = progress
-        // Light smoothing only — enough to de-jitter, not enough to float behind.
-        smooth += (progress - smooth) * 0.35
-        const target = start + smooth * (end - start)
-        if (!v.seeking) {
-          if (!primed) {
-            // Force exactly one seek so a frame is guaranteed to be decoded and
-            // uploaded to the texture. Needed because at the top of the page the
-            // target is 0 and currentTime is already 0, so the delta check below
-            // would never fire and the background would stay black.
-            v.currentTime = Math.min(target + 0.001, end)
-            primed = true
-          } else if (Math.abs(v.currentTime - target) > 0.033) {
-            v.currentTime = target
-          }
-        }
-      }
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [active, tex])
+  }, [active])
 
   return tex
 }
