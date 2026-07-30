@@ -263,152 +263,181 @@ export function MaskParticles() {
   }, [])
 
   // Build everything once we have geometry + renderer.
-  const sim = useMemo(() => {
-    if (!maskGeometry) return null
-    if (!maskGeometry.attributes.normal) maskGeometry.computeVertexNormals()
-    const mesh = new THREE.Mesh(maskGeometry)
-    const sampler = new MeshSurfaceSampler(mesh).build()
+  const [sim, setSim] = useState<{
+    gpu: GPUComputationRenderer
+    posVar: any
+    velVar: any
+    geometry: THREE.BufferGeometry
+    material: THREE.ShaderMaterial
+    rayMesh: THREE.Mesh
+    glyphGeo: THREE.BufferGeometry
+    glyphMat: THREE.ShaderMaterial
+    hotspots: THREE.Vector3[]
+    candidates: THREE.Vector3[]
+  } | null>(null)
 
-    // Height clip: keep only the lower part of the model (face + jaw), dropping
-    // the skull-top, helmet crown and the antenna above the forehead.
-    maskGeometry.computeBoundingBox()
-    const bb = maskGeometry.boundingBox!
-    const yCap = bb.min.y + (bb.max.y - bb.min.y) * 0.66
+  useEffect(() => {
+    if (!maskGeometry) return
+    let isCancelled = false
 
-    const count = SIZE * SIZE
-    const homeData = new Float32Array(count * 4)
-    const refs = new Float32Array(count * 2)
-    const p = new THREE.Vector3()
-    const n = new THREE.Vector3()
+    const buildSim = async () => {
+      if (!maskGeometry.attributes.normal) maskGeometry.computeVertexNormals()
+      const mesh = new THREE.Mesh(maskGeometry)
+      const sampler = new MeshSurfaceSampler(mesh).build()
 
-    for (let i = 0; i < SIZE; i++) {
-      for (let j = 0; j < SIZE; j++) {
-        const idx = i * SIZE + j
-        // resample until we get a front-facing point below the height cap
-        // (drops back of head, crown and antenna → leaves the face shell)
-        let tries = 0
-        do {
-          sampler.sample(p, n)
-          tries++
-        } while ((n.z < FRONT_FACING || p.y > yCap) && tries < 10)
-        homeData[idx * 4 + 0] = p.x
-        homeData[idx * 4 + 1] = p.y
-        homeData[idx * 4 + 2] = p.z
-        homeData[idx * 4 + 3] = 1
-        refs[idx * 2 + 0] = (j + 0.5) / SIZE
-        refs[idx * 2 + 1] = (i + 0.5) / SIZE
+      // Height clip: keep only the lower part of the model (face + jaw), dropping
+      // the skull-top, helmet crown and the antenna above the forehead.
+      maskGeometry.computeBoundingBox()
+      const bb = maskGeometry.boundingBox!
+      const yCap = bb.min.y + (bb.max.y - bb.min.y) * 0.66
+
+      const count = SIZE * SIZE
+      const homeData = new Float32Array(count * 4)
+      const refs = new Float32Array(count * 2)
+      const p = new THREE.Vector3()
+      const n = new THREE.Vector3()
+
+      for (let i = 0; i < SIZE; i++) {
+        // Yield to the main thread every 4 rows to prevent UI freeze
+        if (i % 4 === 0) await new Promise((r) => setTimeout(r, 0))
+        if (isCancelled) return
+
+        for (let j = 0; j < SIZE; j++) {
+          const idx = i * SIZE + j
+          // resample until we get a front-facing point below the height cap
+          // (drops back of head, crown and antenna → leaves the face shell)
+          let tries = 0
+          do {
+            sampler.sample(p, n)
+            tries++
+          } while ((n.z < FRONT_FACING || p.y > yCap) && tries < 10)
+          homeData[idx * 4 + 0] = p.x
+          homeData[idx * 4 + 1] = p.y
+          homeData[idx * 4 + 2] = p.z
+          homeData[idx * 4 + 3] = 1
+          refs[idx * 2 + 0] = (j + 0.5) / SIZE
+          refs[idx * 2 + 1] = (i + 0.5) / SIZE
+        }
+      }
+
+      // GPU sim
+      const gpu = new GPUComputationRenderer(SIZE, SIZE, gl)
+      const homeTex = gpu.createTexture()
+      homeTex.image.data!.set(homeData)
+      const velTex = gpu.createTexture() // starts at 0
+
+      const posVar = gpu.addVariable('uCurrentPosition', simPosition, homeTex)
+      const velVar = gpu.addVariable('uCurrentVelocity', simVelocity, velTex)
+      gpu.setVariableDependencies(posVar, [posVar, velVar])
+      gpu.setVariableDependencies(velVar, [posVar, velVar])
+
+      // clone the home texture so it's a stable "original" reference
+      const homeRef = gpu.createTexture()
+      homeRef.image.data!.set(homeData)
+      velVar.material.uniforms.uHome = { value: homeRef }
+      velVar.material.uniforms.uMouse = { value: new THREE.Vector3(999, 999, 999) }
+      velVar.material.uniforms.uMouseSpeed = { value: 0 }
+      velVar.material.uniforms.uForce = { value: 0.72 }
+      velVar.material.uniforms.uTime = { value: 0 }
+
+      const err = gpu.init()
+      if (err) console.error('[MaskField] GPGPU init error:', err)
+
+      // render geometry: one point per particle, carrying its texel ref
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
+      geometry.setAttribute('aRef', new THREE.BufferAttribute(refs, 2))
+
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          uPositionTexture: { value: null },
+          uVelocityTexture: { value: null },
+          uParticleSize: { value: 1.7 },
+          uColor: { value: new THREE.Color('#80fff0') },
+          uMinAlpha: { value: 0.04 },
+          uMaxAlpha: { value: 0.85 },
+        },
+        vertexShader: renderVertex,
+        fragmentShader: renderFragment,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+
+      // ---- glyph layer: a strided subset carries a seed; hotspots decide which
+      // are visible (localized patches), the shader cycles binary→Telugu→hex ----
+      const atlas = makeGlyphAtlas()
+      const stride = Math.max(1, Math.floor(count / GLYPH_COUNT))
+      const gPositions: number[] = []
+      const gRefs: number[] = []
+      const gSeeds: number[] = []
+      for (let k = 0; k < count; k += stride) {
+        gPositions.push(0, 0, 0)
+        gRefs.push(refs[k * 2], refs[k * 2 + 1])
+        gSeeds.push(Math.random())
+      }
+      const glyphGeo = new THREE.BufferGeometry()
+      glyphGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(gPositions), 3))
+      glyphGeo.setAttribute('aRef', new THREE.BufferAttribute(new Float32Array(gRefs), 2))
+      glyphGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array(gSeeds), 1))
+
+      // face bounding box (from the accepted samples) → hotspot radius + a pool of
+      // candidate positions the hotspots hop between (chin, eyes, cheek, …)
+      let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity
+      const candidates: THREE.Vector3[] = []
+      for (let k = 0; k < count; k++) {
+        const x = homeData[k * 4], y = homeData[k * 4 + 1], z = homeData[k * 4 + 2]
+        if (x < minx) minx = x
+        if (x > maxx) maxx = x
+        if (y < miny) miny = y
+        if (y > maxy) maxy = y
+        if (k % 700 === 0) candidates.push(new THREE.Vector3(x, y, z))
+      }
+      const hotRadius = Math.max(maxx - minx, maxy - miny) * 0.18
+      const hotspots = Array.from({ length: N_HOTSPOTS }, () =>
+        candidates[(Math.random() * candidates.length) | 0].clone(),
+      )
+
+      const glyphMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uPositionTexture: { value: null },
+          uHomeTexture: { value: homeRef },
+          uGlyphSize: { value: 26 },
+          uTime: { value: 0 },
+          uHots: { value: hotspots },
+          uHotRadius: { value: hotRadius },
+          uBinStart: { value: BIN_START },
+          uTelStart: { value: TEL_START },
+          uHexStart: { value: HEX_START },
+          uAtlas: { value: atlas.texture },
+          uCols: { value: atlas.cols },
+          uColor: { value: new THREE.Color('#b9fff2') },
+        },
+        vertexShader: glyphVertex,
+        fragmentShader: glyphFragment,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+
+      // a hidden mesh (with BVH) purely for cursor→surface raycasting
+      ;(maskGeometry as unknown as { computeBoundsTree: () => void }).computeBoundsTree()
+      const rayMesh = new THREE.Mesh(maskGeometry)
+      rayMesh.position.copy(OFFSET) // match the rendered points' left offset
+      rayMesh.updateMatrixWorld()
+
+      if (!isCancelled) {
+        setSim({ gpu, posVar, velVar, geometry, material, rayMesh, glyphGeo, glyphMat, hotspots, candidates })
       }
     }
 
-    // GPU sim
-    const gpu = new GPUComputationRenderer(SIZE, SIZE, gl)
-    const homeTex = gpu.createTexture()
-    homeTex.image.data!.set(homeData)
-    const velTex = gpu.createTexture() // starts at 0
+    buildSim()
 
-    const posVar = gpu.addVariable('uCurrentPosition', simPosition, homeTex)
-    const velVar = gpu.addVariable('uCurrentVelocity', simVelocity, velTex)
-    gpu.setVariableDependencies(posVar, [posVar, velVar])
-    gpu.setVariableDependencies(velVar, [posVar, velVar])
-
-    // clone the home texture so it's a stable "original" reference
-    const homeRef = gpu.createTexture()
-    homeRef.image.data!.set(homeData)
-    velVar.material.uniforms.uHome = { value: homeRef }
-    velVar.material.uniforms.uMouse = { value: new THREE.Vector3(999, 999, 999) }
-    velVar.material.uniforms.uMouseSpeed = { value: 0 }
-    velVar.material.uniforms.uForce = { value: 0.72 }
-    velVar.material.uniforms.uTime = { value: 0 }
-
-    const err = gpu.init()
-    if (err) console.error('[MaskField] GPGPU init error:', err)
-
-    // render geometry: one point per particle, carrying its texel ref
-    const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
-    geometry.setAttribute('aRef', new THREE.BufferAttribute(refs, 2))
-
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        uPositionTexture: { value: null },
-        uVelocityTexture: { value: null },
-        uParticleSize: { value: 1.7 },
-        uColor: { value: new THREE.Color('#80fff0') },
-        uMinAlpha: { value: 0.04 },
-        uMaxAlpha: { value: 0.85 },
-      },
-      vertexShader: renderVertex,
-      fragmentShader: renderFragment,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    })
-
-    // ---- glyph layer: a strided subset carries a seed; hotspots decide which
-    // are visible (localized patches), the shader cycles binary→Telugu→hex ----
-    const atlas = makeGlyphAtlas()
-    const stride = Math.max(1, Math.floor(count / GLYPH_COUNT))
-    const gPositions: number[] = []
-    const gRefs: number[] = []
-    const gSeeds: number[] = []
-    for (let k = 0; k < count; k += stride) {
-      gPositions.push(0, 0, 0)
-      gRefs.push(refs[k * 2], refs[k * 2 + 1])
-      gSeeds.push(Math.random())
+    return () => {
+      isCancelled = true
     }
-    const glyphGeo = new THREE.BufferGeometry()
-    glyphGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(gPositions), 3))
-    glyphGeo.setAttribute('aRef', new THREE.BufferAttribute(new Float32Array(gRefs), 2))
-    glyphGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array(gSeeds), 1))
-
-    // face bounding box (from the accepted samples) → hotspot radius + a pool of
-    // candidate positions the hotspots hop between (chin, eyes, cheek, …)
-    let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity
-    const candidates: THREE.Vector3[] = []
-    for (let k = 0; k < count; k++) {
-      const x = homeData[k * 4], y = homeData[k * 4 + 1], z = homeData[k * 4 + 2]
-      if (x < minx) minx = x
-      if (x > maxx) maxx = x
-      if (y < miny) miny = y
-      if (y > maxy) maxy = y
-      if (k % 700 === 0) candidates.push(new THREE.Vector3(x, y, z))
-    }
-    const hotRadius = Math.max(maxx - minx, maxy - miny) * 0.18
-    const hotspots = Array.from({ length: N_HOTSPOTS }, () =>
-      candidates[(Math.random() * candidates.length) | 0].clone(),
-    )
-
-    const glyphMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uPositionTexture: { value: null },
-        uHomeTexture: { value: homeRef },
-        uGlyphSize: { value: 26 },
-        uTime: { value: 0 },
-        uHots: { value: hotspots },
-        uHotRadius: { value: hotRadius },
-        uBinStart: { value: BIN_START },
-        uTelStart: { value: TEL_START },
-        uHexStart: { value: HEX_START },
-        uAtlas: { value: atlas.texture },
-        uCols: { value: atlas.cols },
-        uColor: { value: new THREE.Color('#b9fff2') },
-      },
-      vertexShader: glyphVertex,
-      fragmentShader: glyphFragment,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    })
-
-    // a hidden mesh (with BVH) purely for cursor→surface raycasting
-    ;(maskGeometry as unknown as { computeBoundsTree: () => void }).computeBoundsTree()
-    const rayMesh = new THREE.Mesh(maskGeometry)
-    rayMesh.position.copy(OFFSET) // match the rendered points' left offset
-    rayMesh.updateMatrixWorld()
-
-    return { gpu, posVar, velVar, geometry, material, rayMesh, glyphGeo, glyphMat, hotspots, candidates }
   }, [maskGeometry, gl])
 
   const raycaster = useRef(new THREE.Raycaster())
