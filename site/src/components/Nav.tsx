@@ -71,6 +71,8 @@ export function Nav() {
                 gradient pill, which read as cheap against the warm field. */}
             <a
               href="/resume.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
               className="glass-cta ml-1 rounded-full px-5 py-2 text-sm tracking-wide text-white/90"
             >
               Resume

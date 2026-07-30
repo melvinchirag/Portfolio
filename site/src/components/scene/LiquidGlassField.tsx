@@ -260,25 +260,25 @@ void main() {
  */
 export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
   const { size } = useThree()
-  
+
   // Render targets
   const sceneFBO = useFBO(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
   const vBlurFBO = useFBO(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
   const hBlurFBO = useFBO(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
-  
+
   // Materials
   const vBlurMat = useMemo(() => new THREE.ShaderMaterial({
     uniforms: { tDiffuse: { value: null }, v: { value: 1.0 / size.height } },
     vertexShader, fragmentShader: vBlurShader,
     depthWrite: false, depthTest: false
   }), [size.height])
-  
+
   const hBlurMat = useMemo(() => new THREE.ShaderMaterial({
     uniforms: { tDiffuse: { value: null }, h: { value: 1.0 / size.width } },
     vertexShader, fragmentShader: hBlurShader,
     depthWrite: false, depthTest: false
   }), [size.width])
-  
+
   const glassMat = useMemo(() => new THREE.ShaderMaterial({
     uniforms: {
       u_bg: { value: null },
@@ -303,7 +303,7 @@ export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
       u_shadowExpand: { value: 15.3 },
       u_shadowFactor: { value: 15.0 },
       u_shadowPosition: { value: new THREE.Vector2(0, -10) },
-      u_tint: { value: new THREE.Vector4(8/255, 102/255, 165/255, 0.0) },
+      u_tint: { value: new THREE.Vector4(8 / 255, 102 / 255, 165 / 255, 0.0) },
       u_glassOnly: { value: 0.0 },
       // DOM rects tracking
       u_numRects: { value: 0 },
@@ -386,9 +386,9 @@ export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
       glassMat.uniforms.u_numRects.value = 0
       return
     }
-    
+
     glassMat.uniforms.u_numRects.value = rects.length
-    for(let i=0; i<rects.length; i++) {
+    for (let i = 0; i < rects.length; i++) {
       glassMat.uniforms.u_rects.value[i] = rects[i]
       glassMat.uniforms.u_radii.value[i] = radii[i]
     }
