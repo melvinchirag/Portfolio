@@ -158,6 +158,45 @@ so and hand off with what you learned; don't ship a black page and call it broke
 
 ---
 
+## 11. [AGY] Vercel 404 on refresh — SPA routing + Root Directory gotcha
+*Logged by AGY, 2026-07-30.*
+
+**What happened:** refreshing the site on any route except `/` showed a Vercel
+`404: NOT_FOUND` page. Clicking nav links worked fine; only browser refresh or
+directly visiting a URL like `/about` broke.
+
+**Why it happened (two issues stacked):**
+1. **SPA routing 101.** React Router handles routes client-side — there are no
+   physical files at `/about` or `/work`. When the browser refreshes, it sends a
+   real HTTP request to Vercel, which looks for a file at that path, finds nothing,
+   and returns 404. The fix is a `vercel.json` rewrite rule:
+   `{ "source": "/(.*)", "destination": "/index.html" }` — this tells Vercel to
+   serve `index.html` for every route, letting React Router take over.
+2. **Vercel Root Directory + "Skip deployments" interaction.** The Vercel project
+   has Root Directory set to `site/`. I first placed `vercel.json` at the **repo
+   root** — Vercel ignored it. Then, because "Skip deployments when there are no
+   changes to the root directory" was **enabled**, commits that only touched files
+   outside `site/` were silently skipped — the rewrite rule never deployed. The
+   fix was placing `vercel.json` inside `site/` (the actual Vercel Root Directory).
+
+**What AGY did wrong:** assumed `vercel.json` at the repo root would be read by
+Vercel regardless of the Root Directory setting. Burned 4 attempts before
+realising the config file was never being picked up.
+
+**What to do instead / watch out for:**
+- **`vercel.json` must live inside `site/`** — always. That's the Vercel Root
+  Directory. The repo-root copy is ignored.
+- **The "Skip deployments" toggle** means changes to files outside `site/` won't
+  trigger redeployments. If you need to force a redeploy after changing something
+  at the repo root, make a trivial change inside `site/` too.
+- **New React Router routes work automatically** — the catch-all rewrite covers
+  everything. No need to touch `vercel.json` when adding pages.
+- **`/` always works without a rewrite** because Vercel finds `index.html` at
+  the root naturally. This makes the bug deceptive — it looks like "only some
+  pages crash" when really it's "the one page that has a physical file works."
+
+---
+
 ## The process we're adopting because of all this (Melvin's own structure)
 1. **Foundations before pizzazz.** Get content, page structure, routing, and
    plain UI right FIRST (this needs no high fidelity — a cheaper model/AGY can
