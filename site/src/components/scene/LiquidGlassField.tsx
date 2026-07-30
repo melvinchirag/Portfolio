@@ -261,10 +261,14 @@ void main() {
 export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
   const { size } = useThree()
 
+  const dpr = window.devicePixelRatio
+  const w = Math.max(1, size.width * dpr)
+  const h = Math.max(1, size.height * dpr)
+
   // Render targets
-  const sceneFBO = useFBO(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
-  const vBlurFBO = useFBO(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
-  const hBlurFBO = useFBO(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
+  const sceneFBO = useFBO(w, h)
+  const vBlurFBO = useFBO(w, h)
+  const hBlurFBO = useFBO(w, h)
 
   // Materials
   const vBlurMat = useMemo(() => new THREE.ShaderMaterial({
@@ -317,9 +321,12 @@ export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
 
   // Update sizes on resize
   useEffect(() => {
-    vBlurMat.uniforms.v.value = 1.0 / size.height
-    hBlurMat.uniforms.h.value = 1.0 / size.width
-    glassMat.uniforms.u_resolution.value.set(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio)
+    vBlurMat.uniforms.v.value = 1.0 / Math.max(1, size.height)
+    hBlurMat.uniforms.h.value = 1.0 / Math.max(1, size.width)
+    glassMat.uniforms.u_resolution.value.set(
+      Math.max(1, size.width * window.devicePixelRatio),
+      Math.max(1, size.height * window.devicePixelRatio)
+    )
     glassMat.uniforms.u_dpr.value = window.devicePixelRatio
   }, [size, vBlurMat, hBlurMat, glassMat])
 
