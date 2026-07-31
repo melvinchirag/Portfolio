@@ -1,6 +1,23 @@
 # CONTEXT — Portfolio project handoff
 
-Last updated: 2026-07-28 ~11:19 EDT · Owner: Melvin
+Last updated: 2026-07-31 · Owner: Melvin
+
+## 🔀 PARALLEL WORK IN PROGRESS (2026-07-31) — read this, AGY
+Melvin is running **Claude on the HERO (Home) + all WebGL** and **AGY on the
+other pages' content/UI** at the same time. To avoid collisions:
+- **AGY owns:** `About`, `Work`, `Vision`, `Contact`, `Résumé` — content, copy,
+  plain layout/UI. **Claude owns:** `Home`/hero, and ALL the shared WebGL.
+- **AGY MUST NOT TOUCH** (Claude is actively editing these): `Home.tsx`,
+  `HeroBeats.tsx`, `heroScroll.ts`, and everything under
+  `components/scene/` — `GlobalScene.tsx`, `MaskField.tsx`, `LiquidGlassField.tsx`,
+  `VideoBackground.tsx`. These are the shared global canvas + hero; editing them
+  in parallel will conflict. (This matches PAGE-PLAN.md's DO-NOT-TOUCH list.)
+- **Git:** both are committing to `main`. **Pull before you start and before you
+  push**, keep commits small, and if you must change a shared file, say so in
+  CONTEXT first. Consider a separate branch for big AGY changes.
+- `.sync-glass-rect` on a card = it gets liquid-glass; that class is the ONLY
+  hook AGY needs from the WebGL side — don't touch the shader to use it.
+
 **Read `AGENTS.md` first (tool-agnostic entry point), then jump straight to
 the `🤝 HANDOFF` section below — it is the current, authoritative state and
 supersedes everything else in this file.** Everything above/below that block
@@ -404,6 +421,24 @@ they read as "gone."
   `uOnFrac` (coverage dial), `uRoveSpeed` (rove speed). Guide inline.
 - tsc/oxlint/build clean; NOT visually verified (automation-browser wall) — needs
   Melvin's screenshot to confirm coverage/legibility/rove feel.
+
+### [CLAUDE] Glyphs #4 — rove speed too fast, smoothed (2026-07-31, later)
+Melvin: "the glyphs are changing too fast their change needs to be smoother."
+`uRoveSpeed` 0.1 → **0.02**. Speed and coverage are decoupled (`uOnFrac` is the
+coverage dial, `uRoveSpeed` is separate), so this makes each glyph linger ~1s
+with a soft ~0.5s fade in/out and the whole set relocate more slowly, WITHOUT
+changing the ~1/7 on-screen coverage. tsc/oxlint clean; not yet re-verified by
+Melvin. Commit `0c02d9d` (code only — this CONTEXT entry was written after the
+fact; the standing "log immediately" rule was missed in the moment, caught here).
+
+### 📝 OPEN ITEM — glyph brightness (2026-07-31, not yet acted on)
+Melvin: "the binary + telugu [glyphs] need to be brighter... but we can do that
+later too if needed." Deferred at his request — moving on to the rest of the
+hero first. When picked up: the glyph colour is `#b9fff2` in `MaskField.tsx`
+(`glyphMat` uniforms `uColor`) — raising its alpha/intensity or reducing how much
+`vAlpha`'s fade dims it are the likely levers. Do NOT change blind; get Melvin's
+screenshot first per the pattern above (three rounds of guessing already cost a
+lot of back-and-forth this session — measure or ask before touching numbers).
 
 ---
 
