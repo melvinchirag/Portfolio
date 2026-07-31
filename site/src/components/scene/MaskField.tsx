@@ -453,8 +453,12 @@ export function MaskParticles() {
           // ⚙️ THE COVERAGE DIAL: fraction of the candidate pool lit at any instant.
           // ~0.02 ≈ 1/7 of the mask, 0.03 ≈ 1/5, at uGlyphSize 15. Raise for more.
           uOnFrac: { value: 0.02 },
-          // ⚙️ how fast the lit set relocates across the mask (higher = busier).
-          uRoveSpeed: { value: 0.1 },
+          // ⚙️ how fast the change happens. Each glyph stays lit for
+          // ~uOnFrac/uRoveSpeed seconds, so LOWER = each glyph lingers longer and
+          // fades more gently (smoother), and the whole set relocates more slowly —
+          // WITHOUT changing coverage (that's uOnFrac's job). 0.1 flickered (~0.2s
+          // per glyph); 0.02 ≈ ~1s per glyph with a soft ~0.5s fade in/out.
+          uRoveSpeed: { value: 0.02 },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
           uColor: { value: new THREE.Color('#b9fff2') },
