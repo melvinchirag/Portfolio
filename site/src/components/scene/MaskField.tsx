@@ -48,6 +48,18 @@ const OFFSET = new THREE.Vector3(-0.62, 0, 0)
 // head and the helmet "crown", leaving the face/mask shell.
 const FRONT_FACING = 0.12
 
+// Depth clip — drops the mask's hollow INNER-BACK shell that sits behind the face.
+// The "Soulless" model is a hollow shell, so its inner-back surface faces FORWARD
+// and sneaks past FRONT_FACING; front-on you never notice, but turned to profile
+// it hangs behind the face as a detached "jaw/ghost" blob (Melvin, 2026-07-31:
+// "that jaw piece I want it gone… only face"). Measured from the geometry: the
+// face-front shell lives at z≈[-0.03, 0.35] and the inner-back shell at
+// z≈[-0.34, -0.19], separated by an EMPTY gap at z≈[-0.19, -0.03]. Clipping in
+// that gap removes the rear shell and keeps the whole face. (If this ever cuts
+// the face instead of the ghost, the front shell is -Z on this model — flip to
+// keeping p.z <= BACK_CLIP.)
+const BACK_CLIP = -0.11
+
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
  * The mask no longer just sits on the left — it travels a path, scales, and
  * rolls as you scroll the 5 hero beats, so scrolling reads as a real animation.
@@ -359,13 +371,14 @@ export function MaskParticles() {
 
         for (let j = 0; j < SIZE; j++) {
           const idx = i * SIZE + j
-          // resample until we get a front-facing point below the height cap
-          // (drops back of head, crown and antenna → leaves the face shell)
+          // resample until we get a front-facing point below the height cap AND
+          // in front of the depth clip (drops back of head, crown, antenna, and
+          // the hollow inner-back shell → leaves just the face-front shell)
           let tries = 0
           do {
             sampler.sample(p, n)
             tries++
-          } while ((n.z < FRONT_FACING || p.y > yCap) && tries < 10)
+          } while ((n.z < FRONT_FACING || p.y > yCap || p.z < BACK_CLIP) && tries < 10)
           homeData[idx * 4 + 0] = p.x
           homeData[idx * 4 + 1] = p.y
           homeData[idx * 4 + 2] = p.z

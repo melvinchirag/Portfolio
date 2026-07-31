@@ -449,6 +449,28 @@ changing the ~1/7 on-screen coverage. tsc/oxlint clean; not yet re-verified by
 Melvin. Commit `0c02d9d` (code only — this CONTEXT entry was written after the
 fact; the standing "log immediately" rule was missed in the moment, caught here).
 
+### [CLAUDE] Mask: removed the inner-back "jaw/ghost" shell (2026-07-31)
+Melvin dragged the mask to profile and saw a second, detached blob hanging behind
+the face — "that jaw piece I want it gone… only face." **Measured the geometry
+headlessly before touching anything** (decoded the DRACO GLB with `draco3d` in
+node — three's DRACOLoader can't run headless: file:// fetch + Web Workers — and
+histogrammed/ASCII-mapped the sampled points; scripts were temp, in scratchpad):
+- The model is natively a **straight-on frontal face** (nose = max +Z toward
+  camera, symmetric). The two-mass look ONLY appears when turned to profile —
+  Melvin confirmed he'd dragged it.
+- Root cause: the "Soulless" model is a **hollow shell**. Its inner-back surface
+  faces FORWARD, so it sneaks past `FRONT_FACING` (0.12). Side view showed two
+  shells in depth: face-front at z≈[-0.03, 0.35], inner-back at z≈[-0.34, -0.19],
+  separated by an EMPTY gap at z≈[-0.19, -0.03].
+- **Fix:** new `BACK_CLIP = -0.11` constant + `|| p.z < BACK_CLIP` in the sampler
+  reject loop — lands the clip in the measured empty gap. Removes the rear shell
+  (19.5% of accepted points), keeps the whole face (80.5%, now denser since all
+  ~147k particles pack into the face). tsc/oxlint clean.
+- Not a guess — derived from the geometry's actual depth gap. **Melvin to verify
+  on the deployed site**: drag to profile, confirm the ghost blob is gone and the
+  face reads clean. If it ever removed the face instead, the front shell would be
+  -Z on this model → flip the inequality (noted inline at `BACK_CLIP`).
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
