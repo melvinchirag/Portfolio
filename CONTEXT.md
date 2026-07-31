@@ -271,6 +271,43 @@ to ONE canonical server (now `:5173`), per Lesson 7.
 
 ---
 
+## 🎬 [CLAUDE] HERO REBUILD — STEP 1: scroll choreography (2026-07-31)
+Melvin chose (from 3 options) the **incremental** path: "The Assembly" — a
+particle-morph hero — built up from a motion-only step 1, rather than jumping
+straight to a full deep-space engine. (Full concept + the 3 options are in the
+chat; short version: mask travels/scales/morphs across beats, some particles peel
+off to become the depth-field. Space engine reserved as a possible v2 environment
+layer.)
+
+**Step 1 done (this is motion only — no morph yet):**
+- `MaskField.tsx` — the mask now **travels a path, scales, and z-rolls as you
+  scroll**, driven off `heroScroll.progress` (the read-only contract, so it can't
+  desync the GPGPU sim). New `MASK_PATH` keyframes + `samplePath()` (smoothstep
+  eased). Applied to BOTH the visible group AND the raycast mesh so cursor
+  interaction stays aligned wherever the mask flies to. Drag rotation still
+  composes on top. **The path is a deliberate FIRST PASS to tune live with
+  Melvin, not a final composition.**
+- **NOT done yet (step 2):** the morph/dissolve formations between beats, and the
+  peel-off depth-field so the mask isn't on pure black. Step 2's morph will be
+  prototyped standalone first (it's a genuinely new effect).
+
+**Bonus fix — self-hosted the DRACO decoder** (`MaskField.tsx`
+`setDecoderPath('/draco/')`, files copied from `three/examples` into
+`site/public/draco/`). Was loading from the gstatic CDN — a real production
+reliability TODO, and it's blocked entirely in the sandboxed automation browser,
+which is one reason the mask can't be verified there. Local files fix both.
+
+**⚠️ Could NOT visually verify in the automation browser** (same class as
+LESSONS §12): the heavy WebGL scene doesn't initialise here — the R3F canvas is
+stuck at the default 300×150 and the window keeps collapsing to ~767×370, so the
+mask never builds and `cyborg.glb` is never even fetched. Confirmed instead that
+all assets serve (`/models/cyborg.glb`, `/draco/*` all return 206 with correct
+content-types) and that `tsc`/`oxlint`/`vite build` are all clean. **Melvin needs
+to eyeball the mask motion in his own browser** so we can tune the `MASK_PATH`
+feel together — the path values are the one knob.
+
+---
+
 # [CLAUDE] PLAYBOOK — Scroll-driven video + liquid glass on a page (replicable)
 *Written by Claude, 2026-07-28, at Melvin's request so this exact process can be
 re-run (e.g. with AGY) on another page. This is the authoritative "how it was

@@ -22,6 +22,7 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
+import { heroScroll } from '../../hooks/heroScroll'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
@@ -46,6 +47,40 @@ const OFFSET = new THREE.Vector3(-0.62, 0, 0)
 // Keep only front-facing samples (normal.z above this) → drops the back of the
 // head and the helmet "crown", leaving the face/mask shell.
 const FRONT_FACING = 0.12
+
+/* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
+ * The mask no longer just sits on the left — it travels a path, scales, and
+ * rolls as you scroll the 5 hero beats, so scrolling reads as a real animation.
+ * Each keyframe: p = scroll progress 0→1, (x,y) = world position, s = scale,
+ * rz = z-roll (radians). Camera is at z=1.5, fov 50 → the visible box at z=0 is
+ * roughly x∈[-1.1,1.1], y∈[-0.7,0.7], so these stay on-screen. This is a
+ * FIRST-PASS path meant to be tuned live with Melvin, not a final composition. */
+type Pose = { x: number; y: number; s: number; rz: number }
+const MASK_PATH: (Pose & { p: number })[] = [
+  { p: 0.0, x: -0.62, y: 0.0, s: 1.0, rz: 0.0 }, // beat 1 — identity, left
+  { p: 0.25, x: -0.2, y: 0.22, s: 1.2, rz: 0.12 }, // drifts up + grows
+  { p: 0.5, x: 0.3, y: -0.02, s: 1.35, rz: -0.1 }, // the big centred hero beat
+  { p: 0.75, x: 0.62, y: 0.24, s: 1.1, rz: 0.2 }, // swings right, shrinks
+  { p: 1.0, x: 0.1, y: 0.32, s: 0.8, rz: 0.0 }, // settles high for the CTA
+]
+
+// Sample the path at scroll progress `p`, easing between keyframes with
+// smoothstep so the travel feels inertial, never linear/robotic.
+function samplePath(p: number, out: Pose): Pose {
+  const prog = p < 0 ? 0 : p > 1 ? 1 : p
+  let i = 0
+  while (i < MASK_PATH.length - 2 && prog > MASK_PATH[i + 1].p) i++
+  const a = MASK_PATH[i]
+  const b = MASK_PATH[i + 1]
+  const span = b.p - a.p
+  const t = span <= 0 ? 0 : (prog - a.p) / span
+  const e = t * t * (3 - 2 * t) // smoothstep easing
+  out.x = a.x + (b.x - a.x) * e
+  out.y = a.y + (b.y - a.y) * e
+  out.s = a.s + (b.s - a.s) * e
+  out.rz = a.rz + (b.rz - a.rz) * e
+  return out
+}
 
 /* ---- our simulation shaders (GPUComputationRenderer injects uCurrentPosition,
  * uCurrentVelocity and `resolution` automatically) ------------------------- */
@@ -241,7 +276,12 @@ export function MaskParticles() {
   const [maskGeometry, setMaskGeometry] = useState<THREE.BufferGeometry | null>(null)
   useEffect(() => {
     const draco = new DRACOLoader()
-    draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
+    // Self-hosted decoder (copied from three/examples into public/draco/). Was
+    // loading from the gstatic CDN, which is an external dependency — flaky
+    // offline, and blocked entirely in some sandboxed browsers, which left the
+    // mask permanently invisible. Local files fix reliability AND make the mask
+    // load in any environment. Update these if `three` is upgraded.
+    draco.setDecoderPath('/draco/')
     const loader = new GLTFLoader()
     loader.setDRACOLoader(draco)
     loader.load(
@@ -444,6 +484,8 @@ export function MaskParticles() {
   const hotIndex = useRef(0)
   const groupRef = useRef<THREE.Group>(null)
   const rot = useRef({ x: 0, y: 0 })
+  // Reused each frame by samplePath so scroll choreography allocates nothing.
+  const poseScratch = useRef<Pose>({ x: 0, y: 0, s: 1, rz: 0 })
 
   // Drag anywhere to spin the mask 360° (it stays on the left; we rotate the
   // group, not the camera). Plain mouse-move still disturbs the particles.
@@ -472,10 +514,20 @@ export function MaskParticles() {
     if (!sim) return
     const { gpu, posVar, velVar, material, glyphMat, rayMesh, hotspots, candidates } = sim
 
-    // apply drag rotation to the visible group AND the raycast mesh so cursor
-    // interaction still lines up after you spin the mask
-    if (groupRef.current) groupRef.current.rotation.set(rot.current.x, rot.current.y, 0)
-    rayMesh.rotation.set(rot.current.x, rot.current.y, 0)
+    // SCROLL CHOREOGRAPHY: the mask travels a path, scales, and rolls as you
+    // scroll the hero. Drives off heroScroll.progress (the read-only contract, so
+    // it can't desync the sim). Drag rotation (pitch/yaw) still composes on top.
+    // The raycast mesh gets the SAME transform so cursor interaction stays aligned
+    // wherever the mask has flown to.
+    const pose = samplePath(heroScroll.progress, poseScratch.current)
+    if (groupRef.current) {
+      groupRef.current.position.set(pose.x, pose.y, 0)
+      groupRef.current.scale.setScalar(pose.s)
+      groupRef.current.rotation.set(rot.current.x, rot.current.y, pose.rz)
+    }
+    rayMesh.position.set(pose.x, pose.y, 0)
+    rayMesh.scale.setScalar(pose.s)
+    rayMesh.rotation.set(rot.current.x, rot.current.y, pose.rz)
     rayMesh.updateMatrixWorld()
 
     // cursor → 3D point on the (possibly rotated) mask → sim-local space
