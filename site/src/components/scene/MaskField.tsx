@@ -172,12 +172,13 @@ const TELUGU = ['అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', '
 const GLYPH_CHARS = [...BINARY, ...TELUGU]
 const BIN_START = 0
 const TEL_START = BINARY.length
-// Fraction of ALL particles rendered as glyphs, scattered RANDOMLY across the
-// whole mask. Was localized roving "hotspots" that converted ~1/3 in chunks;
-// Melvin (2026-07-31) wants ~1/5 of the TOTAL volume, evenly scattered, not
-// patchy. The surface sampler visits points in random order, so a strided
-// subset is already spatially scattered. Tune this one knob for density.
-const GLYPH_FRACTION = 0.2
+// Fraction of ALL ~147k particles rendered as glyphs, scattered RANDOMLY across
+// the whole mask (the surface sampler visits points in random order, so a strided
+// subset is already spatially scattered). ⚙️ THIS IS THE DENSITY KNOB — tune to
+// taste: 0.2 (1/5) blanketed the mask and read as solid + too bright, so it's
+// dialled down. Rough guide: 0.02 ≈ very sparse sprinkle · 0.05 ≈ light scatter
+// (current) · 0.1 ≈ busy · 0.2 ≈ near-solid. Lower this if it's still too much.
+const GLYPH_FRACTION = 0.05
 
 // Bake all glyphs into one texture atlas (grid of cells) drawn on a canvas.
 function makeGlyphAtlas() {
@@ -414,7 +415,9 @@ export function MaskParticles() {
       const glyphMat = new THREE.ShaderMaterial({
         uniforms: {
           uPositionTexture: { value: null },
-          uGlyphSize: { value: 26 },
+          // ⚙️ glyph char size in px. Smaller = less blanketing + dimmer footprint
+          // (each glyph is additive, so size drives brightness too). 26 → 20.
+          uGlyphSize: { value: 20 },
           uTime: { value: 0 },
           uBinStart: { value: BIN_START },
           uTelStart: { value: TEL_START },

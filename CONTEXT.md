@@ -340,6 +340,22 @@ not blindly changed:**
   suffers, dial `GLYPH_FRACTION` down. tsc/oxlint/build all clean; NOT visually
   verified here (automation browser can't init the heavy WebGL — Melvin verifies).
 
+### [CLAUDE] Glyph density/brightness fix — Melvin: "too bright, whole mask is chars, not scattered" (2026-07-31)
+Diagnosed: the scatter logic was CORRECT (verified — `sampler.sample` gives an
+independent random surface point per particle, so strided selection is genuinely
+spatially scattered). The problem was pure DENSITY: `GLYPH_FRACTION = 0.2` = ~29k
+large additive glyphs, which overlap into a solid, over-bright field that reads as
+"the whole mask" and not scattered. Melvin's "1/5" was a perceptual estimate; 1/5
+of the total 147k is far more than the old patchy look actually was.
+- **`GLYPH_FRACTION` 0.2 → 0.05** (~7.4k glyphs) and **`uGlyphSize` 26 → 20.**
+  Both are now clearly-labelled ⚙️ KNOBS in `MaskField.tsx` with a value→look
+  guide, so Melvin can dial density/brightness himself without a blind round-trip.
+- Brightness note: the pre-glyph mask never drew a brightness complaint, so the
+  spike was the glyphs (5× more, always-on, additive+bloom). Count+size cut should
+  resolve it. If the BASE mask is still too bright, the levers are the base-dot
+  colour/alpha (`#80fff0`), the glyph colour (`#b9fff2`), or Bloom intensity (0.7
+  in `GlobalScene.tsx`) — NOT changed blind; for Melvin to point at.
+
 ---
 
 # [CLAUDE] PLAYBOOK — Scroll-driven video + liquid glass on a page (replicable)
