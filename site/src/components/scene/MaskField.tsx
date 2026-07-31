@@ -461,7 +461,11 @@ export function MaskParticles() {
           uRoveSpeed: { value: 0.02 },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
-          uColor: { value: new THREE.Color('#b9fff2') },
+          // ⚙️ Overdriven past (1,1,1) on purpose: additive blending + Bloom read
+          // values >1 as "hotter", so this pushes brightness without touching the
+          // shared Bloom intensity (which would also brighten the base dot layer,
+          // not just the glyphs Melvin asked about). Same hue, 1.5x intensity.
+          uColor: { value: new THREE.Color('#b9fff2').multiplyScalar(1.5) },
         },
         vertexShader: glyphVertex,
         fragmentShader: glyphFragment,

@@ -449,14 +449,26 @@ changing the ~1/7 on-screen coverage. tsc/oxlint clean; not yet re-verified by
 Melvin. Commit `0c02d9d` (code only — this CONTEXT entry was written after the
 fact; the standing "log immediately" rule was missed in the moment, caught here).
 
-### 📝 OPEN ITEM — glyph brightness (2026-07-31, not yet acted on)
-Melvin: "the binary + telugu [glyphs] need to be brighter... but we can do that
-later too if needed." Deferred at his request — moving on to the rest of the
-hero first. When picked up: the glyph colour is `#b9fff2` in `MaskField.tsx`
-(`glyphMat` uniforms `uColor`) — raising its alpha/intensity or reducing how much
-`vAlpha`'s fade dims it are the likely levers. Do NOT change blind; get Melvin's
-screenshot first per the pattern above (three rounds of guessing already cost a
-lot of back-and-forth this session — measure or ask before touching numbers).
+### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
+Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
+transitions], then 3 [glass placement]." Checked the math before touching
+anything: `vAlpha` already peaks at exactly 1.0 mid-fade (the smoothstep
+in/out window in `glyphVertex` is a true 0→1→0 shape), and the atlas glyphs
+are drawn opaque white (`ctx.fillStyle = '#ffffff'`, no alpha), so neither
+alpha channel was the dimming cause — the colour itself was just not that
+bright (`#b9fff2` ≈ RGB(0.73, 1.0, 0.95), already near-white but capped at 1).
+- **Fix:** `uColor` for `glyphMat` is now `new THREE.Color('#b9fff2').multiplyScalar(1.5)`
+  in `MaskField.tsx` — same hue, values pushed past 1.0. Because the glyph layer
+  is `AdditiveBlending` and the scene runs Bloom, overdriving past 1 reads as
+  "hotter" without touching the shared Bloom intensity (which would also
+  brighten the base dot layer — not what was asked for).
+- tsc + oxlint clean. Dev server running on `:5173` for Melvin to verify live
+  (automation browser still can't render the WebGL scene — same wall as
+  before). **Not yet confirmed by Melvin** — this is a considered first pass,
+  not a guess; if 1.5x isn't enough or overshoots, the multiplier is the one
+  knob to retune.
+- Next in the requested order: (2) beat-to-beat transitions, (3) liquid glass
+  placement on the Home hero.
 
 ---
 
