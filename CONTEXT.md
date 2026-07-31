@@ -306,6 +306,40 @@ content-types) and that `tsc`/`oxlint`/`vite build` are all clean. **Melvin need
 to eyeball the mask motion in his own browser** so we can tune the `MASK_PATH`
 feel together — the path values are the one knob.
 
+### [CLAUDE] Step 1 tweaks — Melvin's feedback (2026-07-31, later)
+Melvin checked in his browser: motion is "really nice, exactly what you said,"
+with tweaks. All in `MaskField.tsx`:
+- **Motion felt rigid → added inertia.** New `smoothProg` ref exponentially eases
+  toward `heroScroll.progress` (frame-rate-independent, constant 6.0) and the path
+  samples from THAT, so the mask glides with its own momentum instead of tracking
+  scroll 1:1. Constant is the tuning knob (higher = snappier).
+- **Hex removed** — glyphs now cycle **binary ⇄ Telugu only** (2 categories).
+  Dropped `HEX`, `HEX_START`, `uHexStart`, and the 3rd cycle branch.
+- **Glyphs: localized chunks → scattered 1/5.** Replaced the roving 3-hotspot
+  localization (converted ~1/3 in patches) with a **randomly scattered
+  `GLYPH_FRACTION = 0.2`** of ALL particles, always visible, spread over the whole
+  mask (strided over the sampler's random-order points = even scatter). Removed
+  `uHots`/`uHotRadius`/`candidates`/`hotspots`/the roving `useFrame` block and the
+  home-texture localization in the glyph vertex shader. `GLYPH_FRACTION` +
+  `uGlyphSize` are the knobs.
+
+**Melvin's "brighter/smoother when the window is smaller" observation — explained,
+not blindly changed:**
+- *Smoother when smaller* = fewer pixels → higher framerate. The inertia fix helps
+  regardless; if it's still not buttery at full size it's framerate (the mask is
+  ~147k additive points + now ~29k always-on glyphs + bloom).
+- *Brighter when smaller* = additive points have a fixed PIXEL size, so on a
+  smaller canvas the same points crowd into fewer pixels → more overlap → brighter.
+  Expected physics of the technique. A resolution-proportional point size would
+  stabilise it, but I did NOT change it blind (can't see the mask in the automation
+  browser) — offered it to Melvin as a targeted follow-up he can verify.
+- ⚠️ Note: with 20% glyphs always on, there's a lot MORE of the still-turquoise
+  `#b9fff2`/`#80fff0` (the tracked banned-colour mask exception) on screen now —
+  may finally be worth changing the mask colour; flagged to Melvin.
+- ⚠️ Perf: 20% always-on glyphs is ~5× the previous glyph draw. If framerate
+  suffers, dial `GLYPH_FRACTION` down. tsc/oxlint/build all clean; NOT visually
+  verified here (automation browser can't init the heavy WebGL — Melvin verifies).
+
 ---
 
 # [CLAUDE] PLAYBOOK — Scroll-driven video + liquid glass on a page (replicable)
