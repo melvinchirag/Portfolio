@@ -471,6 +471,31 @@ histogrammed/ASCII-mapped the sampled points; scripts were temp, in scratchpad):
   face reads clean. If it ever removed the face instead, the front shell would be
   -Z on this model → flip the inequality (noted inline at `BACK_CLIP`).
 
+### [CLAUDE] Face isolation — teal = face only, glyphs everywhere (2026-07-31)
+Follow-up to the jaw/ghost entry. Melvin clarified the real goal after seeing the
+depth-clip: the clip **diluted** the crown/jaw/rear (the 10-try resample cap
+leaves stragglers) rather than removing them — and he *liked* that the leftovers
+turned into glyphs. New ask: **"I just want the face — not the crown, not the jaw.
+Everything else invisible, but keep those particles in the code so the glyphs
+still appear there."** So visibility and existence are now decoupled:
+- **Distribution (particles that exist → drive BOTH layers):** broadened to the
+  central head COLUMN — front-facing + front-shell (`BACK_CLIP -0.11`, no rear
+  ghost) + `|x| ≤ COLUMN_HALF_WIDTH 0.3` (drops the detached ear strips). The old
+  height cap (`yCap`) is REMOVED so the crown is kept → glyphs populate crown+jaw.
+- **Face flag (`aFace`, per particle, model-space so it holds at every rotation):**
+  inside an ellipse `(cx0, cy-0.08, rx0.3, ry0.46)` → draws teal; outside → base
+  dot is size-zeroed + discarded (invisible) but the particle stays, so glyphs
+  keep spawning. Ellipse params measured from the headless geometry map
+  (nose y≈-0.07, brow y≈0.27, chin y≈-0.55, ears |x|>0.33).
+- Base shaders (`renderVertex`/`renderFragment`): new `aFace` attribute; non-face
+  dots get `gl_PointSize *= aFace` and a `vFace < 0.5` discard. Glyph layer
+  untouched → glyphs render everywhere (face has teal+glyphs; crown/jaw glyph-only).
+- Density check (headless): ~68% of particles land teal on the face (~100k of
+  147k), ~47k are glyph-only — face stays dense, no SIZE bump needed.
+- The ellipse consts are the live-tuning knobs. tsc/oxlint clean. **Melvin to
+  verify on deploy**, then we move to properly choreographing the scroll motion
+  ("it moves, looks cool, but can be much better").
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching

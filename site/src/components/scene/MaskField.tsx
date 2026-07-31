@@ -48,17 +48,37 @@ const OFFSET = new THREE.Vector3(-0.62, 0, 0)
 // head and the helmet "crown", leaving the face/mask shell.
 const FRONT_FACING = 0.12
 
-// Depth clip — drops the mask's hollow INNER-BACK shell that sits behind the face.
-// The "Soulless" model is a hollow shell, so its inner-back surface faces FORWARD
-// and sneaks past FRONT_FACING; front-on you never notice, but turned to profile
-// it hangs behind the face as a detached "jaw/ghost" blob (Melvin, 2026-07-31:
-// "that jaw piece I want it gone… only face"). Measured from the geometry: the
-// face-front shell lives at z≈[-0.03, 0.35] and the inner-back shell at
-// z≈[-0.34, -0.19], separated by an EMPTY gap at z≈[-0.19, -0.03]. Clipping in
-// that gap removes the rear shell and keeps the whole face. (If this ever cuts
-// the face instead of the ghost, the front shell is -Z on this model — flip to
-// keeping p.z <= BACK_CLIP.)
-const BACK_CLIP = -0.11
+/* ---- FACE ISOLATION (Melvin, 2026-07-31) --------------------------------------
+ * "I just want the face — not the head crown, not the jaw. Everything else should
+ *  be invisible. But keep those particles IN THE CODE so the glyphs still appear
+ *  there." So we split two things that used to be one:
+ *   1. DISTRIBUTION — which particles EXIST (they drive BOTH the teal dots and the
+ *      binary/Telugu glyph layer). We keep a broad CENTRAL COLUMN of the head
+ *      (crown -> face -> jaw) so glyphs can live in the crown and jaw regions.
+ *   2. FACE FLAG (aFace) — which particles are TEAL. Only particles inside the
+ *      face oval draw the teal base dot; the rest are transparent (invisible) but
+ *      still present, so glyphs keep spawning on them. Result: a clean glowing
+ *      face, with code glyphs floating in the dark where the crown/jaw would be.
+ *
+ * All values are MODEL-SPACE, so the face stays the same anatomical region "from
+ * all angles" as the mask rotates. Measured from the geometry (draco3d headless
+ * map): nose peaks forward at y~-0.07, brow ridge at y~0.27, chin tip at y~-0.55,
+ * ears are detached strips at |x|>0.33, crown fills above y~0.4. These are the
+ * knobs to fine-tune the face shape live. */
+
+// DISTRIBUTION: front shell only (BACK_CLIP drops the hollow model's inner-back
+// "ghost" shell that faces forward and would otherwise hang behind the face in
+// profile); central column only (drops the detached ear strips). No height cap —
+// the crown is kept on purpose so glyphs populate it.
+const BACK_CLIP = -0.11        // keep p.z >= this (front shell; drops rear ghost)
+const COLUMN_HALF_WIDTH = 0.3  // keep |p.x| <= this (drops the side ear strips)
+
+// FACE OVAL: an ellipse in the model's X/Y (frontal) plane. A particle is "face"
+// (teal) when inside this ellipse; outside -> invisible base dot, glyphs only.
+const FACE_CX = 0.0            // horizontal centre
+const FACE_CY = -0.08          // vertical centre (face sits a touch below model mid)
+const FACE_RX = 0.3            // half-width  (cheeks). Beyond -> jaw sides go dark
+const FACE_RY = 0.46           // half-height (brow y~0.38 down to chin y~-0.54)
 
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
  * The mask no longer just sits on the left — it travels a path, scales, and
@@ -147,13 +167,19 @@ const renderVertex = /* glsl */ `
   uniform sampler2D uVelocityTexture;
   uniform float uParticleSize;
   attribute vec2 aRef;   // this particle's texel in the sim textures
+  attribute float aFace; // 1.0 = inside the face oval (teal), 0.0 = crown/jaw (hidden)
   varying float vSpeed;
+  varying float vFace;
 
   void main() {
     vec3 pos = texture2D(uPositionTexture, aRef).xyz;
     vSpeed = length(texture2D(uVelocityTexture, aRef).xyz);
+    vFace = aFace;
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-    gl_PointSize = uParticleSize / -mv.z;
+    // Non-face dots are invisible: collapse them to zero size so they never paint
+    // (the fragment also discards them). The particle still EXISTS, so the glyph
+    // layer keeps rendering binary/Telugu here.
+    gl_PointSize = (uParticleSize / -mv.z) * aFace;
     gl_Position = projectionMatrix * mv;
   }
 `
@@ -164,8 +190,10 @@ const renderFragment = /* glsl */ `
   uniform float uMinAlpha;
   uniform float uMaxAlpha;
   varying float vSpeed;
+  varying float vFace;
 
   void main() {
+    if (vFace < 0.5) discard;                          // crown/jaw: base dot hidden
     if (length(gl_PointCoord - 0.5) > 0.5) discard;   // round sprite
     float a = clamp(vSpeed * 100.0, uMinAlpha, uMaxAlpha);
     gl_FragColor = vec4(uColor, a);
@@ -352,15 +380,13 @@ export function MaskParticles() {
       const mesh = new THREE.Mesh(maskGeometry)
       const sampler = new MeshSurfaceSampler(mesh).build()
 
-      // Height clip: keep only the lower part of the model (face + jaw), dropping
-      // the skull-top, helmet crown and the antenna above the forehead.
-      maskGeometry.computeBoundingBox()
-      const bb = maskGeometry.boundingBox!
-      const yCap = bb.min.y + (bb.max.y - bb.min.y) * 0.66
-
       const count = SIZE * SIZE
       const homeData = new Float32Array(count * 4)
       const refs = new Float32Array(count * 2)
+      // aFace: 1 = particle is inside the face oval (draws teal), 0 = crown/jaw
+      // (invisible base dot, but still present so glyphs spawn there). See the
+      // FACE ISOLATION block up top.
+      const faces = new Float32Array(count)
       const p = new THREE.Vector3()
       const n = new THREE.Vector3()
 
@@ -371,20 +397,27 @@ export function MaskParticles() {
 
         for (let j = 0; j < SIZE; j++) {
           const idx = i * SIZE + j
-          // resample until we get a front-facing point below the height cap AND
-          // in front of the depth clip (drops back of head, crown, antenna, and
-          // the hollow inner-back shell → leaves just the face-front shell)
+          // Resample until the point is in the DISTRIBUTION: front-facing, front
+          // shell (not the rear ghost), and inside the central column (no ears).
+          // Crown is intentionally kept (no height cap) so glyphs populate it.
           let tries = 0
           do {
             sampler.sample(p, n)
             tries++
-          } while ((n.z < FRONT_FACING || p.y > yCap || p.z < BACK_CLIP) && tries < 10)
+          } while (
+            (n.z < FRONT_FACING || p.z < BACK_CLIP || Math.abs(p.x) > COLUMN_HALF_WIDTH) &&
+            tries < 10
+          )
           homeData[idx * 4 + 0] = p.x
           homeData[idx * 4 + 1] = p.y
           homeData[idx * 4 + 2] = p.z
           homeData[idx * 4 + 3] = 1
           refs[idx * 2 + 0] = (j + 0.5) / SIZE
           refs[idx * 2 + 1] = (i + 0.5) / SIZE
+          // FACE FLAG: inside the face ellipse -> teal, else invisible (glyph-only).
+          const ex = (p.x - FACE_CX) / FACE_RX
+          const ey = (p.y - FACE_CY) / FACE_RY
+          faces[idx] = ex * ex + ey * ey <= 1 ? 1 : 0
         }
       }
 
@@ -415,6 +448,7 @@ export function MaskParticles() {
       const geometry = new THREE.BufferGeometry()
       geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
       geometry.setAttribute('aRef', new THREE.BufferAttribute(refs, 2))
+      geometry.setAttribute('aFace', new THREE.BufferAttribute(faces, 1))
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
