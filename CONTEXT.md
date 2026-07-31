@@ -356,6 +356,36 @@ of the total 147k is far more than the old patchy look actually was.
   colour/alpha (`#80fff0`), the glyph colour (`#b9fff2`), or Bloom intensity (0.7
   in `GlobalScene.tsx`) — NOT changed blind; for Melvin to point at.
 
+### [CLAUDE] Glyph fix #2 — the 0.05/20 attempt was STILL wrong; Melvin sent a screenshot (2026-07-31)
+The previous "cut density + size" attempt (0.05, 20px) still read as "the whole
+mask is characters" — confirmed by Melvin's screenshot, not a perceptual
+disagreement. **Root cause finally found by comparing against the base layer,
+not by guessing again:** base dots render at `uParticleSize: 1.7`px. Glyphs were
+at 20px — **12× bigger.** A single 20px glyph's ink footprint covers roughly the
+area of ~140 neighbouring base-dot positions. So even selecting only 5% of the
+particle COUNT, the glyph layer's total PAINTED AREA came out to **~4× the
+entire mask's area** — an oversaturated solid sheet, not a scatter. The fraction
+was never really the bug; size² was doing nearly all of it (confirmed the
+scatter-selection logic itself IS spatially random — that part was always
+correct, re-verified this round).
+- **Reframed the knob as AREA, not particle count.** Solved `(GLYPH_FRACTION,
+  uGlyphSize)` as a pair whose total footprint (`fraction × (0.6×size)²`) is
+  ~1/5 of the mask's estimated visible area, using measurements from Melvin's
+  screenshot. **`GLYPH_FRACTION` 0.05 → 0.015, `uGlyphSize` 20 → 7.** Landed
+  deliberately a bit UNDER 1/5 (≈1/7) so the correction errs toward "too sparse,
+  make bigger" rather than risking a THIRD "too much" round-trip.
+- Both constants in `MaskField.tsx` now carry the full derivation + a
+  fraction/size table for hitting 1/5 exactly, plus an explicit warning that
+  moving them independently (not together) breaks the math.
+- **Honest tradeoff flagged, not hidden:** at 7px, Telugu letters (more complex
+  strokes than binary digits) may read as a small glowing mark rather than a
+  crisp individual character. That's inherent to "1/5 of the AREA, scattered,
+  not clumped" — legible-and-big vs. area-accurate-and-small is a real tradeoff,
+  not a bug. If legibility wins, raise size and lower fraction to compensate.
+- tsc/oxlint/build all clean. **Still NOT visually verified** (same automation-
+  browser wall) — this is derived from Melvin's own screenshot's math this time,
+  not a fresh guess, but needs a new screenshot to confirm before calling it done.
+
 ---
 
 # [CLAUDE] PLAYBOOK — Scroll-driven video + liquid glass on a page (replicable)

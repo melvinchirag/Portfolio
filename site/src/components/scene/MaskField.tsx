@@ -174,11 +174,37 @@ const BIN_START = 0
 const TEL_START = BINARY.length
 // Fraction of ALL ~147k particles rendered as glyphs, scattered RANDOMLY across
 // the whole mask (the surface sampler visits points in random order, so a strided
-// subset is already spatially scattered). ⚙️ THIS IS THE DENSITY KNOB — tune to
-// taste: 0.2 (1/5) blanketed the mask and read as solid + too bright, so it's
-// dialled down. Rough guide: 0.02 ≈ very sparse sprinkle · 0.05 ≈ light scatter
-// (current) · 0.1 ≈ busy · 0.2 ≈ near-solid. Lower this if it's still too much.
-const GLYPH_FRACTION = 0.05
+// subset is already spatially scattered — confirmed correct by code review, this
+// was never the bug).
+//
+// THE ACTUAL BUG (found from Melvin's screenshot, 2026-07-31): base dots render at
+// `uParticleSize: 1.7`px; glyphs were rendering at 20px — 12× bigger. A single 20px
+// glyph's ink footprint covers roughly the area of ~140 neighbouring base-dot
+// positions, so even at 5% of the PARTICLE COUNT, the glyph layer's total painted
+// area came out to ~4× the whole mask's area — a solid oversaturated sheet, not a
+// scatter. Fraction was never really the problem; size² was doing almost all of it.
+//
+// THE FIX: solved for a (fraction, size) pair whose TOTAL PAINTED AREA is actually
+// ~1/5 of the mask's visible area (not 1/5 of particle count), using footprint ≈
+// (0.6 × uGlyphSize)² per glyph (0.6 accounts for a character's ink not filling its
+// full point-square) against a mask area estimated from Melvin's screenshot. Landed
+// intentionally a bit UNDER 1/5 so the first correction errs toward "too sparse, go
+// bigger" rather than repeating "too much" a third time.
+//
+// ⚙️ THE TWO KNOBS (move them together, not independently — it's the AREA i.e.
+// fraction × size² that matters, not either number alone):
+//   GLYPH_FRACTION · uGlyphSize below · ≈ resulting visible coverage
+//     0.015          7px               ≈1/7 of the mask (current, conservative)
+//     0.02           7px               ≈1/5 of the mask (Melvin's literal ask)
+//     0.03           7px               ≈1/3 of the mask (too much again)
+// ⚠️ Real tradeoff, not hidden: at 7px, simple binary '0'/'1' stay readable but the
+// more detailed Telugu letters may read as a small glowing mark rather than a crisp
+// individual character. That's inherent to "1/5 of the AREA, scattered, not
+// clumped" — the only way to keep letters BIG and individually legible is fewer of
+// them (a lower total-area fraction). If legibility matters more than hitting 1/5
+// exactly, raise uGlyphSize and lower GLYPH_FRACTION to compensate (keep the
+// product roughly constant using the table above).
+const GLYPH_FRACTION = 0.015
 
 // Bake all glyphs into one texture atlas (grid of cells) drawn on a canvas.
 function makeGlyphAtlas() {
@@ -415,9 +441,11 @@ export function MaskParticles() {
       const glyphMat = new THREE.ShaderMaterial({
         uniforms: {
           uPositionTexture: { value: null },
-          // ⚙️ glyph char size in px. Smaller = less blanketing + dimmer footprint
-          // (each glyph is additive, so size drives brightness too). 26 → 20.
-          uGlyphSize: { value: 20 },
+          // ⚙️ glyph char size in px — move together with GLYPH_FRACTION above (see
+          // its comment for the reasoning + table). 26 → 20 → 7. This is the value
+          // that actually controls total coverage (footprint scales with size²), so
+          // changing this alone has a much bigger visual effect than the fraction.
+          uGlyphSize: { value: 7 },
           uTime: { value: 0 },
           uBinStart: { value: BIN_START },
           uTelStart: { value: TEL_START },
