@@ -18,6 +18,24 @@ other pages' content/UI** at the same time. To avoid collisions:
 - `.sync-glass-rect` on a card = it gets liquid-glass; that class is the ONLY
   hook AGY needs from the WebGL side — don't touch the shader to use it.
 
+### [CLAUDE] Hero Step 2 idea — prototyped, SHELVED for now (2026-07-31)
+Explored a companion particle field (separate from the mask) that would morph a
+cloud into procedural landmark silhouettes — Kuwait Towers, a generic skyline for
+India, the Ypsilanti water tower for Michigan — as a second scrollytelling layer
+alongside the mask (mask itself untouched). Built as a **standalone artifact
+prototype** (canvas 2D, no site code touched) per the "never build a signature
+visual blind" rule — exactly why this is worth noting: the prototype-first
+process caught this BEFORE it cost a real build cycle in the actual hero.
+- Mechanism worked (roving morph, per-particle arc/stagger, correct sequencing)
+  and the Kuwait Towers silhouette in particular read clearly once verified.
+- **Melvin's call after seeing it: too ambitious for right now.** Shelved, not
+  abandoned — no site code was touched, so there's nothing to revert. If revived
+  later, the working prototype exists in this session's scratchpad
+  (`landmark-morph-prototype.html`) as a reference for the technique.
+- **Current focus instead:** the rest of the hero via lighter-weight pieces —
+  beat-to-beat transitions, liquid glass placement, beat copy/content — TBD with
+  Melvin which comes next.
+
 **Read `AGENTS.md` first (tool-agnostic entry point), then jump straight to
 the `🤝 HANDOFF` section below — it is the current, authoritative state and
 supersedes everything else in this file.** Everything above/below that block
