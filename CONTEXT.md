@@ -386,6 +386,25 @@ correct, re-verified this round).
   browser wall) — this is derived from Melvin's own screenshot's math this time,
   not a fresh guess, but needs a new screenshot to confirm before calling it done.
 
+### [CLAUDE] Glyphs #3 — ROVING + legible letters (Melvin saw it: "1/7, randomly change on different points, bring back Telugu+binary") (2026-07-31)
+Melvin confirmed ~1/7 coverage is right, but wanted (a) the glyph set to keep
+RELOCATING (different random points over time, not a fixed sprinkle) and (b)
+Telugu + binary legible again — at 7px the Telugu letters collapsed to a dot, so
+they read as "gone."
+- **Roving added** (`glyphVertex`): each candidate has a seed-staggered "life"
+  0→1 advancing at `uRoveSpeed`; it's lit only while `life < uOnFrac` (smooth
+  fade in/out via a smoothstep window), and re-picks its character (binary ⇄
+  Telugu ~50/50) each relight. So glyphs bloom in at random scattered spots, fade,
+  and reappear elsewhere. The geometry is now a scattered candidate POOL
+  (`GLYPH_POOL_FRACTION = 0.12`); only ~`uOnFrac` of it shows at once.
+- **Legibility**: `uGlyphSize` 7 → **15** (Telugu reads as letters again).
+- **Coverage rebalanced** to stay ~1/7 despite bigger glyphs: `uOnFrac = 0.02`
+  (~0.02 ≈ 1/7, 0.03 ≈ 1/5 at size 15). `uRoveSpeed = 0.1`.
+- Knobs consolidated + documented in `MaskField.tsx`: `uGlyphSize` (legibility),
+  `uOnFrac` (coverage dial), `uRoveSpeed` (rove speed). Guide inline.
+- tsc/oxlint/build clean; NOT visually verified (automation-browser wall) — needs
+  Melvin's screenshot to confirm coverage/legibility/rove feel.
+
 ---
 
 # [CLAUDE] PLAYBOOK — Scroll-driven video + liquid glass on a page (replicable)

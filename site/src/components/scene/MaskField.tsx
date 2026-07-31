@@ -172,39 +172,29 @@ const TELUGU = ['అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', '
 const GLYPH_CHARS = [...BINARY, ...TELUGU]
 const BIN_START = 0
 const TEL_START = BINARY.length
-// Fraction of ALL ~147k particles rendered as glyphs, scattered RANDOMLY across
-// the whole mask (the surface sampler visits points in random order, so a strided
-// subset is already spatially scattered — confirmed correct by code review, this
-// was never the bug).
+// The glyph layer is now ROVING (2026-07-31, per Melvin): a scattered candidate
+// POOL of particles, of which only a small fraction is lit at any instant, and
+// WHICH ones are lit keeps drifting — so glyphs appear at random spots, fade, and
+// reappear elsewhere across the whole mask (not a fixed sprinkle, not a patch).
 //
-// THE ACTUAL BUG (found from Melvin's screenshot, 2026-07-31): base dots render at
-// `uParticleSize: 1.7`px; glyphs were rendering at 20px — 12× bigger. A single 20px
-// glyph's ink footprint covers roughly the area of ~140 neighbouring base-dot
-// positions, so even at 5% of the PARTICLE COUNT, the glyph layer's total painted
-// area came out to ~4× the whole mask's area — a solid oversaturated sheet, not a
-// scatter. Fraction was never really the problem; size² was doing almost all of it.
+// GLYPH_POOL_FRACTION = fraction of all ~147k particles that are candidate glyph
+// positions (the scatter "grid" the rove draws from). Bigger = finer/denser
+// possible locations. It is NOT the on-screen amount — the shader's `uOnFrac`
+// controls how much of this pool is actually lit at once.
 //
-// THE FIX: solved for a (fraction, size) pair whose TOTAL PAINTED AREA is actually
-// ~1/5 of the mask's visible area (not 1/5 of particle count), using footprint ≈
-// (0.6 × uGlyphSize)² per glyph (0.6 accounts for a character's ink not filling its
-// full point-square) against a mask area estimated from Melvin's screenshot. Landed
-// intentionally a bit UNDER 1/5 so the first correction errs toward "too sparse, go
-// bigger" rather than repeating "too much" a third time.
+// On-screen coverage ≈ GLYPH_POOL_FRACTION × uOnFrac × (footprint per glyph).
+// Sizing history: glyphs were 20px vs the base dots' 1.7px (12× → each covered
+// ~140 dot-spots → a solid sheet even at low counts). The real lever is glyph
+// SIZE² (area), not the raw count. Now tuned for legible letters at ~1/7 coverage.
 //
-// ⚙️ THE TWO KNOBS (move them together, not independently — it's the AREA i.e.
-// fraction × size² that matters, not either number alone):
-//   GLYPH_FRACTION · uGlyphSize below · ≈ resulting visible coverage
-//     0.015          7px               ≈1/7 of the mask (current, conservative)
-//     0.02           7px               ≈1/5 of the mask (Melvin's literal ask)
-//     0.03           7px               ≈1/3 of the mask (too much again)
-// ⚠️ Real tradeoff, not hidden: at 7px, simple binary '0'/'1' stay readable but the
-// more detailed Telugu letters may read as a small glowing mark rather than a crisp
-// individual character. That's inherent to "1/5 of the AREA, scattered, not
-// clumped" — the only way to keep letters BIG and individually legible is fewer of
-// them (a lower total-area fraction). If legibility matters more than hitting 1/5
-// exactly, raise uGlyphSize and lower GLYPH_FRACTION to compensate (keep the
-// product roughly constant using the table above).
-const GLYPH_FRACTION = 0.015
+// ⚙️ THE KNOBS YOU'LL ACTUALLY TOUCH (all in the glyphMat uniforms below):
+//   uGlyphSize  — character size / legibility (Telugu needs ~14+ to read as letters)
+//   uOnFrac     — how much of the mask shows glyphs at once (THE coverage dial)
+//   uRoveSpeed  — how fast the lit set relocates
+// At uGlyphSize 15, uOnFrac ≈ 0.02 lands near 1/7 coverage; 0.03 ≈ 1/5; raise/lower
+// uOnFrac to taste. If letters still aren't legible, raise uGlyphSize AND drop
+// uOnFrac to keep coverage constant (bigger letters ⇒ fewer of them).
+const GLYPH_POOL_FRACTION = 0.12
 
 // Bake all glyphs into one texture atlas (grid of cells) drawn on a canvas.
 function makeGlyphAtlas() {
@@ -240,28 +230,38 @@ const glyphVertex = /* glsl */ `
   uniform float uTime;
   uniform float uBinStart;
   uniform float uTelStart;
+  uniform float uOnFrac;    // fraction of the candidate pool lit at any instant
+  uniform float uRoveSpeed; // how fast the lit set drifts across the mask
   attribute vec2 aRef;
   attribute float aSeed;
   varying float vGlyph;
+  varying float vAlpha;
 
   float hash(float x) { return fract(sin(x * 127.1) * 43758.5453); }
 
   void main() {
     vec3 pos = texture2D(uPositionTexture, aRef).xyz;
 
-    // type cycle per particle: binary ⇄ Telugu (staggered by seed so the whole
-    // scattered set never flips in unison). No hotspots — every glyph particle
-    // in the scattered subset is always visible.
-    float phase = mod(uTime * 0.5 + aSeed * 9.0, 2.0);
-    float cat = floor(phase);                     // 0 = binary, 1 = Telugu
+    // ROVING: each candidate has its own drifting "life" (0→1, staggered by seed).
+    // It is lit only while life < uOnFrac, so at any instant ~uOnFrac of the pool
+    // shows AND which points show keeps changing — glyphs bloom in at random
+    // scattered spots, fade, and reappear elsewhere. Smooth in/out so they don't pop.
+    float life = fract(aSeed * 31.7 + uTime * uRoveSpeed);
+    float edge = min(0.06, uOnFrac * 0.5);
+    float fade = smoothstep(0.0, edge, life) - smoothstep(uOnFrac - edge, uOnFrac, life);
+    vAlpha = clamp(fade, 0.0, 1.0);
+
+    // Re-pick the character each time this particle relights (integer part of its
+    // life advance), mixing binary ⇄ Telugu ~50/50 so both keep appearing.
+    float relight = floor(aSeed * 31.7 + uTime * uRoveSpeed);
+    float cat = step(0.5, hash(aSeed * 3.1 + relight));   // 0 = binary, 1 = Telugu
     float start = cat < 0.5 ? uBinStart : uTelStart;
     float cnt   = cat < 0.5 ? 2.0       : 16.0;
-    // which character within the category (changes ~once/sec)
-    float r = hash(aSeed * 7.0 + cat * 5.0 + floor(uTime * 1.1));
+    float r = hash(aSeed * 7.0 + cat * 5.0 + relight);
     vGlyph = start + floor(r * cnt);
 
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-    gl_PointSize = uGlyphSize / -mv.z;
+    gl_PointSize = (uGlyphSize / -mv.z) * step(0.002, vAlpha); // size 0 when unlit
     gl_Position = projectionMatrix * mv;
   }
 `
@@ -272,14 +272,16 @@ const glyphFragment = /* glsl */ `
   uniform float uCols;
   uniform vec3 uColor;
   varying float vGlyph;
+  varying float vAlpha;
   void main() {
+    if (vAlpha < 0.01) discard;
     float idx = floor(vGlyph + 0.5);
     float cx = mod(idx, uCols);
     float cy = floor(idx / uCols);
     vec2 uv = (vec2(cx, cy) + gl_PointCoord) / uCols;
     vec4 g = texture2D(uAtlas, uv);
     if (g.a < 0.15) discard;
-    gl_FragColor = vec4(uColor, g.a);
+    gl_FragColor = vec4(uColor, g.a * vAlpha);
   }
 `
 
@@ -418,12 +420,11 @@ export function MaskParticles() {
         blending: THREE.AdditiveBlending,
       })
 
-      // ---- glyph layer: a RANDOMLY SCATTERED ~GLYPH_FRACTION of all particles
-      // render as glyphs across the whole mask (no localized patches); each cycles
-      // binary ⇄ Telugu. Strided selection over the random-order surface samples
-      // gives an even scatter. ----
+      // ---- glyph layer: a RANDOMLY SCATTERED candidate POOL of particles; the
+      // shader lights a small roving subset at a time (binary ⇄ Telugu). Strided
+      // selection over the random-order surface samples gives an even scatter. ----
       const atlas = makeGlyphAtlas()
-      const glyphPool = Math.max(1, Math.floor(count * GLYPH_FRACTION))
+      const glyphPool = Math.max(1, Math.floor(count * GLYPH_POOL_FRACTION))
       const stride = Math.max(1, Math.floor(count / glyphPool))
       const gPositions: number[] = []
       const gRefs: number[] = []
@@ -441,14 +442,19 @@ export function MaskParticles() {
       const glyphMat = new THREE.ShaderMaterial({
         uniforms: {
           uPositionTexture: { value: null },
-          // ⚙️ glyph char size in px — move together with GLYPH_FRACTION above (see
-          // its comment for the reasoning + table). 26 → 20 → 7. This is the value
-          // that actually controls total coverage (footprint scales with size²), so
-          // changing this alone has a much bigger visual effect than the fraction.
-          uGlyphSize: { value: 7 },
+          // ⚙️ glyph char size in px. Big enough that Telugu letters read as LETTERS
+          // (they collapse to a dot below ~12px). Footprint scales with size², so
+          // this is the strongest coverage lever — raise it and drop uOnFrac to keep
+          // total coverage steady.
+          uGlyphSize: { value: 15 },
           uTime: { value: 0 },
           uBinStart: { value: BIN_START },
           uTelStart: { value: TEL_START },
+          // ⚙️ THE COVERAGE DIAL: fraction of the candidate pool lit at any instant.
+          // ~0.02 ≈ 1/7 of the mask, 0.03 ≈ 1/5, at uGlyphSize 15. Raise for more.
+          uOnFrac: { value: 0.02 },
+          // ⚙️ how fast the lit set relocates across the mask (higher = busier).
+          uRoveSpeed: { value: 0.1 },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
           uColor: { value: new THREE.Color('#b9fff2') },
