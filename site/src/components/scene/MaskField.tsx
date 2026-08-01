@@ -68,9 +68,16 @@ const FRONT_FACING = 0.12
  * how round the top is (higher = tighter dome). Verified with ASCII previews. */
 const BACK_CLIP = -0.11      // keep p.z ≥ this (front shell; drops the rear ghost)
 const FACE_X_HALF = 0.32     // keep |p.x| ≤ this (drops the detached ear strips)
-const FACE_Y_BOTTOM = -0.58  // keep p.y ≥ this (chin kept, neck/under-jaw cut)
+const FACE_Y_BOTTOM = -0.64  // keep p.y ≥ this (down to the chin TIP; neck is cut)
 const FACE_TOP_PEAK = 0.36   // top of the forehead dome at centre (x = 0)
 const FACE_TOP_CURVE = 2.2   // how fast the dome curves down toward the sides
+
+// The "Soulless" sculpt is slightly LOPSIDED (≈6.5% more surface on one side +
+// uneven features). Melvin wants a balanced face, so we MIRROR: every particle's
+// x is folded to |x| and then split evenly to both sides by index parity, giving
+// a perfectly symmetric face built from the model's own features. (The model is
+// already near-symmetric, so this cleans it up without doubling features.)
+const MIRROR_FACE = true
 
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
  * The mask no longer just sits on the left — it travels a path, scales, and
@@ -400,6 +407,8 @@ export function MaskParticles() {
           } while (!inFace(p, n.z) && tries < 40)
           if (!inFace(p, n.z)) p.copy(last)
           else last.copy(p)
+          // Symmetry: fold to |x| and alternate sides so the face is balanced.
+          if (MIRROR_FACE) p.x = Math.abs(p.x) * (idx % 2 === 0 ? 1 : -1)
           homeData[idx * 4 + 0] = p.x
           homeData[idx * 4 + 1] = p.y
           homeData[idx * 4 + 2] = p.z
