@@ -106,21 +106,14 @@ const EYE_HW = 0.09       // eye half-width (corners at |x|-EYE_X = ±this)
 const EYE_OPEN = 0.035    // how far the lids bow from the centre line (eye "openness")
 const EYE_LINE_BW = 0.01  // half-thickness of the drawn eyelid lines
 const EYE_IRIS_R = 0.028  // iris/pupil dot radius
-// Lips drawn like a face painter (Melvin, 2026-08-01): NOT an area — THREE thin
-// lines only, tight on the lip itself. The upper-lip line bows up and the lower-lip
-// line bows down from a central SEAM, all meeting at the mouth corners; everything
-// else (cheeks, philtrum, the space above the lip) stays dark. Small: a real mouth
-// is a fraction of the face width, so keep LIP_HW modest.
-const LIP_Y = -0.47       // the seam (where the lips meet), model-space y. Moved
-                          // -0.37→-0.47 (Melvin, 2026-08-01): at -0.37 the mouth read
-                          // as sitting UNDER THE NOSE; his marked-up image puts the
-                          // lips lower, ~-0.47 (mapped from screenshot #21's red mark).
-const LIP_HW = 0.09       // mouth half-width (corners at x = ±this)
-const LIP_OPEN = 0.034    // how far the upper/lower lip lines bow from the seam at centre
-const LIP_LINE_BW = 0.009 // half-thickness of each of the three drawn lines — THIN, so the
-                          // lip bodies stay dark between them and they read as three lines
-// Nose: a tall narrow ellipse down the centre line, bridge → tip (Melvin: correct).
+// LIPS: highlight REMOVED entirely (Melvin, 2026-08-01). Repeated attempts to draw a
+// mouth on this featureless mesh never landed where he wanted, so the mouth area is
+// left at the normal (un-brightened) field — no lip term in featureWeight anymore.
+// Nose: a tall narrow ellipse down the centre line, bridge → tip. Capped at NOSE_TOP
+// so it doesn't creep up to the brow/forehead (Melvin: "a little brightening on the
+// forehead — remove it"; that was the top of this ridge).
 const NOSE_X_HALF = 0.055, NOSE_Y = 0.06, NOSE_Y_HALF = 0.17
+const NOSE_TOP = 0.14
 function featureWeight(x: number, y: number): number {
   // Eyes (mirrored via |x|): an almond eyelid outline + an iris dot. `enx` is 0 at
   // the eye centre, ±1 at the corners; `et` is a parabola so the upper/lower lids
@@ -137,26 +130,11 @@ function featureWeight(x: number, y: number): number {
     const iris = Math.max(0, 1 - Math.hypot(edx, edy) / EYE_IRIS_R)
     eyeW = Math.max(lid, iris)
   }
-  // Lips: three thin curved lines. `nx` is 0 at centre, ±1 at the corners; `t` is a
-  // parabola that makes the upper/lower lines converge to the seam at the corners
-  // (the almond shape of a mouth). We light a point only if it's within LIP_LINE_BW
-  // of one of the three lines, and fade the lines out near the corners.
-  let lipW = 0
-  const nx = x / LIP_HW
-  if (Math.abs(nx) < 1) {
-    const t = 1 - nx * nx
-    const dUpper = Math.abs(y - (LIP_Y + LIP_OPEN * t))
-    const dLower = Math.abs(y - (LIP_Y - LIP_OPEN * t))
-    const dSeam = Math.abs(y - LIP_Y)
-    const dMin = Math.min(dUpper, dLower, dSeam)
-    const line = Math.max(0, 1 - dMin / LIP_LINE_BW)
-    const cornerFade = Math.min(1, (1 - Math.abs(nx)) / 0.22) // soften the ends
-    lipW = line * cornerFade
-  }
-  // Nose: a centred vertical ellipse (taller than wide).
+  // Nose: a centred vertical ellipse (taller than wide), hard-capped at NOSE_TOP so
+  // it never reaches the brow/forehead.
   const noseDist = Math.hypot(x / NOSE_X_HALF, (y - NOSE_Y) / NOSE_Y_HALF)
-  const noseW = Math.max(0, 1 - noseDist) * 0.85 // a touch softer than eyes/lips
-  return Math.min(1, Math.max(eyeW, lipW, noseW))
+  const noseW = y > NOSE_TOP ? 0 : Math.max(0, 1 - noseDist) * 0.85
+  return Math.min(1, Math.max(eyeW, noseW))
 }
 
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
