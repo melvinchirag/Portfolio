@@ -79,6 +79,29 @@ const FACE_TOP_CURVE = 2.2   // how fast the dome curves down toward the sides
 // already near-symmetric, so this cleans it up without doubling features.)
 const MIRROR_FACE = true
 
+/* ---- FACIAL FEATURES (Melvin, 2026-08-01) -------------------------------------
+ * "Make the facial features more prominent near the eyes and the lips... I want
+ *  him to have facial features, make him feel alive." We brighten the particles
+ *  that sit on the eyes and the lip band so those read as real features against
+ *  the even teal field. Centres are MEASURED from the model's depth map (headless
+ *  draco3d probe, 2026-08-01): the nose ridge protrudes y≈0.2→0.0, brow at
+ *  y≈0.24, so the eyes sit between them at y≈0.11, flanking the bridge at
+ *  |x|≈0.14; the lips are the forward bump at y≈-0.33, centred. featureWeight()
+ *  returns 0→1 (1 = dead-centre of a feature) and the base shader multiplies each
+ *  dot's brightness by (1 + weight·uFeatureBoost). This also gives us the eye
+ *  region we'll later dim for the BLINK (idea D). */
+const EYE_Y = 0.11, EYE_X = 0.14, EYE_R = 0.11
+const LIP_Y = -0.33, LIP_X_HALF = 0.17, LIP_Y_HALF = 0.07
+function featureWeight(x: number, y: number): number {
+  // Eyes: two discs mirrored across the centre line (use |x| so one test covers both).
+  const eyeDist = Math.hypot(Math.abs(x) - EYE_X, y - EYE_Y) / EYE_R
+  const eyeW = Math.max(0, 1 - eyeDist)
+  // Lips: a centred ellipse (wider than tall).
+  const lipDist = Math.hypot(x / LIP_X_HALF, (y - LIP_Y) / LIP_Y_HALF)
+  const lipW = Math.max(0, 1 - lipDist)
+  return Math.min(1, Math.max(eyeW, lipW))
+}
+
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
  * The mask no longer just sits on the left — it travels a path, scales, and
  * rolls as you scroll the 5 hero beats, so scrolling reads as a real animation.
@@ -177,12 +200,15 @@ const renderVertex = /* glsl */ `
   uniform float uOnFrac;     // same value the glyph layer uses
   attribute vec2 aRef;       // this particle's texel in the sim textures
   attribute float aGlyphSeed;// glyph seed if this dot is a glyph candidate, else -1
+  attribute float aFeature;  // eye/lip brightness weight (0..1)
   varying float vSpeed;
   varying float vGlyphFade;  // 1 while this dot's glyph is lit → dot fades to 0
+  varying float vFeature;
 
   void main() {
     vec3 pos = texture2D(uPositionTexture, aRef).xyz;
     vSpeed = length(texture2D(uVelocityTexture, aRef).xyz);
+    vFeature = aFeature;
 
     // CONVERSION: if this dot is a glyph candidate, recompute the SAME life curve
     // the glyph layer uses, and report how "lit" its glyph is. The fragment fades
@@ -207,12 +233,15 @@ const renderFragment = /* glsl */ `
   uniform float uMinAlpha;
   uniform float uMaxAlpha;
   uniform float uFade;       // 0→1 intro fade-in (the "emerge from the black" reveal)
+  uniform float uFeatureBoost;
   varying float vSpeed;
   varying float vGlyphFade;
+  varying float vFeature;
 
   void main() {
     if (length(gl_PointCoord - 0.5) > 0.5) discard;   // round sprite
     float a = clamp(vSpeed * 100.0, uMinAlpha, uMaxAlpha);
+    a *= (1.0 + vFeature * uFeatureBoost); // brighten eyes & lips → real features
     a *= (1.0 - vGlyphFade);   // dot vanishes as its glyph forms (the conversion)
     a *= uFade;                // whole mask fades up on load
     gl_FragColor = vec4(uColor, a);
@@ -266,7 +295,7 @@ const GLYPH_POOL_FRACTION = 0.12
 //   GLYPH_ROVE_SPEED= how fast life advances. Lower = each glyph lingers and
 //     dissipates SLOWER and the set relocates slower (Melvin: "make it slower").
 //     Lit duration ≈ GLYPH_ON_FRAC / GLYPH_ROVE_SPEED seconds. 0.026/0.012 ≈ 2.2s.
-const GLYPH_ON_FRAC = 0.026
+const GLYPH_ON_FRAC = 0.032   // 0.026→0.032 (Melvin: "a bit more prominent")
 const GLYPH_ROVE_SPEED = 0.012
 
 // Bake all glyphs into one texture atlas (grid of cells) drawn on a canvas.
@@ -433,6 +462,7 @@ export function MaskParticles() {
       const count = SIZE * SIZE
       const homeData = new Float32Array(count * 4)
       const refs = new Float32Array(count * 2)
+      const featureData = new Float32Array(count) // per-dot eye/lip brightness weight
       const p = new THREE.Vector3()
       const n = new THREE.Vector3()
 
@@ -476,6 +506,9 @@ export function MaskParticles() {
           homeData[idx * 4 + 1] = p.y
           homeData[idx * 4 + 2] = p.z
           homeData[idx * 4 + 3] = 1
+          // Eye/lip brightness weight from the FINAL (mirrored) position, so it
+          // lines up with where the dot actually renders.
+          featureData[idx] = featureWeight(p.x, p.y)
           refs[idx * 2 + 0] = (j + 0.5) / SIZE
           refs[idx * 2 + 1] = (i + 0.5) / SIZE
         }
@@ -529,6 +562,7 @@ export function MaskParticles() {
       geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
       geometry.setAttribute('aRef', new THREE.BufferAttribute(refs, 2))
       geometry.setAttribute('aGlyphSeed', new THREE.BufferAttribute(baseGlyphSeed, 1))
+      geometry.setAttribute('aFeature', new THREE.BufferAttribute(featureData, 1))
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -543,6 +577,9 @@ export function MaskParticles() {
           uRoveSpeed: { value: GLYPH_ROVE_SPEED },
           uOnFrac: { value: GLYPH_ON_FRAC },
           uFade: { value: 0 }, // intro fade-in (see the reveal in useFrame)
+          // ⚙️ Eye/lip brightness lift. Dots on a feature get up to this much extra
+          // brightness (×(1+boost)) so the face reads. Raise for stronger features.
+          uFeatureBoost: { value: 1.3 },
         },
         vertexShader: renderVertex,
         fragmentShader: renderFragment,
@@ -589,8 +626,9 @@ export function MaskParticles() {
           // ⚙️ Overdriven past (1,1,1) on purpose: additive blending + Bloom read
           // values >1 as "hotter", so this pushes brightness without touching the
           // shared Bloom intensity (which would also brighten the base dot layer,
-          // not just the glyphs Melvin asked about). Same hue, 1.5x intensity.
-          uColor: { value: new THREE.Color('#b9fff2').multiplyScalar(1.5) },
+          // not just the glyphs Melvin asked about). Same hue, 1.7x intensity
+          // (1.5→1.7, 2026-08-01: "a bit more prominent").
+          uColor: { value: new THREE.Color('#b9fff2').multiplyScalar(1.7) },
         },
         vertexShader: glyphVertex,
         fragmentShader: glyphFragment,
@@ -630,6 +668,11 @@ export function MaskParticles() {
   // negative-z start that flies the mask forward to z=0 (perspective makes it
   // rush toward you) plus a fade-up, so the mask emerges out of the black.
   const introT = useRef(0)
+  // Melvin (2026-08-01): "he should start from a different point every time, but
+  // always end up in the same place." A random x/y birth offset chosen ONCE per
+  // page load; it decays to 0 as the intro completes, so the mask flies in from a
+  // fresh spot each visit and always settles into the identical home pose.
+  const introOffset = useRef({ x: (Math.random() * 2 - 1) * 1.3, y: (Math.random() * 2 - 1) * 0.7 })
   // Reused each frame by samplePath so scroll choreography allocates nothing.
   const poseScratch = useRef<Pose>({ x: 0, y: 0, s: 1, rz: 0 })
 
@@ -679,16 +722,19 @@ export function MaskParticles() {
     const te = introT.current
     const eIntro = 1 - Math.pow(1 - te, 3) // easeOutCubic
     const zIn = INTRO_Z_DEEP * (1 - eIntro)
+    // Random birth offset that decays to 0 → starts somewhere new, ends at home.
+    const offX = introOffset.current.x * (1 - eIntro)
+    const offY = introOffset.current.y * (1 - eIntro)
     const fade = eIntro
     material.uniforms.uFade.value = fade
     glyphMat.uniforms.uFade.value = fade
 
     if (groupRef.current) {
-      groupRef.current.position.set(pose.x, pose.y, zIn)
+      groupRef.current.position.set(pose.x + offX, pose.y + offY, zIn)
       groupRef.current.scale.setScalar(pose.s)
       groupRef.current.rotation.set(rot.current.x, rot.current.y, pose.rz)
     }
-    rayMesh.position.set(pose.x, pose.y, zIn)
+    rayMesh.position.set(pose.x + offX, pose.y + offY, zIn)
     rayMesh.scale.setScalar(pose.s)
     rayMesh.rotation.set(rot.current.x, rot.current.y, pose.rz)
     rayMesh.updateMatrixWorld()
