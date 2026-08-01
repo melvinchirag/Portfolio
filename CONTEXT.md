@@ -685,6 +685,28 @@ bump (not above). Removed the old LIP_X_HALF/LIP_Y_HALF/LIP_RING_BW/LIP_SEAM_BW.
 Commit 2cdaba9. Knobs: LIP_OPEN (lip fullness), LIP_LINE_BW (line thickness),
 LIP_HW (mouth width), LIP_Y (position). NEXT: D (blink) → E (scroll).
 
+### [CLAUDE] Feature ISOLATION investigation + eyes-as-eyes (2026-08-01)
+Melvin (screenshot #24): the real bottleneck is I keep PAINTING SHAPES at guessed
+coords instead of ISOLATING the actual features from geometry. He's right. I tried
+three geometry-based isolation methods HEADLESS before concluding:
+1. Curvature/crease detector (per-vertex normal divergence over mesh edges, incl.
+   Laplacian-smoothed + top-percentile threshold) — this sculpt is UNIFORMLY bumpy,
+   so the sharpest creases scatter across forehead/cheeks; features don't separate
+   from skin noise. (~308k verts / 499k faces via draco3d GetFaceFromMesh.)
+2. Depth/anatomy — upper face is smooth; NO distinct eye socket / eyeball to grab.
+3. Texture — GLB has TEXCOORD_0 (UVs) but NO materials/textures/images at all.
+CONCLUSION: the "Soulless" mesh does not CONTAIN isolatable features; hand-drawn
+shapes are the only lever this model gives. Told Melvin honestly + offered a fork
+(swap model / park features / keep hand-tuning). He answered: "just make the eyes
+look like actual eyes." So, same approach as the lips: redrew EYES as a SHAPE — an
+almond eyelid outline (upper+lower lid via `et=1-enx²` parabola converging at the
+corners) + a central IRIS dot; mirrored via |x|. Params EYE_X 0.16, EYE_Y -0.14,
+EYE_HW 0.09, EYE_OPEN 0.035, EYE_LINE_BW 0.01, EYE_IRIS_R 0.028. High-res preview
+confirms it reads as an eye (almond + iris). Removed EYE_R. Commit af35c32.
+Knobs: EYE_OPEN (openness), EYE_IRIS_R (iris size), EYE_HW (width), EYE_X/EYE_Y (pos).
+KEY LEARNING for features on this model: geometry can't auto-isolate — draw SHAPES
+(three-line mouth, almond+iris eye) and validate the shape headless before shipping.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
