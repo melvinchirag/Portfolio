@@ -111,7 +111,10 @@ const EYE_IRIS_R = 0.028  // iris/pupil dot radius
 // line bows down from a central SEAM, all meeting at the mouth corners; everything
 // else (cheeks, philtrum, the space above the lip) stays dark. Small: a real mouth
 // is a fraction of the face width, so keep LIP_HW modest.
-const LIP_Y = -0.37       // the seam (where the lips meet), model-space y
+const LIP_Y = -0.47       // the seam (where the lips meet), model-space y. Moved
+                          // -0.37→-0.47 (Melvin, 2026-08-01): at -0.37 the mouth read
+                          // as sitting UNDER THE NOSE; his marked-up image puts the
+                          // lips lower, ~-0.47 (mapped from screenshot #21's red mark).
 const LIP_HW = 0.09       // mouth half-width (corners at x = ±this)
 const LIP_OPEN = 0.034    // how far the upper/lower lip lines bow from the seam at centre
 const LIP_LINE_BW = 0.009 // half-thickness of each of the three drawn lines — THIN, so the
