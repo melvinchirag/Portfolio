@@ -97,27 +97,38 @@ const MIRROR_FACE = true
 // hollows are the recessed flanks just below/beside the nose base at y≈-0.14,
 // x≈±0.16; the lip bump is the protrusion at y≈-0.36. Nose was already right.
 const EYE_Y = -0.14, EYE_X = 0.16, EYE_R = 0.1
-// Lips are drawn as an OUTLINE, not a filled blob (Melvin, 2026-08-01): the outer
-// border of the mouth + the horizontal SEAM between the two lips are lit, while the
-// lip bodies stay dark — so it reads like a drawn mouth. Slightly bigger than the
-// old filled ellipse so the ring catches enough particles to read.
-const LIP_Y = -0.36, LIP_X_HALF = 0.17, LIP_Y_HALF = 0.075
-const LIP_RING_BW = 0.36 // width of the outer-border ring (in normalised ellipse units)
-const LIP_SEAM_BW = 0.2 // half-thickness of the centre seam line (thin, so it reads as a line)
+// Lips drawn like a face painter (Melvin, 2026-08-01): NOT an area — THREE thin
+// lines only, tight on the lip itself. The upper-lip line bows up and the lower-lip
+// line bows down from a central SEAM, all meeting at the mouth corners; everything
+// else (cheeks, philtrum, the space above the lip) stays dark. Small: a real mouth
+// is a fraction of the face width, so keep LIP_HW modest.
+const LIP_Y = -0.37       // the seam (where the lips meet), model-space y
+const LIP_HW = 0.09       // mouth half-width (corners at x = ±this)
+const LIP_OPEN = 0.034    // how far the upper/lower lip lines bow from the seam at centre
+const LIP_LINE_BW = 0.009 // half-thickness of each of the three drawn lines — THIN, so the
+                          // lip bodies stay dark between them and they read as three lines
 // Nose: a tall narrow ellipse down the centre line, bridge → tip (Melvin: correct).
 const NOSE_X_HALF = 0.055, NOSE_Y = 0.06, NOSE_Y_HALF = 0.17
 function featureWeight(x: number, y: number): number {
   // Eyes: two discs mirrored across the centre line (use |x| so one test covers both).
   const eyeDist = Math.hypot(Math.abs(x) - EYE_X, y - EYE_Y) / EYE_R
   const eyeW = Math.max(0, 1 - eyeDist)
-  // Lips (OUTLINE): normalise to the lip ellipse, then light a RING near the border
-  // (d≈1) and a horizontal SEAM through the middle (ey≈0), leaving the interior dark.
-  const ex = x / LIP_X_HALF
-  const ey = (y - LIP_Y) / LIP_Y_HALF
-  const d = Math.hypot(ex, ey)
-  const lipRing = Math.max(0, 1 - Math.abs(d - 1) / LIP_RING_BW)
-  const lipSeam = Math.abs(ex) < 1 ? Math.max(0, 1 - Math.abs(ey) / LIP_SEAM_BW) : 0
-  const lipW = Math.max(lipRing, lipSeam)
+  // Lips: three thin curved lines. `nx` is 0 at centre, ±1 at the corners; `t` is a
+  // parabola that makes the upper/lower lines converge to the seam at the corners
+  // (the almond shape of a mouth). We light a point only if it's within LIP_LINE_BW
+  // of one of the three lines, and fade the lines out near the corners.
+  let lipW = 0
+  const nx = x / LIP_HW
+  if (Math.abs(nx) < 1) {
+    const t = 1 - nx * nx
+    const dUpper = Math.abs(y - (LIP_Y + LIP_OPEN * t))
+    const dLower = Math.abs(y - (LIP_Y - LIP_OPEN * t))
+    const dSeam = Math.abs(y - LIP_Y)
+    const dMin = Math.min(dUpper, dLower, dSeam)
+    const line = Math.max(0, 1 - dMin / LIP_LINE_BW)
+    const cornerFade = Math.min(1, (1 - Math.abs(nx)) / 0.22) // soften the ends
+    lipW = line * cornerFade
+  }
   // Nose: a centred vertical ellipse (taller than wide).
   const noseDist = Math.hypot(x / NOSE_X_HALF, (y - NOSE_Y) / NOSE_Y_HALF)
   const noseW = Math.max(0, 1 - noseDist) * 0.85 // a touch softer than eyes/lips
