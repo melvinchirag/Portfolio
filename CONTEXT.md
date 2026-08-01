@@ -669,6 +669,22 @@ bodies. Feature floor 0.30→0.34 so the sparser outline reads. Commit 4a1f93c.
 Knobs: LIP_RING_BW (outline thickness), LIP_SEAM_BW (seam thickness), uFeatureFloor.
 NEXT still: D (slow blink) → E (scroll choreography).
 
+### [CLAUDE] Lips round 3 — three thin lines, "like a face painter" (2026-08-01)
+Melvin (screenshot #23, frustrated): the ellipse-outline was "horrible" — too big,
+lit ABOVE the lip, covered the whole region. Wants ONLY the lip outline: upper-lip
+line, lower-lip line, and the middle line — "imagine a professional face painting
+artist." Replaced the ellipse-ring lip term entirely with THREE thin curved lines:
+with `nx = x/LIP_HW` and `t = 1-nx²` (parabola → lines converge at the corners),
+light a point within `LIP_LINE_BW` of any of: upper `LIP_Y+LIP_OPEN·t`, lower
+`LIP_Y-LIP_OPEN·t`, seam `LIP_Y`; `cornerFade` softens the ends. Params:
+`LIP_Y -0.37, LIP_HW 0.09, LIP_OPEN 0.034, LIP_LINE_BW 0.009` (thin so the lip
+BODIES stay dark between the lines). First try at BW 0.013/OPEN 0.028 merged into a
+band — thinned to 0.009 / widened to 0.034 for three distinct lines. High-res depth
+overlay confirms an almond mouth outline + seam, dark interior, centred on the lip
+bump (not above). Removed the old LIP_X_HALF/LIP_Y_HALF/LIP_RING_BW/LIP_SEAM_BW.
+Commit 2cdaba9. Knobs: LIP_OPEN (lip fullness), LIP_LINE_BW (line thickness),
+LIP_HW (mouth width), LIP_Y (position). NEXT: D (blink) → E (scroll).
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
