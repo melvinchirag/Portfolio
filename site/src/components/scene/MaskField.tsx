@@ -748,10 +748,13 @@ export function MaskParticles() {
     // The raycast mesh gets the SAME transform so cursor interaction stays aligned
     // wherever the mask has flown to.
     //
-    // Smooth the scroll input first (frame-rate-independent exponential ease) so
-    // the mask GLIDES with its own momentum rather than snapping to scroll — this
-    // is the fix for the "rigid" feel. Higher constant = snappier, lower = floatier.
-    smoothProg.current += (heroScroll.progress - smoothProg.current) * (1 - Math.exp(-delta * 6.0))
+    // Track the scroll input near-directly (Melvin, 2026-08-01: "responsive, 1:1 —
+    // you move it directly", not floaty). The constant is high, so smoothProg stays
+    // almost glued to heroScroll.progress — only enough smoothing to absorb per-frame
+    // jitter (Lenis already smooths the underlying scroll). The "settle" on each beat
+    // now comes purely from the smoothstep easing BETWEEN keyframes in samplePath, not
+    // from input lag. Lower this toward ~6 for a floatier feel; raise for even tighter.
+    smoothProg.current += (heroScroll.progress - smoothProg.current) * (1 - Math.exp(-delta * 26.0))
     const pose = samplePath(smoothProg.current, poseScratch.current)
 
     // INTRO REVEAL: ramp introT 0→1, ease-out so it decelerates as it arrives.
