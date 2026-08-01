@@ -756,6 +756,18 @@ screenshot. NOTE: eyes(-0.14) vs nose(0.06) layout means the nose sits ABOVE the
 eyes on this model — if he later says the nose is too high, that's the same axis
 confusion; may need to revisit. NEXT: confirm deploy, then tune beat POSES.
 
+### [CLAUDE] BLINK (item D) — the mask feels alive (2026-08-01)
+Melvin confirmed he sees the scroll head-turn (so he's on the live build; forehead
+resolved) and chose the BLINK next. Implemented: split the merged feature attribute
+into `aEye` + `aNose` so the eyes can animate alone; base vertex now does
+`vFeature = max(aNose, aEye * uEyeOpen)`. Blink cycle in useFrame: `blink` ref
+{clock,next,start}; when clock≥next, run close→open over `BLINK_DUR 0.16s` via
+`1 - sin(bt·π)` (smooth 1→0→1), then schedule next at random `BLINK_MIN 3.2..BLINK_MAX 7.0`s.
+Both eyes together (uEyeOpen is global); gated on fade>0.9 so it doesn't blink mid
+fly-in. Commit 358ea3e. Knobs: BLINK_DUR (speed), BLINK_MIN/MAX (frequency).
+Roadmap now: A✅ B✅ C✅ D✅ E🔄(travel+settle+yaw done, beat POSES still tunable).
+Older queued: beat-to-beat text transitions, liquid-glass placement on hero.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
