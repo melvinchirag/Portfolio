@@ -97,16 +97,27 @@ const MIRROR_FACE = true
 // hollows are the recessed flanks just below/beside the nose base at y≈-0.14,
 // x≈±0.16; the lip bump is the protrusion at y≈-0.36. Nose was already right.
 const EYE_Y = -0.14, EYE_X = 0.16, EYE_R = 0.1
-const LIP_Y = -0.36, LIP_X_HALF = 0.15, LIP_Y_HALF = 0.06
+// Lips are drawn as an OUTLINE, not a filled blob (Melvin, 2026-08-01): the outer
+// border of the mouth + the horizontal SEAM between the two lips are lit, while the
+// lip bodies stay dark — so it reads like a drawn mouth. Slightly bigger than the
+// old filled ellipse so the ring catches enough particles to read.
+const LIP_Y = -0.36, LIP_X_HALF = 0.17, LIP_Y_HALF = 0.075
+const LIP_RING_BW = 0.36 // width of the outer-border ring (in normalised ellipse units)
+const LIP_SEAM_BW = 0.2 // half-thickness of the centre seam line (thin, so it reads as a line)
 // Nose: a tall narrow ellipse down the centre line, bridge → tip (Melvin: correct).
 const NOSE_X_HALF = 0.055, NOSE_Y = 0.06, NOSE_Y_HALF = 0.17
 function featureWeight(x: number, y: number): number {
   // Eyes: two discs mirrored across the centre line (use |x| so one test covers both).
   const eyeDist = Math.hypot(Math.abs(x) - EYE_X, y - EYE_Y) / EYE_R
   const eyeW = Math.max(0, 1 - eyeDist)
-  // Lips: a centred ellipse (wider than tall).
-  const lipDist = Math.hypot(x / LIP_X_HALF, (y - LIP_Y) / LIP_Y_HALF)
-  const lipW = Math.max(0, 1 - lipDist)
+  // Lips (OUTLINE): normalise to the lip ellipse, then light a RING near the border
+  // (d≈1) and a horizontal SEAM through the middle (ey≈0), leaving the interior dark.
+  const ex = x / LIP_X_HALF
+  const ey = (y - LIP_Y) / LIP_Y_HALF
+  const d = Math.hypot(ex, ey)
+  const lipRing = Math.max(0, 1 - Math.abs(d - 1) / LIP_RING_BW)
+  const lipSeam = Math.abs(ex) < 1 ? Math.max(0, 1 - Math.abs(ey) / LIP_SEAM_BW) : 0
+  const lipW = Math.max(lipRing, lipSeam)
   // Nose: a centred vertical ellipse (taller than wide).
   const noseDist = Math.hypot(x / NOSE_X_HALF, (y - NOSE_Y) / NOSE_Y_HALF)
   const noseW = Math.max(0, 1 - noseDist) * 0.85 // a touch softer than eyes/lips
@@ -594,7 +605,7 @@ export function MaskParticles() {
           // as solid shading against the dim resting field (base rest alpha ≈ 0.04).
           // The earlier multiplicative boost was invisible because it multiplied
           // that tiny rest alpha. Raise for stronger features, lower for subtler.
-          uFeatureFloor: { value: 0.3 },
+          uFeatureFloor: { value: 0.34 },
         },
         vertexShader: renderVertex,
         fragmentShader: renderFragment,
