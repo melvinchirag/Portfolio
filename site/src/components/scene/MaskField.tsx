@@ -114,27 +114,29 @@ const EYE_IRIS_R = 0.028  // iris/pupil dot radius
 // forehead — remove it"; that was the top of this ridge).
 const NOSE_X_HALF = 0.055, NOSE_Y = 0.06, NOSE_Y_HALF = 0.17
 const NOSE_TOP = 0.14
-function featureWeight(x: number, y: number): number {
-  // Eyes (mirrored via |x|): an almond eyelid outline + an iris dot. `enx` is 0 at
-  // the eye centre, ±1 at the corners; `et` is a parabola so the upper/lower lids
-  // converge to the corners (the almond shape). Light a point near either lid line
-  // OR inside the iris; everything else in the eye stays dark.
-  let eyeW = 0
+// Eye and nose weights are computed SEPARATELY (not merged) so the BLINK can animate
+// the eyes alone: the shader multiplies the eye weight by uEyeOpen (1 open → 0 shut)
+// while the nose stays put. See the blink cycle in useFrame.
+// Eyes (mirrored via |x|): an almond eyelid outline + an iris dot. `enx` is 0 at the
+// eye centre, ±1 at the corners; `et` is a parabola so the upper/lower lids converge
+// to the corners (the almond shape). Light a point near either lid line OR the iris.
+function eyeWeight(x: number, y: number): number {
   const edx = Math.abs(x) - EYE_X
   const edy = y - EYE_Y
   const enx = edx / EYE_HW
-  if (Math.abs(enx) < 1) {
-    const et = 1 - enx * enx
-    const dLid = Math.min(Math.abs(edy - EYE_OPEN * et), Math.abs(edy + EYE_OPEN * et))
-    const lid = Math.max(0, 1 - dLid / EYE_LINE_BW) * Math.min(1, (1 - Math.abs(enx)) / 0.18)
-    const iris = Math.max(0, 1 - Math.hypot(edx, edy) / EYE_IRIS_R)
-    eyeW = Math.max(lid, iris)
-  }
-  // Nose: a centred vertical ellipse (taller than wide), hard-capped at NOSE_TOP so
-  // it never reaches the brow/forehead.
+  if (Math.abs(enx) >= 1) return 0
+  const et = 1 - enx * enx
+  const dLid = Math.min(Math.abs(edy - EYE_OPEN * et), Math.abs(edy + EYE_OPEN * et))
+  const lid = Math.max(0, 1 - dLid / EYE_LINE_BW) * Math.min(1, (1 - Math.abs(enx)) / 0.18)
+  const iris = Math.max(0, 1 - Math.hypot(edx, edy) / EYE_IRIS_R)
+  return Math.max(lid, iris)
+}
+// Nose: a centred vertical ellipse (taller than wide), hard-capped at NOSE_TOP so it
+// never reaches the brow/forehead.
+function noseWeight(x: number, y: number): number {
+  if (y > NOSE_TOP) return 0
   const noseDist = Math.hypot(x / NOSE_X_HALF, (y - NOSE_Y) / NOSE_Y_HALF)
-  const noseW = y > NOSE_TOP ? 0 : Math.max(0, 1 - noseDist) * 0.85
-  return Math.min(1, Math.max(eyeW, noseW))
+  return Math.max(0, 1 - noseDist) * 0.85
 }
 
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
@@ -151,6 +153,13 @@ function featureWeight(x: number, y: number): number {
 // second faster"). The fly-in does not START until the Loader is gone (heroIntro).
 const INTRO_SECS = 1.2
 const INTRO_Z_DEEP = -9
+
+// BLINK (Melvin, 2026-08-01: "slow natural blink so the mask feels alive"). The eyes
+// close + reopen over BLINK_DUR, then wait a random BLINK_MIN..BLINK_MAX before the
+// next one, so it never feels metronomic. Both eyes blink together (uEyeOpen is global).
+const BLINK_DUR = 0.16   // seconds for one full close→open
+const BLINK_MIN = 3.2    // shortest gap between blinks
+const BLINK_MAX = 7.0    // longest gap between blinks
 
 // Each keyframe adds `ry` (yaw = the head TURNING left/right, radians) on top of
 // x/y/scale/rz, so the mask reads as a living head that turns as it travels — the
@@ -242,7 +251,9 @@ const renderVertex = /* glsl */ `
   uniform float uOnFrac;     // same value the glyph layer uses
   attribute vec2 aRef;       // this particle's texel in the sim textures
   attribute float aGlyphSeed;// glyph seed if this dot is a glyph candidate, else -1
-  attribute float aFeature;  // eye/lip brightness weight (0..1)
+  attribute float aEye;      // eye-feature weight (0..1) — animated by the blink
+  attribute float aNose;     // nose-feature weight (0..1) — static
+  uniform float uEyeOpen;    // 1 = eyes open, 0 = shut (the blink)
   varying float vSpeed;
   varying float vGlyphFade;  // 1 while this dot's glyph is lit → dot fades to 0
   varying float vFeature;
@@ -250,7 +261,8 @@ const renderVertex = /* glsl */ `
   void main() {
     vec3 pos = texture2D(uPositionTexture, aRef).xyz;
     vSpeed = length(texture2D(uVelocityTexture, aRef).xyz);
-    vFeature = aFeature;
+    // Eyes fade out as they blink shut; nose is unaffected.
+    vFeature = max(aNose, aEye * uEyeOpen);
 
     // CONVERSION: if this dot is a glyph candidate, recompute the SAME life curve
     // the glyph layer uses, and report how "lit" its glyph is. The fragment fades
@@ -504,7 +516,8 @@ export function MaskParticles() {
       const count = SIZE * SIZE
       const homeData = new Float32Array(count * 4)
       const refs = new Float32Array(count * 2)
-      const featureData = new Float32Array(count) // per-dot eye/lip brightness weight
+      const eyeData = new Float32Array(count)  // per-dot eye-feature weight (blinks)
+      const noseData = new Float32Array(count) // per-dot nose-feature weight (static)
       const p = new THREE.Vector3()
       const n = new THREE.Vector3()
 
@@ -548,9 +561,10 @@ export function MaskParticles() {
           homeData[idx * 4 + 1] = p.y
           homeData[idx * 4 + 2] = p.z
           homeData[idx * 4 + 3] = 1
-          // Eye/lip brightness weight from the FINAL (mirrored) position, so it
-          // lines up with where the dot actually renders.
-          featureData[idx] = featureWeight(p.x, p.y)
+          // Eye + nose weights from the FINAL (mirrored) position, so they line up
+          // with where the dot actually renders. Kept separate for the blink.
+          eyeData[idx] = eyeWeight(p.x, p.y)
+          noseData[idx] = noseWeight(p.x, p.y)
           refs[idx * 2 + 0] = (j + 0.5) / SIZE
           refs[idx * 2 + 1] = (i + 0.5) / SIZE
         }
@@ -604,7 +618,8 @@ export function MaskParticles() {
       geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
       geometry.setAttribute('aRef', new THREE.BufferAttribute(refs, 2))
       geometry.setAttribute('aGlyphSeed', new THREE.BufferAttribute(baseGlyphSeed, 1))
-      geometry.setAttribute('aFeature', new THREE.BufferAttribute(featureData, 1))
+      geometry.setAttribute('aEye', new THREE.BufferAttribute(eyeData, 1))
+      geometry.setAttribute('aNose', new THREE.BufferAttribute(noseData, 1))
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -619,12 +634,12 @@ export function MaskParticles() {
           uRoveSpeed: { value: GLYPH_ROVE_SPEED },
           uOnFrac: { value: GLYPH_ON_FRAC },
           uFade: { value: 0 }, // intro fade-in (see the reveal in useFrame)
-          // ⚙️ Eye/lip/nose shading FLOOR. A feature dot's brightness is lifted to
-          // AT LEAST this (independent of motion), so the eyes, nose and lips read
-          // as solid shading against the dim resting field (base rest alpha ≈ 0.04).
-          // The earlier multiplicative boost was invisible because it multiplied
-          // that tiny rest alpha. Raise for stronger features, lower for subtler.
+          // ⚙️ Eye/nose shading FLOOR. A feature dot's brightness is lifted to AT
+          // LEAST this (independent of motion), so the eyes and nose read as solid
+          // shading against the dim resting field (base rest alpha ≈ 0.04). Raise for
+          // stronger features, lower for subtler.
           uFeatureFloor: { value: 0.34 },
+          uEyeOpen: { value: 1 }, // 1 open → 0 shut; driven by the blink in useFrame
         },
         vertexShader: renderVertex,
         fragmentShader: renderFragment,
@@ -718,6 +733,9 @@ export function MaskParticles() {
   // page load; it decays to 0 as the intro completes, so the mask flies in from a
   // fresh spot each visit and always settles into the identical home pose.
   const introOffset = useRef({ x: (Math.random() * 2 - 1) * 1.3, y: (Math.random() * 2 - 1) * 0.7 })
+  // Blink state: `clock` accumulates time, `next` is when the next blink starts,
+  // `start` is when the current blink began (-1 = not blinking). See useFrame.
+  const blink = useRef({ clock: 0, next: 3.0, start: -1 })
   // Reused each frame by samplePath so scroll choreography allocates nothing.
   const poseScratch = useRef<Pose>({ x: 0, y: 0, s: 1, rz: 0, ry: 0 })
 
@@ -780,6 +798,27 @@ export function MaskParticles() {
     const fade = eIntro
     material.uniforms.uFade.value = fade
     glyphMat.uniforms.uFade.value = fade
+
+    // BLINK: advance the clock; when it's time, run a close→open over BLINK_DUR
+    // (uEyeOpen 1→0→1 via a sine so it's smooth), then schedule the next at a random
+    // interval. Only blink once the mask has arrived (fade≈1), so it doesn't blink
+    // while still flying in from the deep.
+    const bk = blink.current
+    bk.clock += delta
+    let eyeOpen = 1
+    if (fade > 0.9) {
+      if (bk.start < 0 && bk.clock >= bk.next) bk.start = bk.clock
+      if (bk.start >= 0) {
+        const bt = (bk.clock - bk.start) / BLINK_DUR
+        if (bt >= 1) {
+          bk.start = -1
+          bk.next = bk.clock + BLINK_MIN + Math.random() * (BLINK_MAX - BLINK_MIN)
+        } else {
+          eyeOpen = 1 - Math.sin(bt * Math.PI) // 1 → 0 (shut at mid) → 1
+        }
+      }
+    }
+    material.uniforms.uEyeOpen.value = eyeOpen
 
     if (groupRef.current) {
       groupRef.current.position.set(pose.x + offX, pose.y + offY, zIn)
