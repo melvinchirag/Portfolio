@@ -611,6 +611,31 @@ this pass (commit 3942423):
 Knobs: uFeatureBoost (feature strength), EYE_*/LIP_* (positions/sizes).
 NEXT: D (blink) then E (scroll choreography). Build-gated via `npm run build`.
 
+### [CLAUDE] Bug batch — loader/mask timing, faster fly-in, VISIBLE features, bigger glyphs (2026-08-01)
+Melvin's report after seeing A/B/C: (1) the mask fly-in was running UNDERNEATH the
+~5.2s loader, so it was "already there" when the neurons dissolved — it should
+only start once the neurons are gone; (2) the fly-in should be "exactly one second
+faster"; (3) glyph prominence change wasn't noticeable — wants glyphs a little
+BIGGER; (4) the eye/lip feature brightness "is not done" — invisible — and add the
+NOSE. He LOVES the dissipation ("forming from each dot then flying away"). Commit
+0ae717e:
+1. **Timing (architectural).** Root cause: `introT` advanced from the mask's first
+   frame, concurrent with the Loader. New `src/hooks/heroIntro.ts` — a heroScroll-
+   style plain gate `{ ready:false }` + `markIntroReady()`. Loader flips it in a
+   `phase === 'gone'` effect (covers normal finish, skip, reduced-motion, AND the
+   already-seen-this-session initial 'gone'). MaskField advances `introT` only when
+   `heroIntro.ready`, so it stays invisible+deep under the loader and enters after.
+2. **1s faster.** INTRO_SECS 2.2 → 1.2.
+3. **Features were INVISIBLE — real fix.** The boost was `a *= (1+feature·boost)`
+   but `a` at rest is the speed-clamped `uMinAlpha ≈ 0.04`, so the lift was ~0.05 —
+   lost in the additive field. Switched to a FLOOR: `a = max(a, feature·uFeatureFloor)`
+   with `uFeatureFloor 0.3`, so feature dots glow solidly regardless of motion.
+   Added NOSE to `featureWeight` (centre vertical ellipse, ridge y0.06, measured).
+   Re-verified eyes+nose+lips via ASCII map — reads as a face.
+4. **Bigger glyphs.** uGlyphSize 15 → 17.
+Knobs: uFeatureFloor (feature strength), NOSE_*/EYE_*/LIP_*, uGlyphSize, INTRO_SECS.
+NEXT unchanged: D (blink), then E (scroll choreography).
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
