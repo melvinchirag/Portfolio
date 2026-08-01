@@ -504,6 +504,26 @@ export function MaskParticles() {
       const err = gpu.init()
       if (err) console.error('[MaskField] GPGPU init error:', err)
 
+      // ---- glyph pool: a strided (even-scattered) subset of particles are glyph
+      // candidates. Build the seeds FIRST because the base dot layer needs each
+      // dot's glyph seed to fade itself out as its glyph forms (the conversion). ----
+      const glyphPool = Math.max(1, Math.floor(count * GLYPH_POOL_FRACTION))
+      const stride = Math.max(1, Math.floor(count / glyphPool))
+      const gPositions: number[] = []
+      const gRefs: number[] = []
+      const gSeeds: number[] = []
+      // Per-BASE-particle glyph seed (or -1). Lets the base dot layer recompute the
+      // exact same glyph life curve, so a dot fades out precisely as its glyph
+      // forms — the dot converts INTO the glyph rather than sitting under it.
+      const baseGlyphSeed = new Float32Array(count).fill(-1)
+      for (let k = 0; k < count; k += stride) {
+        const seed = Math.random()
+        gPositions.push(0, 0, 0)
+        gRefs.push(refs[k * 2], refs[k * 2 + 1])
+        gSeeds.push(seed)
+        baseGlyphSeed[k] = seed
+      }
+
       // render geometry: one point per particle, carrying its texel ref
       const geometry = new THREE.BufferGeometry()
       geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
@@ -532,26 +552,9 @@ export function MaskParticles() {
         blending: THREE.AdditiveBlending,
       })
 
-      // ---- glyph layer: a RANDOMLY SCATTERED candidate POOL of particles; the
-      // shader lights a small roving subset at a time (binary ⇄ Telugu). Strided
-      // selection over the random-order surface samples gives an even scatter. ----
+      // ---- glyph layer: draws the candidate POOL built above; the shader lights a
+      // small roving subset at a time (binary ⇄ Telugu) and floats each off-face. ----
       const atlas = makeGlyphAtlas()
-      const glyphPool = Math.max(1, Math.floor(count * GLYPH_POOL_FRACTION))
-      const stride = Math.max(1, Math.floor(count / glyphPool))
-      const gPositions: number[] = []
-      const gRefs: number[] = []
-      const gSeeds: number[] = []
-      // Per-BASE-particle glyph seed (or -1). Lets the base dot layer recompute the
-      // exact same glyph life curve, so a dot fades out precisely as its glyph
-      // forms — the dot converts INTO the glyph rather than sitting under it.
-      const baseGlyphSeed = new Float32Array(count).fill(-1)
-      for (let k = 0; k < count; k += stride) {
-        const seed = Math.random()
-        gPositions.push(0, 0, 0)
-        gRefs.push(refs[k * 2], refs[k * 2 + 1])
-        gSeeds.push(seed)
-        baseGlyphSeed[k] = seed
-      }
       const glyphGeo = new THREE.BufferGeometry()
       glyphGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(gPositions), 3))
       glyphGeo.setAttribute('aRef', new THREE.BufferAttribute(new Float32Array(gRefs), 2))
