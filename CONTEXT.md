@@ -727,6 +727,19 @@ NOSE only. The forehead brightening was the TOP of the nose ridge (ellipse reach
 y0.23 = glabella/brow) — added hard cap `NOSE_TOP 0.14` (noseW=0 above it). Commit
 0963db8. Melvin wants to move on NOW to the scroll choreography (item E) — that's next.
 
+### [CLAUDE] Scroll choreography (item E) — step 1: responsive 1:1 (2026-08-01)
+Asked Melvin how the mask should move on scroll. He chose: (1) TRAVEL + SETTLE across
+the 5 beats (the existing MASK_PATH concept: left → up/grow → big centre → swing right
+→ settle high for CTA — it already matches), and (2) RESPONSIVE 1:1 / "you move it
+directly", NOT floaty/inertial. So step 1 = kill the input lag: raised the smoothProg
+ease constant `6 → 26` in useFrame so the mask tracks `heroScroll.progress` almost
+directly; the per-beat SETTLE now comes only from the smoothstep easing between
+keyframes in `samplePath`, not from time-lag. MASK_PATH keyframes left unchanged (they
+already match his chosen sequence). Commit 3eb0be8. NEXT: let him feel it, then refine
+the actual beat POSES/path (it's still a first-pass composition) to taste. Knob: the
+26.0 constant (lower=floatier). Face features are DONE (eyes+nose only); blink (D)
+deferred — Melvin prioritised scroll.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
