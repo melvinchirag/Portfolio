@@ -496,6 +496,31 @@ still appear there."** So visibility and existence are now decoupled:
   verify on deploy**, then we move to properly choreographing the scroll motion
   ("it moves, looks cool, but can be much better").
 
+### [CLAUDE] Face crop — REVERSED the keep-for-glyphs idea, now face-only (2026-08-01)
+The "keep crown/jaw particles alive so glyphs float there" version (prev entry)
+BACKFIRED: Melvin — "the black-tealed glyphs are so structured and well placed it
+still makes it look like the mask has a crown and a jaw… bring back the face,
+completely remove the crown and the jaw. I only want to see the face from all
+angles." The evenly-placed glyphs traced the crown/jaw silhouette, so the head
+shape still read; and the face ellipse also cut too much (it narrows too fast at
+the top, slicing the upper cheeks/temples). Full reversal:
+- **Removed the aFace split entirely** (reverted `renderVertex`/`renderFragment`
+  to plain). No more "present but invisible" particles.
+- **Distribution is now the FACE CROP itself** — every surviving particle IS the
+  face, so teal AND glyphs live only on the face; crown/jaw/ears/rear have NO
+  particles → nothing traces them. Crop = front-facing + `z ≥ BACK_CLIP -0.11`
+  (front shell, no ghost) + `|x| ≤ FACE_X_HALF 0.31` (no ears) + `FACE_Y_BOTTOM
+  -0.56 ≤ y ≤ FACE_Y_TOP 0.40`. Cut lines are Melvin's calls: **keep chin (cut
+  neck), keep forehead (cut skull crown)**. Verified with an ASCII preview —
+  clean forehead→brow→eyes→nose→mouth→chin, ~95k pts, dense.
+- **Zero stragglers this time:** the old 10-try resample cap left ~3% of particles
+  stranded in rejected regions (that was the "diluted, not removed" look). Now up
+  to 40 tries + a fallback that snaps any straggler to the last valid face point,
+  so nothing ever lands outside the face.
+- The 4 crop constants are the live knobs. tsc/oxlint clean. **Melvin to verify on
+  deploy** (rotate to all angles — should be face only, no crown/jaw ghost/glyphs),
+  then on to scroll choreography.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
