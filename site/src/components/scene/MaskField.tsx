@@ -86,6 +86,13 @@ const MIRROR_FACE = true
  * rz = z-roll (radians). Camera is at z=1.5, fov 50 → the visible box at z=0 is
  * roughly x∈[-1.1,1.1], y∈[-0.7,0.7], so these stay on-screen. This is a
  * FIRST-PASS path meant to be tuned live with Melvin, not a final composition. */
+// Intro reveal timing (see introT). INTRO_SECS = how long the fly-in lasts;
+// INTRO_Z_DEEP = how far back (in world z) the mask starts — camera is at z=1.5,
+// so -9 is well into the black behind the scene, and easing it to 0 makes the
+// mask rush toward the viewer out of the deep.
+const INTRO_SECS = 2.2
+const INTRO_Z_DEEP = -9
+
 type Pose = { x: number; y: number; s: number; rz: number }
 const MASK_PATH: (Pose & { p: number })[] = [
   { p: 0.0, x: -0.62, y: 0.0, s: 1.0, rz: 0.0 }, // beat 1 — identity, left
@@ -165,12 +172,29 @@ const renderVertex = /* glsl */ `
   uniform sampler2D uPositionTexture;
   uniform sampler2D uVelocityTexture;
   uniform float uParticleSize;
-  attribute vec2 aRef;   // this particle's texel in the sim textures
+  uniform float uTime;       // shared clock with the glyph layer
+  uniform float uRoveSpeed;  // same value the glyph layer uses
+  uniform float uOnFrac;     // same value the glyph layer uses
+  attribute vec2 aRef;       // this particle's texel in the sim textures
+  attribute float aGlyphSeed;// glyph seed if this dot is a glyph candidate, else -1
   varying float vSpeed;
+  varying float vGlyphFade;  // 1 while this dot's glyph is lit → dot fades to 0
 
   void main() {
     vec3 pos = texture2D(uPositionTexture, aRef).xyz;
     vSpeed = length(texture2D(uVelocityTexture, aRef).xyz);
+
+    // CONVERSION: if this dot is a glyph candidate, recompute the SAME life curve
+    // the glyph layer uses, and report how "lit" its glyph is. The fragment fades
+    // the dot out by exactly that amount, so the teal dot dissolves precisely as
+    // its character forms in place — the particle turns INTO the glyph.
+    vGlyphFade = 0.0;
+    if (aGlyphSeed >= 0.0) {
+      float life = fract(aGlyphSeed * 31.7 + uTime * uRoveSpeed);
+      float edge = min(0.06, uOnFrac * 0.5);
+      vGlyphFade = clamp(smoothstep(0.0, edge, life) - smoothstep(uOnFrac - edge, uOnFrac, life), 0.0, 1.0);
+    }
+
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     gl_PointSize = uParticleSize / -mv.z;
     gl_Position = projectionMatrix * mv;
@@ -182,11 +206,15 @@ const renderFragment = /* glsl */ `
   uniform vec3  uColor;
   uniform float uMinAlpha;
   uniform float uMaxAlpha;
+  uniform float uFade;       // 0→1 intro fade-in (the "emerge from the black" reveal)
   varying float vSpeed;
+  varying float vGlyphFade;
 
   void main() {
     if (length(gl_PointCoord - 0.5) > 0.5) discard;   // round sprite
     float a = clamp(vSpeed * 100.0, uMinAlpha, uMaxAlpha);
+    a *= (1.0 - vGlyphFade);   // dot vanishes as its glyph forms (the conversion)
+    a *= uFade;                // whole mask fades up on load
     gl_FragColor = vec4(uColor, a);
   }
 `
@@ -226,6 +254,20 @@ const TEL_START = BINARY.length
 // uOnFrac to taste. If letters still aren't legible, raise uGlyphSize AND drop
 // uOnFrac to keep coverage constant (bigger letters ⇒ fewer of them).
 const GLYPH_POOL_FRACTION = 0.12
+
+// Glyph TIMING — shared by BOTH the glyph layer AND the base-dot layer so they
+// stay in exact lockstep. This is what makes a dot CONVERT into its glyph
+// (Melvin, 2026-08-01: "each particle should first convert into the glyph, then
+// flow"): the base dot fades out on exactly the same life curve the glyph fades
+// IN, so the teal dot becomes the character in place, the character floats off,
+// then the dot reforms. Both shaders recompute the same `life` from these two
+// numbers + the particle's seed, so they MUST be identical on both materials.
+//   GLYPH_ON_FRAC   = fraction of the pool lit at once (coverage / prominence)
+//   GLYPH_ROVE_SPEED= how fast life advances. Lower = each glyph lingers and
+//     dissipates SLOWER and the set relocates slower (Melvin: "make it slower").
+//     Lit duration ≈ GLYPH_ON_FRAC / GLYPH_ROVE_SPEED seconds. 0.026/0.012 ≈ 2.2s.
+const GLYPH_ON_FRAC = 0.026
+const GLYPH_ROVE_SPEED = 0.012
 
 // Bake all glyphs into one texture atlas (grid of cells) drawn on a canvas.
 function makeGlyphAtlas() {
@@ -318,6 +360,7 @@ const glyphFragment = /* glsl */ `
   uniform sampler2D uAtlas;
   uniform float uCols;
   uniform vec3 uColor;
+  uniform float uFade;   // 0→1 intro fade-in, shared with the base dot layer
   varying float vGlyph;
   varying float vAlpha;
   void main() {
@@ -328,7 +371,7 @@ const glyphFragment = /* glsl */ `
     vec2 uv = (vec2(cx, cy) + gl_PointCoord) / uCols;
     vec4 g = texture2D(uAtlas, uv);
     if (g.a < 0.15) discard;
-    gl_FragColor = vec4(uColor, g.a * vAlpha);
+    gl_FragColor = vec4(uColor, g.a * vAlpha * uFade);
   }
 `
 
@@ -465,6 +508,7 @@ export function MaskParticles() {
       const geometry = new THREE.BufferGeometry()
       geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
       geometry.setAttribute('aRef', new THREE.BufferAttribute(refs, 2))
+      geometry.setAttribute('aGlyphSeed', new THREE.BufferAttribute(baseGlyphSeed, 1))
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -474,6 +518,11 @@ export function MaskParticles() {
           uColor: { value: new THREE.Color('#80fff0') },
           uMinAlpha: { value: 0.04 },
           uMaxAlpha: { value: 0.85 },
+          // Shared with the glyph layer so a dot converts into its glyph in sync.
+          uTime: { value: 0 },
+          uRoveSpeed: { value: GLYPH_ROVE_SPEED },
+          uOnFrac: { value: GLYPH_ON_FRAC },
+          uFade: { value: 0 }, // intro fade-in (see the reveal in useFrame)
         },
         vertexShader: renderVertex,
         fragmentShader: renderFragment,
@@ -492,10 +541,16 @@ export function MaskParticles() {
       const gPositions: number[] = []
       const gRefs: number[] = []
       const gSeeds: number[] = []
+      // Per-BASE-particle glyph seed (or -1). Lets the base dot layer recompute the
+      // exact same glyph life curve, so a dot fades out precisely as its glyph
+      // forms — the dot converts INTO the glyph rather than sitting under it.
+      const baseGlyphSeed = new Float32Array(count).fill(-1)
       for (let k = 0; k < count; k += stride) {
+        const seed = Math.random()
         gPositions.push(0, 0, 0)
         gRefs.push(refs[k * 2], refs[k * 2 + 1])
-        gSeeds.push(Math.random())
+        gSeeds.push(seed)
+        baseGlyphSeed[k] = seed
       }
       const glyphGeo = new THREE.BufferGeometry()
       glyphGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(gPositions), 3))
@@ -513,17 +568,11 @@ export function MaskParticles() {
           uTime: { value: 0 },
           uBinStart: { value: BIN_START },
           uTelStart: { value: TEL_START },
-          // ⚙️ THE COVERAGE DIAL: fraction of the candidate pool lit at any instant.
-          // ~0.02 ≈ 1/7 of the mask, 0.03 ≈ 1/5, at uGlyphSize 15. Raise for more.
-          // Nudged 0.02→0.026 (2026-08-01) so glyphs read as PROMINENT/present now
-          // that each also spends part of its life drifting off-face (see uDrift*).
-          uOnFrac: { value: 0.026 },
-          // ⚙️ how fast the change happens. Each glyph stays lit for
-          // ~uOnFrac/uRoveSpeed seconds, so LOWER = each glyph lingers longer and
-          // fades more gently (smoother), and the whole set relocates more slowly —
-          // WITHOUT changing coverage (that's uOnFrac's job). 0.1 flickered (~0.2s
-          // per glyph); 0.02 ≈ ~1s per glyph with a soft ~0.5s fade in/out.
-          uRoveSpeed: { value: 0.02 },
+          // ⚙️ THE COVERAGE DIAL — shared with the base layer (see GLYPH_ON_FRAC).
+          uOnFrac: { value: GLYPH_ON_FRAC },
+          // ⚙️ roving/dissipation speed — shared with the base layer so the
+          // conversion stays in lockstep (see GLYPH_ROVE_SPEED). Lower = slower.
+          uRoveSpeed: { value: GLYPH_ROVE_SPEED },
           // ⚙️ DISSIPATION knobs — how a glyph floats off the face as it fades.
           // uDriftUp = rise in model units over its lifetime (face is ~1.2 tall);
           // uDriftOut = how far it peels forward off the surface; uDriftSide = sway.
@@ -533,6 +582,7 @@ export function MaskParticles() {
           uDriftSide: { value: 0.05 },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
+          uFade: { value: 0 }, // intro fade-in, shared with the base dot layer
           // ⚙️ Overdriven past (1,1,1) on purpose: additive blending + Bloom read
           // values >1 as "hotter", so this pushes brightness without touching the
           // shared Bloom intensity (which would also brighten the base dot layer,
@@ -572,6 +622,11 @@ export function MaskParticles() {
   const smoothProg = useRef(0)
   const groupRef = useRef<THREE.Group>(null)
   const rot = useRef({ x: 0, y: 0 })
+  // Intro reveal (Melvin, 2026-08-01: "coming from far, from the deep/black, it
+  // zooms into view"). Ramps 0→1 over INTRO_SECS on first load; drives a big
+  // negative-z start that flies the mask forward to z=0 (perspective makes it
+  // rush toward you) plus a fade-up, so the mask emerges out of the black.
+  const introT = useRef(0)
   // Reused each frame by samplePath so scroll choreography allocates nothing.
   const poseScratch = useRef<Pose>({ x: 0, y: 0, s: 1, rz: 0 })
 
@@ -613,12 +668,24 @@ export function MaskParticles() {
     // is the fix for the "rigid" feel. Higher constant = snappier, lower = floatier.
     smoothProg.current += (heroScroll.progress - smoothProg.current) * (1 - Math.exp(-delta * 6.0))
     const pose = samplePath(smoothProg.current, poseScratch.current)
+
+    // INTRO REVEAL: ramp introT 0→1, ease-out so it decelerates as it arrives.
+    // zIn starts deep in the black (INTRO_Z_DEEP) and flies to 0; fade 0→1. After
+    // it completes, zIn=0 and fade=1, so this leaves the resting pose untouched.
+    if (introT.current < 1) introT.current = Math.min(1, introT.current + delta / INTRO_SECS)
+    const te = introT.current
+    const eIntro = 1 - Math.pow(1 - te, 3) // easeOutCubic
+    const zIn = INTRO_Z_DEEP * (1 - eIntro)
+    const fade = eIntro
+    material.uniforms.uFade.value = fade
+    glyphMat.uniforms.uFade.value = fade
+
     if (groupRef.current) {
-      groupRef.current.position.set(pose.x, pose.y, 0)
+      groupRef.current.position.set(pose.x, pose.y, zIn)
       groupRef.current.scale.setScalar(pose.s)
       groupRef.current.rotation.set(rot.current.x, rot.current.y, pose.rz)
     }
-    rayMesh.position.set(pose.x, pose.y, 0)
+    rayMesh.position.set(pose.x, pose.y, zIn)
     rayMesh.scale.setScalar(pose.s)
     rayMesh.rotation.set(rot.current.x, rot.current.y, pose.rz)
     rayMesh.updateMatrixWorld()
@@ -640,6 +707,9 @@ export function MaskParticles() {
     material.uniforms.uVelocityTexture.value = gpu.getCurrentRenderTarget(velVar).texture
     glyphMat.uniforms.uPositionTexture.value = posTex
     glyphMat.uniforms.uTime.value += delta
+    // Keep the base dot layer's clock identical so the dot→glyph conversion stays
+    // frame-exact (both recompute the same life curve from this shared time).
+    material.uniforms.uTime.value = glyphMat.uniforms.uTime.value
   })
 
   if (!sim) return null
