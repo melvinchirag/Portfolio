@@ -636,6 +636,25 @@ NOSE. He LOVES the dissipation ("forming from each dot then flying away"). Commi
 Knobs: uFeatureFloor (feature strength), NOSE_*/EYE_*/LIP_*, uGlyphSize, INTRO_SECS.
 NEXT unchanged: D (blink), then E (scroll choreography).
 
+### [CLAUDE] Feature placement round 2 — eyes/lips were in the wrong spot (2026-08-01)
+Melvin (marked-up screenshot #21): loves glyphs/mask/speed/loader-sync now. Nose
+placement CORRECT. But eyes were circled in purple as WRONG — they sat on the nose
+ridge/brow ("sunglasses on the forehead"); red circles showed the true eyes (mid-
+face) and lips (lower). Root cause: v1 `EYE_Y=0.11` is up on the brow/upper-nose.
+Fix method (measured, not guessed): rendered the model's front-face DEPTH MAP
+(headless draco3d, max-z per x/y cell → protrusions bright, hollows dark). Read off:
+nose ridge is the bright central column y0.23→-0.11 (my nose already sat on it);
+the real EYE hollows are the recessed `****` flanks below/beside the nose base at
+y≈-0.14, x≈±0.16; the LIP bump is the bright `%%%` cluster at y≈-0.36. Independently
+matched Melvin's red circles via image→model mapping (face bounds 0.36..-0.64). New:
+`EYE_Y -0.14, EYE_X 0.16, EYE_R 0.10; LIP_Y -0.36, LIP_X_HALF 0.15, LIP_Y_HALF 0.06`
+(nose unchanged). Verified by overlaying E/N/L regions back onto the depth map —
+eyes land on the hollows, lips on the bump. Commit 0296534. Note y=-0.14 is the
+face's exact vertical centre, matching the mid-face red circles.
+TECHNIQUE for future feature work: the front-face depth map (`max z per x/y`) is the
+reliable way to place features on this model — anatomical intuition misled here
+(this sculpt's nose mass sits high, pushing perceived eyes low).
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
