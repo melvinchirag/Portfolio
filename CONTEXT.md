@@ -655,6 +655,20 @@ TECHNIQUE for future feature work: the front-face depth map (`max z per x/y`) is
 reliable way to place features on this model — anatomical intuition misled here
 (this sculpt's nose mass sits high, pushing perceived eyes low).
 
+### [CLAUDE] Lips as an OUTLINE, not a filled blob (2026-08-01)
+Melvin (screenshot #22): eyes/nose now "kinda right" (fine for now). Lips STILL not
+reading — and he wants them OUTLINED not filled: light "the outer parts and the line
+in between both lips," lip bodies shaded/dark, so it looks like a drawn mouth.
+Redesigned the lip term in `featureWeight`: normalise to the lip ellipse, then
+`max(ring, seam)` where ring = border at d≈1 (`LIP_RING_BW 0.36`) and seam = thin
+horizontal midline at ey≈0 (`LIP_SEAM_BW 0.2`); interior stays dark. Sizes
+`LIP_Y -0.36, LIP_X_HALF 0.17, LIP_Y_HALF 0.075`. Verified: the lip band has ~12k
+front-facing particles (density was never the issue — the old FILLED ellipse just
+didn't read), and an ASCII preview shows a clean oval outline + thin seam with dark
+bodies. Feature floor 0.30→0.34 so the sparser outline reads. Commit 4a1f93c.
+Knobs: LIP_RING_BW (outline thickness), LIP_SEAM_BW (seam thickness), uFeatureFloor.
+NEXT still: D (slow blink) → E (scroll choreography).
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
