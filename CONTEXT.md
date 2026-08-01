@@ -521,6 +521,17 @@ the top, slicing the upper cheeks/temples). Full reversal:
   deploy** (rotate to all angles — should be face only, no crown/jaw ghost/glyphs),
   then on to scroll choreography.
 
+### [CLAUDE] Face crop — domed top (rounded forehead, not a flat slice) (2026-08-01)
+Face-only crop shipped, but the flat `y ≤ 0.40` top read as CHOPPED — Melvin: "not
+right." Measured the silhouette per Y band and found WHY: this head is a rounded
+HELMET, ~0.27 wide all the way up, so any horizontal cut lands on a wide part =
+flat edge. Fix: replaced the flat top with a **dome** — keep `y ≤ FACE_TOP_PEAK −
+FACE_TOP_CURVE·x²` (a downward parabola), so the top curves off at the corners
+like a real forehead. Params `PEAK 0.36`, `CURVE 2.2` chosen by rendering 3 ASCII
+candidates and picking the most natural. Reference: Melvin's images 15/16 (the
+face shape he wants) minus crown/jaw. Knobs: PEAK (forehead height), CURVE (dome
+roundness), FACE_X_HALF 0.32, FACE_Y_BOTTOM -0.58. tsc/oxlint clean; on deploy.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
