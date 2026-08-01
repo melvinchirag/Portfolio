@@ -543,6 +543,25 @@ already, so no doubled features; verified via ASCII). Note: rayMesh (cursor
 raycast) still uses the un-mirrored full head — soft effect, acceptable; revisit
 if cursor repulsion feels off on the mirrored side. tsc/oxlint clean; on deploy.
 
+### [CLAUDE] Glyphs — one-sided regression + float-away dissipation (2026-08-01)
+Melvin: face cut looks great now, but glyphs broke — "Telugu/binary only on the
+RIGHT side, should be scattered; less prominent than before; and when they appear
+they should float into the air and disappear (peel off the face, dissipate)."
+Three fixes in `MaskField.tsx`:
+1. **One-sided cause = my own MIRROR_FACE.** The glyph pool is strided (every 8th
+   particle → all EVEN idx); the mirror used `idx % 2` for side, so every glyph
+   went to +x. Fix: randomise the side — `Math.abs(p.x) * (Math.random()<0.5?1:-1)`
+   — decorrelating the mirror from the stride. Face stays balanced (~50/50), glyphs
+   now scatter both sides.
+2. **Dissipation.** New `uDriftUp/uDriftOut/uDriftSide` uniforms + glyphVertex math:
+   over each glyph's lit window (lp 0→1, eased lp²) it rises +y, peels forward +z
+   (model-local, so it lifts off the face at any rotation) with a per-seed sway,
+   then the existing fade returns alpha to 0 → glyph blooms on the face, floats up
+   and off, dissipates, relights elsewhere. Values: up 0.16, out 0.10, side 0.05.
+3. **Prominence.** `uOnFrac 0.02 → 0.026` so glyphs stay present now that each
+   spends part of its life drifting off-face. Brightness left at 1.5x (Melvin:
+   "prominent but not bright"). tsc/oxlint clean; commit f0c888a; on deploy.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
