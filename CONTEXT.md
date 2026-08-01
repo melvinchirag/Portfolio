@@ -562,6 +562,32 @@ Three fixes in `MaskField.tsx`:
    spends part of its life drifting off-face. Brightness left at 1.5x (Melvin:
    "prominent but not bright"). tsc/oxlint clean; commit f0c888a; on deploy.
 
+### [CLAUDE] Glyphs — dot→glyph conversion + slower float + zoom-from-deep intro (2026-08-01)
+Melvin saw the above: distribution "quite close to what I imagined." Three asks:
+(a) slower dissipation, (b) "each particle should first CONVERT into the glyph
+then flow" — not a glyph forming ON TOP of a still-present dot, and (c) an intro
+where the mask "comes from far, from the deep/black, zooms into view" instead of
+just being there. Done in `MaskField.tsx` (commit 6fa1f56):
+1. **Conversion (the key one).** The base dot layer now recomputes the *same*
+   glyph life curve and fades each dot out by exactly the glyph's lit amount, so a
+   dot dissolves precisely as its character forms in place → the particle turns
+   INTO the glyph, glyph floats off, dot reforms. Wiring: extracted shared
+   `GLYPH_ON_FRAC`/`GLYPH_ROVE_SPEED` consts used by BOTH materials; new
+   per-base-particle `aGlyphSeed` attribute (seed at strided glyph indices, else
+   -1); base render shaders gained uTime/uRoveSpeed/uOnFrac + `vGlyphFade` →
+   `a *= (1 - vGlyphFade)`. Base `uTime` is assigned = glyph `uTime` each frame so
+   the two stay frame-exact.
+2. **Slower dissipation.** `GLYPH_ROVE_SPEED 0.02 → 0.012` (lit window ~1.3s →
+   ~2.2s); drift values unchanged, so the same lift-off now plays out slower.
+3. **Intro reveal.** New `introT` ramp (INTRO_SECS 2.2) + easeOutCubic drives a
+   z fly-in from INTRO_Z_DEEP (-9, deep behind the z=1.5 camera) to 0 plus a
+   shared `uFade` 0→1 on both layers → the mask rushes out of the black and
+   settles. Self-resolving: after it completes, zIn=0 & fade=1, leaving the
+   resting pose/scroll choreography untouched. rayMesh gets the same z so cursor
+   stays aligned during the fly-in. tsc/oxlint clean; on deploy.
+Knobs: INTRO_SECS/INTRO_Z_DEEP (fly-in), GLYPH_ROVE_SPEED (float speed),
+uDriftUp/uDriftOut (how far it lifts). NEXT per Melvin: scroll choreography.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
