@@ -740,6 +740,22 @@ the actual beat POSES/path (it's still a first-pass composition) to taste. Knob:
 26.0 constant (lower=floatier). Face features are DONE (eyes+nose only); blink (D)
 deferred — Melvin prioritised scroll.
 
+### [CLAUDE] Scroll step 2 (head-turn) + suspected stale deploy (2026-08-01)
+Melvin: "forehead brightening still there" AND "scroll feels the same as before".
+Verified via headless featureWeight full-face map: the ONLY lit features are the
+nose (y0.0–0.13, capped) and eyes (y-0.12/-0.16); the forehead (y>0.16) is DARK. So
+the forehead glow is NOT in current code — it's the OLD uncapped nose (reached
+y0.23=brow) → almost certainly a CACHED BUILD (both his observations = "no change",
+consistent with stale bundle). Made an unmistakable change so he can tell if the
+deploy updated: added YAW (head turning) to MASK_PATH — new `ry` field per keyframe,
+composed as `rot.y + pose.ry` on group + rayMesh; also scale range 1.0→1.55→0.8.
+Commits: 3eb0be8 (responsive), e070ea9 (yaw). Told him to hard-refresh (Ctrl+Shift+R)
+— if the head now TURNS as he scrolls he's on the new build (and forehead should be
+gone); if forehead persists after that, it's a real separate source → get a circled
+screenshot. NOTE: eyes(-0.14) vs nose(0.06) layout means the nose sits ABOVE the
+eyes on this model — if he later says the nose is too high, that's the same axis
+confusion; may need to revisit. NEXT: confirm deploy, then tune beat POSES.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
