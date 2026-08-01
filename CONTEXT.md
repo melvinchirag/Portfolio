@@ -707,6 +707,17 @@ Knobs: EYE_OPEN (openness), EYE_IRIS_R (iris size), EYE_HW (width), EYE_X/EYE_Y 
 KEY LEARNING for features on this model: geometry can't auto-isolate — draw SHAPES
 (three-line mouth, almond+iris eye) and validate the shape headless before shipping.
 
+### [CLAUDE] Lips moved down — they read as "under the nose" (2026-08-01)
+Melvin accepted the eyes ("not perfect but I'll let it slide"). Lips STILL wrong —
+"still under the nose, remove that, fix it." Root cause: I'd anchored the mouth to a
+geometric lip bump at y-0.36/-0.37, but Melvin's intended lip position (mapped from
+his marked-up screenshot #21's red circle: pixel ~830/979 → face-bounds 0.36..-0.64
+→ y≈-0.47..-0.50) is LOWER. At -0.37 the mouth sat right under the nose. Moved
+`LIP_Y -0.37 → -0.47`; verified ~5k front-facing particles in the new band and the
+three-line mouth stays clean (headless preview). Commit 61deaab. If still off, LIP_Y
+is the single knob. Lesson: for lip PLACEMENT trust Melvin's marked image over the
+subtle geometric bumps (the center-line profile is ambiguous around the mouth).
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
