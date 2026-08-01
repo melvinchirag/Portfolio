@@ -532,6 +532,17 @@ candidates and picking the most natural. Reference: Melvin's images 15/16 (the
 face shape he wants) minus crown/jaw. Knobs: PEAK (forehead height), CURVE (dome
 roundness), FACE_X_HALF 0.32, FACE_Y_BOTTOM -0.58. tsc/oxlint clean; on deploy.
 
+### [CLAUDE] Face crop — chin tip + symmetry (2026-08-01)
+Melvin: "90% there — the chin is missing and there's some asymmetry." (1) Chin:
+`FACE_Y_BOTTOM -0.58 → -0.64` — my -0.58 clipped the chin TIP (model bottom is
+-0.64); now it tapers to a point. (2) Asymmetry: measured the crop is perfectly
+symmetric but the MODEL is lopsided (~6.5% more surface one side + uneven
+features). Added `MIRROR_FACE`: fold each particle's x to |x| and split evenly by
+index parity → a balanced face from the model's own features (near-symmetric
+already, so no doubled features; verified via ASCII). Note: rayMesh (cursor
+raycast) still uses the un-mirrored full head — soft effect, acceptable; revisit
+if cursor repulsion feels off on the mirrored side. tsc/oxlint clean; on deploy.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
