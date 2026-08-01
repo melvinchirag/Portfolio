@@ -152,13 +152,18 @@ function featureWeight(x: number, y: number): number {
 const INTRO_SECS = 1.2
 const INTRO_Z_DEEP = -9
 
-type Pose = { x: number; y: number; s: number; rz: number }
+// Each keyframe adds `ry` (yaw = the head TURNING left/right, radians) on top of
+// x/y/scale/rz, so the mask reads as a living head that turns as it travels — the
+// biggest lever for making the scroll feel like a real animation, not just a slide.
+// (Melvin, 2026-08-01: the pure-slide path "felt the same".) Scale is more dramatic
+// too (1.0 → 1.55 → 0.8). rz = z-roll, ry = yaw.
+type Pose = { x: number; y: number; s: number; rz: number; ry: number }
 const MASK_PATH: (Pose & { p: number })[] = [
-  { p: 0.0, x: -0.62, y: 0.0, s: 1.0, rz: 0.0 }, // beat 1 — identity, left
-  { p: 0.25, x: -0.2, y: 0.22, s: 1.2, rz: 0.12 }, // drifts up + grows
-  { p: 0.5, x: 0.3, y: -0.02, s: 1.35, rz: -0.1 }, // the big centred hero beat
-  { p: 0.75, x: 0.62, y: 0.24, s: 1.1, rz: 0.2 }, // swings right, shrinks
-  { p: 1.0, x: 0.1, y: 0.32, s: 0.8, rz: 0.0 }, // settles high for the CTA
+  { p: 0.0, x: -0.62, y: 0.0, s: 1.0, rz: 0.0, ry: 0.0 }, // beat 1 — identity, left, facing you
+  { p: 0.25, x: -0.18, y: 0.18, s: 1.28, rz: 0.06, ry: 0.5 }, // drifts up + grows, turns to look right
+  { p: 0.5, x: 0.32, y: -0.02, s: 1.55, rz: -0.06, ry: -0.28 }, // big centred hero, turns back toward you
+  { p: 0.75, x: 0.62, y: 0.22, s: 1.08, rz: 0.14, ry: -0.6 }, // swings right + shrinks, looks back left
+  { p: 1.0, x: 0.12, y: 0.32, s: 0.8, rz: 0.0, ry: 0.0 }, // settles high, faces you, for the CTA
 ]
 
 // Sample the path at scroll progress `p`, easing between keyframes with
@@ -176,6 +181,7 @@ function samplePath(p: number, out: Pose): Pose {
   out.y = a.y + (b.y - a.y) * e
   out.s = a.s + (b.s - a.s) * e
   out.rz = a.rz + (b.rz - a.rz) * e
+  out.ry = a.ry + (b.ry - a.ry) * e
   return out
 }
 
@@ -713,7 +719,7 @@ export function MaskParticles() {
   // fresh spot each visit and always settles into the identical home pose.
   const introOffset = useRef({ x: (Math.random() * 2 - 1) * 1.3, y: (Math.random() * 2 - 1) * 0.7 })
   // Reused each frame by samplePath so scroll choreography allocates nothing.
-  const poseScratch = useRef<Pose>({ x: 0, y: 0, s: 1, rz: 0 })
+  const poseScratch = useRef<Pose>({ x: 0, y: 0, s: 1, rz: 0, ry: 0 })
 
   // Drag anywhere to spin the mask 360° (it stays on the left; we rotate the
   // group, not the camera). Plain mouse-move still disturbs the particles.
@@ -778,11 +784,11 @@ export function MaskParticles() {
     if (groupRef.current) {
       groupRef.current.position.set(pose.x + offX, pose.y + offY, zIn)
       groupRef.current.scale.setScalar(pose.s)
-      groupRef.current.rotation.set(rot.current.x, rot.current.y, pose.rz)
+      groupRef.current.rotation.set(rot.current.x, rot.current.y + pose.ry, pose.rz)
     }
     rayMesh.position.set(pose.x + offX, pose.y + offY, zIn)
     rayMesh.scale.setScalar(pose.s)
-    rayMesh.rotation.set(rot.current.x, rot.current.y, pose.rz)
+    rayMesh.rotation.set(rot.current.x, rot.current.y + pose.ry, pose.rz)
     rayMesh.updateMatrixWorld()
 
     // cursor → 3D point on the (possibly rotated) mask → sim-local space
