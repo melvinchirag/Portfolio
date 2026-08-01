@@ -91,10 +91,14 @@ const MIRROR_FACE = true
  *  returns 0→1 (1 = dead-centre of a feature) and the base shader multiplies each
  *  dot's brightness by (1 + weight·uFeatureBoost). This also gives us the eye
  *  region we'll later dim for the BLINK (idea D). */
-const EYE_Y = 0.11, EYE_X = 0.14, EYE_R = 0.11
-const LIP_Y = -0.33, LIP_X_HALF = 0.17, LIP_Y_HALF = 0.07
-// Nose: a tall narrow ellipse down the centre line, from the bridge (between the
-// eyes) to the tip. Measured: the ridge protrudes from y≈0.20 down to y≈0.0.
+// Positions REMEASURED from the model's depth map + Melvin's marked-up screenshot
+// (2026-08-01, round 2). v1 put the eyes at y=0.11 — that sat ON the nose ridge /
+// brow (the "sunglasses on the forehead" he circled in purple). The true eye
+// hollows are the recessed flanks just below/beside the nose base at y≈-0.14,
+// x≈±0.16; the lip bump is the protrusion at y≈-0.36. Nose was already right.
+const EYE_Y = -0.14, EYE_X = 0.16, EYE_R = 0.1
+const LIP_Y = -0.36, LIP_X_HALF = 0.15, LIP_Y_HALF = 0.06
+// Nose: a tall narrow ellipse down the centre line, bridge → tip (Melvin: correct).
 const NOSE_X_HALF = 0.055, NOSE_Y = 0.06, NOSE_Y_HALF = 0.17
 function featureWeight(x: number, y: number): number {
   // Eyes: two discs mirrored across the centre line (use |x| so one test covers both).
