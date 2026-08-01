@@ -54,20 +54,23 @@ const FRONT_FACING = 0.12
  *  that survives IS the face (teal + glyphs). Nothing lives in the crown/jaw, so
  *  nothing (not even a glyph) traces those shapes anymore.
  *
- * The crop is a model-space BOX, so it's the same anatomical region at every
- * rotation. Measured from the geometry (draco3d headless map): nose peaks forward
- * at y≈-0.07, mouth band y≈-0.34, chin tip y≈-0.55, ears are detached strips at
- * |x|>0.33, skull crown rounds off above y≈0.4. A point is kept when it is:
+ * The crop is a model-space region, so it's the same anatomical part at every
+ * rotation. Measured from the geometry (draco3d headless map): this head is a
+ * rounded HELMET that stays ~0.27 wide all the way up, so a flat horizontal top
+ * cut looks CHOPPED. Instead the top is a DOME (a downward parabola) that curves
+ * off at the corners like a real forehead. A point is kept when it is:
  *   front-facing (nose-ward)  AND  z ≥ BACK_CLIP (front shell, no rear ghost)
- *   AND  |x| ≤ FACE_X_HALF (drop ears)  AND  FACE_Y_BOTTOM ≤ y ≤ FACE_Y_TOP.
- * These four are the live-tuning knobs for the face shape.
- * Bottom keeps the CHIN and cuts the neck; top keeps the FOREHEAD and cuts the
- * skull crown (Melvin's calls, 2026-08-01). Verified with an ASCII preview: clean
- * forehead→brow→eyes→nose→mouth→chin, no crown, ears, neck, or ghost. */
-const BACK_CLIP = -0.11     // keep p.z ≥ this (front shell; drops the rear ghost)
-const FACE_X_HALF = 0.31    // keep |p.x| ≤ this (drops the detached ear strips)
-const FACE_Y_TOP = 0.4      // keep p.y ≤ this (forehead kept, skull crown cut)
-const FACE_Y_BOTTOM = -0.56 // keep p.y ≥ this (chin kept, neck/under-jaw cut)
+ *   AND  |x| ≤ FACE_X_HALF (drop ears)
+ *   AND  y ≥ FACE_Y_BOTTOM (chin kept, neck cut)
+ *   AND  y ≤ FACE_TOP_PEAK − FACE_TOP_CURVE·x²  (domed top: forehead kept, skull
+ *        crown cut, corners rounded so it reads as a head, not a sliced blob).
+ * All five are the live knobs; PEAK raises/lowers the forehead, CURVE controls
+ * how round the top is (higher = tighter dome). Verified with ASCII previews. */
+const BACK_CLIP = -0.11      // keep p.z ≥ this (front shell; drops the rear ghost)
+const FACE_X_HALF = 0.32     // keep |p.x| ≤ this (drops the detached ear strips)
+const FACE_Y_BOTTOM = -0.58  // keep p.y ≥ this (chin kept, neck/under-jaw cut)
+const FACE_TOP_PEAK = 0.36   // top of the forehead dome at centre (x = 0)
+const FACE_TOP_CURVE = 2.2   // how fast the dome curves down toward the sides
 
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
  * The mask no longer just sits on the left — it travels a path, scales, and
@@ -373,7 +376,7 @@ export function MaskParticles() {
         v.z >= BACK_CLIP &&
         Math.abs(v.x) <= FACE_X_HALF &&
         v.y >= FACE_Y_BOTTOM &&
-        v.y <= FACE_Y_TOP
+        v.y <= FACE_TOP_PEAK - FACE_TOP_CURVE * v.x * v.x
       // Fallback so a particle NEVER lands outside the face (no stray dots): if the
       // rejection loop can't find a face point in time, we reuse the last one that
       // did. Seeded with a guaranteed in-face point (mid-face, forward = the nose).
