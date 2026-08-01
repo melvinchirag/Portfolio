@@ -23,6 +23,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { heroScroll } from '../../hooks/heroScroll'
+import { heroIntro } from '../../hooks/heroIntro'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
@@ -92,6 +93,9 @@ const MIRROR_FACE = true
  *  region we'll later dim for the BLINK (idea D). */
 const EYE_Y = 0.11, EYE_X = 0.14, EYE_R = 0.11
 const LIP_Y = -0.33, LIP_X_HALF = 0.17, LIP_Y_HALF = 0.07
+// Nose: a tall narrow ellipse down the centre line, from the bridge (between the
+// eyes) to the tip. Measured: the ridge protrudes from y≈0.20 down to y≈0.0.
+const NOSE_X_HALF = 0.055, NOSE_Y = 0.06, NOSE_Y_HALF = 0.17
 function featureWeight(x: number, y: number): number {
   // Eyes: two discs mirrored across the centre line (use |x| so one test covers both).
   const eyeDist = Math.hypot(Math.abs(x) - EYE_X, y - EYE_Y) / EYE_R
@@ -99,7 +103,10 @@ function featureWeight(x: number, y: number): number {
   // Lips: a centred ellipse (wider than tall).
   const lipDist = Math.hypot(x / LIP_X_HALF, (y - LIP_Y) / LIP_Y_HALF)
   const lipW = Math.max(0, 1 - lipDist)
-  return Math.min(1, Math.max(eyeW, lipW))
+  // Nose: a centred vertical ellipse (taller than wide).
+  const noseDist = Math.hypot(x / NOSE_X_HALF, (y - NOSE_Y) / NOSE_Y_HALF)
+  const noseW = Math.max(0, 1 - noseDist) * 0.85 // a touch softer than eyes/lips
+  return Math.min(1, Math.max(eyeW, lipW, noseW))
 }
 
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
@@ -112,8 +119,9 @@ function featureWeight(x: number, y: number): number {
 // Intro reveal timing (see introT). INTRO_SECS = how long the fly-in lasts;
 // INTRO_Z_DEEP = how far back (in world z) the mask starts — camera is at z=1.5,
 // so -9 is well into the black behind the scene, and easing it to 0 makes the
-// mask rush toward the viewer out of the deep.
-const INTRO_SECS = 2.2
+// mask rush toward the viewer out of the deep. 2.2→1.2 (Melvin: "exactly one
+// second faster"). The fly-in does not START until the Loader is gone (heroIntro).
+const INTRO_SECS = 1.2
 const INTRO_Z_DEEP = -9
 
 type Pose = { x: number; y: number; s: number; rz: number }
@@ -233,7 +241,7 @@ const renderFragment = /* glsl */ `
   uniform float uMinAlpha;
   uniform float uMaxAlpha;
   uniform float uFade;       // 0→1 intro fade-in (the "emerge from the black" reveal)
-  uniform float uFeatureBoost;
+  uniform float uFeatureFloor;
   varying float vSpeed;
   varying float vGlyphFade;
   varying float vFeature;
@@ -241,7 +249,7 @@ const renderFragment = /* glsl */ `
   void main() {
     if (length(gl_PointCoord - 0.5) > 0.5) discard;   // round sprite
     float a = clamp(vSpeed * 100.0, uMinAlpha, uMaxAlpha);
-    a *= (1.0 + vFeature * uFeatureBoost); // brighten eyes & lips → real features
+    a = max(a, vFeature * uFeatureFloor); // eyes/nose/lips get a solid shading floor
     a *= (1.0 - vGlyphFade);   // dot vanishes as its glyph forms (the conversion)
     a *= uFade;                // whole mask fades up on load
     gl_FragColor = vec4(uColor, a);
@@ -577,9 +585,12 @@ export function MaskParticles() {
           uRoveSpeed: { value: GLYPH_ROVE_SPEED },
           uOnFrac: { value: GLYPH_ON_FRAC },
           uFade: { value: 0 }, // intro fade-in (see the reveal in useFrame)
-          // ⚙️ Eye/lip brightness lift. Dots on a feature get up to this much extra
-          // brightness (×(1+boost)) so the face reads. Raise for stronger features.
-          uFeatureBoost: { value: 1.3 },
+          // ⚙️ Eye/lip/nose shading FLOOR. A feature dot's brightness is lifted to
+          // AT LEAST this (independent of motion), so the eyes, nose and lips read
+          // as solid shading against the dim resting field (base rest alpha ≈ 0.04).
+          // The earlier multiplicative boost was invisible because it multiplied
+          // that tiny rest alpha. Raise for stronger features, lower for subtler.
+          uFeatureFloor: { value: 0.3 },
         },
         vertexShader: renderVertex,
         fragmentShader: renderFragment,
@@ -604,7 +615,7 @@ export function MaskParticles() {
           // (they collapse to a dot below ~12px). Footprint scales with size², so
           // this is the strongest coverage lever — raise it and drop uOnFrac to keep
           // total coverage steady.
-          uGlyphSize: { value: 15 },
+          uGlyphSize: { value: 17 }, // 15→17 (Melvin: "a little bigger, not too much")
           uTime: { value: 0 },
           uBinStart: { value: BIN_START },
           uTelStart: { value: TEL_START },
@@ -718,7 +729,11 @@ export function MaskParticles() {
     // INTRO REVEAL: ramp introT 0→1, ease-out so it decelerates as it arrives.
     // zIn starts deep in the black (INTRO_Z_DEEP) and flies to 0; fade 0→1. After
     // it completes, zIn=0 and fade=1, so this leaves the resting pose untouched.
-    if (introT.current < 1) introT.current = Math.min(1, introT.current + delta / INTRO_SECS)
+    // GATED on heroIntro.ready — the Loader flips it once the neurons are gone, so
+    // the mask stays invisible+deep until then and only THEN begins its entrance.
+    if (heroIntro.ready && introT.current < 1) {
+      introT.current = Math.min(1, introT.current + delta / INTRO_SECS)
+    }
     const te = introT.current
     const eIntro = 1 - Math.pow(1 - te, 3) // easeOutCubic
     const zIn = INTRO_Z_DEEP * (1 - eIntro)

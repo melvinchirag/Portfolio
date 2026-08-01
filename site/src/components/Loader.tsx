@@ -46,6 +46,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
+import { markIntroReady } from '../hooks/heroIntro'
 
 const SESSION_KEY = 'melvin:seen-intro'
 
@@ -659,6 +660,14 @@ export function Loader() {
     if (phase !== 'leaving') return
     unmountTimer.current = window.setTimeout(() => setPhase('gone'), CONFIG.unmountMs)
     return () => window.clearTimeout(unmountTimer.current)
+  }, [phase])
+
+  // Release the mask's entrance ONLY when the loader is completely gone, so the
+  // neurons finish first and the mask flies in after (not underneath). Fires for
+  // every path to 'gone': normal finish, skip, reduced motion, and the
+  // already-seen-this-session case (initial phase is 'gone' → this runs on mount).
+  useEffect(() => {
+    if (phase === 'gone') markIntroReady()
   }, [phase])
 
   if (phase === 'gone') return null
