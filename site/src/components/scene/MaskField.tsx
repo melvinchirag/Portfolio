@@ -96,7 +96,16 @@ const MIRROR_FACE = true
 // brow (the "sunglasses on the forehead" he circled in purple). The true eye
 // hollows are the recessed flanks just below/beside the nose base at y≈-0.14,
 // x≈±0.16; the lip bump is the protrusion at y≈-0.36. Nose was already right.
-const EYE_Y = -0.14, EYE_X = 0.16, EYE_R = 0.1
+// Eyes drawn as ACTUAL eyes (Melvin, 2026-08-01): an almond eyelid OUTLINE (upper +
+// lower lid, meeting at the inner/outer corners) with an IRIS dot in the middle —
+// not a filled disc. Position kept from the earlier round (mid-face); it's the
+// SHAPE that needed to read as an eye.
+const EYE_Y = -0.14       // eye centre height (model-space y)
+const EYE_X = 0.16        // eye centre distance from the centre line (mirrored)
+const EYE_HW = 0.09       // eye half-width (corners at |x|-EYE_X = ±this)
+const EYE_OPEN = 0.035    // how far the lids bow from the centre line (eye "openness")
+const EYE_LINE_BW = 0.01  // half-thickness of the drawn eyelid lines
+const EYE_IRIS_R = 0.028  // iris/pupil dot radius
 // Lips drawn like a face painter (Melvin, 2026-08-01): NOT an area — THREE thin
 // lines only, tight on the lip itself. The upper-lip line bows up and the lower-lip
 // line bows down from a central SEAM, all meeting at the mouth corners; everything
@@ -110,9 +119,21 @@ const LIP_LINE_BW = 0.009 // half-thickness of each of the three drawn lines —
 // Nose: a tall narrow ellipse down the centre line, bridge → tip (Melvin: correct).
 const NOSE_X_HALF = 0.055, NOSE_Y = 0.06, NOSE_Y_HALF = 0.17
 function featureWeight(x: number, y: number): number {
-  // Eyes: two discs mirrored across the centre line (use |x| so one test covers both).
-  const eyeDist = Math.hypot(Math.abs(x) - EYE_X, y - EYE_Y) / EYE_R
-  const eyeW = Math.max(0, 1 - eyeDist)
+  // Eyes (mirrored via |x|): an almond eyelid outline + an iris dot. `enx` is 0 at
+  // the eye centre, ±1 at the corners; `et` is a parabola so the upper/lower lids
+  // converge to the corners (the almond shape). Light a point near either lid line
+  // OR inside the iris; everything else in the eye stays dark.
+  let eyeW = 0
+  const edx = Math.abs(x) - EYE_X
+  const edy = y - EYE_Y
+  const enx = edx / EYE_HW
+  if (Math.abs(enx) < 1) {
+    const et = 1 - enx * enx
+    const dLid = Math.min(Math.abs(edy - EYE_OPEN * et), Math.abs(edy + EYE_OPEN * et))
+    const lid = Math.max(0, 1 - dLid / EYE_LINE_BW) * Math.min(1, (1 - Math.abs(enx)) / 0.18)
+    const iris = Math.max(0, 1 - Math.hypot(edx, edy) / EYE_IRIS_R)
+    eyeW = Math.max(lid, iris)
+  }
   // Lips: three thin curved lines. `nx` is 0 at centre, ±1 at the corners; `t` is a
   // parabola that makes the upper/lower lines converge to the seam at the corners
   // (the almond shape of a mouth). We light a point only if it's within LIP_LINE_BW
