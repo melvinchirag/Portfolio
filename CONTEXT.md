@@ -718,6 +718,15 @@ three-line mouth stays clean (headless preview). Commit 61deaab. If still off, L
 is the single knob. Lesson: for lip PLACEMENT trust Melvin's marked image over the
 subtle geometric bumps (the center-line profile is ambiguous around the mouth).
 
+### [CLAUDE] Lips REMOVED + forehead brightening removed; on to scroll (2026-08-01)
+Melvin: drop the lip highlight entirely ("bring it back to normal, don't brighten
+that area") — the mouth never landed on this featureless mesh and he'd rather have
+nothing. Also a stray bit of brightening near the FOREHEAD to remove. Done: deleted
+the lip term + all LIP_* consts from `featureWeight`; face features are now EYES +
+NOSE only. The forehead brightening was the TOP of the nose ridge (ellipse reached
+y0.23 = glabella/brow) — added hard cap `NOSE_TOP 0.14` (noseW=0 above it). Commit
+0963db8. Melvin wants to move on NOW to the scroll choreography (item E) — that's next.
+
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
 transitions], then 3 [glass placement]." Checked the math before touching
