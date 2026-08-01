@@ -587,6 +587,29 @@ just being there. Done in `MaskField.tsx` (commit 6fa1f56):
    stays aligned during the fly-in. tsc/oxlint clean; on deploy.
 Knobs: INTRO_SECS/INTRO_Z_DEEP (fly-in), GLYPH_ROVE_SPEED (float speed),
 uDriftUp/uDriftOut (how far it lifts). NEXT per Melvin: scroll choreography.
+⚠️ BUILD-GATE LESSON: `tsc --noEmit` PASSED but the Vercel build (`tsc -b`) FAILED
+on a use-before-declaration (aGlyphSeed) → deploy error (fixed in d02dacd by moving
+the seed loop above the base geometry). Gate pushes on `npm run build`, not just tsc.
+
+### [CLAUDE] Mask "alive" roadmap — random intro + brighter glyphs + eye/lip features (2026-08-01)
+Melvin loved the intro, then opened a batch of ideas (he was worried about scope —
+reassured him it's the right way to build). Captured roadmap A–E: (A) random intro
+start point, (B) glyphs a bit more prominent, (C) facial-feature brightness at
+eyes/lips + define lips, (D) slow natural BLINK (needs C's eye region first), (E)
+scroll choreography (its own round). Zigzag entry parked ("fine for now"). Did A/B/C
+this pass (commit 3942423):
+- **A random start.** `introOffset` ref = random x/y (±1.3, ±0.7) chosen once per
+  load, decays to 0 as intro eases in → mask is born somewhere new each visit but
+  always lands the identical home pose. Applied to group + rayMesh.
+- **B prominence.** `GLYPH_ON_FRAC 0.026→0.032`, glyph brightness `1.5→1.7x`.
+- **C facial features.** New `featureWeight(x,y)` → per-dot `aFeature` attribute;
+  base fragment does `a *= (1 + aFeature·uFeatureBoost)` (boost 1.3) to brighten
+  the eyes and lip band so the face reads. Centres MEASURED from the model depth
+  map (headless draco3d probe): eyes at (±0.14, 0.11) r0.11, lips ellipse at
+  (0,-0.33) 0.17×0.07 — verified with an ASCII feature map (two eye discs + wide
+  lip band, symmetric). This same eye region is what D (blink) will dim.
+Knobs: uFeatureBoost (feature strength), EYE_*/LIP_* (positions/sizes).
+NEXT: D (blink) then E (scroll choreography). Build-gated via `npm run build`.
 
 ### [CLAUDE] Glyph brightness — picked back up, first pass (2026-07-31, later)
 Melvin returned to the deferred item: "first do 1 [brightness], then 2 [beat
