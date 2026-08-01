@@ -263,6 +263,9 @@ const glyphVertex = /* glsl */ `
   uniform float uTelStart;
   uniform float uOnFrac;    // fraction of the candidate pool lit at any instant
   uniform float uRoveSpeed; // how fast the lit set drifts across the mask
+  uniform float uDriftUp;   // how far a glyph rises off the face over its lifetime
+  uniform float uDriftOut;  // how far it peels FORWARD (out of the face) as it goes
+  uniform float uDriftSide; // random horizontal sway so the rise isn't a straight line
   attribute vec2 aRef;
   attribute float aSeed;
   varying float vGlyph;
@@ -281,6 +284,19 @@ const glyphVertex = /* glsl */ `
     float edge = min(0.06, uOnFrac * 0.5);
     float fade = smoothstep(0.0, edge, life) - smoothstep(uOnFrac - edge, uOnFrac, life);
     vAlpha = clamp(fade, 0.0, 1.0);
+
+    // DISSIPATION (Melvin, 2026-08-01: glyphs should "float into the air and
+    // disappear... peel off the face"). lp = 0→1 across the glyph's lit window.
+    // We drift the glyph UP (+y) and OUT of the face (+z, model-local forward, so
+    // it peels toward the viewer no matter how the mask is rotated), with a small
+    // per-glyph horizontal sway. Combined with the fade above (which returns to 0
+    // at the end of the window), each glyph blooms on the face, floats off, and
+    // dissipates — then relights elsewhere. Ease with lp*lp so it accelerates away.
+    float lp = clamp(life / uOnFrac, 0.0, 1.0);
+    float rise = lp * lp;
+    pos.y += uDriftUp * rise;
+    pos.z += uDriftOut * rise;
+    pos.x += (hash(aSeed * 17.0) - 0.5) * uDriftSide * rise;
 
     // Re-pick the character each time this particle relights (integer part of its
     // life advance), mixing binary ⇄ Telugu ~50/50 so both keep appearing.
@@ -407,8 +423,12 @@ export function MaskParticles() {
           } while (!inFace(p, n.z) && tries < 40)
           if (!inFace(p, n.z)) p.copy(last)
           else last.copy(p)
-          // Symmetry: fold to |x| and alternate sides so the face is balanced.
-          if (MIRROR_FACE) p.x = Math.abs(p.x) * (idx % 2 === 0 ? 1 : -1)
+          // Symmetry: fold to |x| and pick a side so the face is balanced. The
+          // side must be RANDOM, not idx-parity: the glyph pool is strided (every
+          // 8th particle → all even idx), so an idx%2 rule sent every glyph to the
+          // same side (Melvin, 2026-08-01: "glyphs only on the right"). A random
+          // flip decorrelates the mirror from the stride → glyphs scatter both sides.
+          if (MIRROR_FACE) p.x = Math.abs(p.x) * (Math.random() < 0.5 ? 1 : -1)
           homeData[idx * 4 + 0] = p.x
           homeData[idx * 4 + 1] = p.y
           homeData[idx * 4 + 2] = p.z
@@ -495,13 +515,22 @@ export function MaskParticles() {
           uTelStart: { value: TEL_START },
           // ⚙️ THE COVERAGE DIAL: fraction of the candidate pool lit at any instant.
           // ~0.02 ≈ 1/7 of the mask, 0.03 ≈ 1/5, at uGlyphSize 15. Raise for more.
-          uOnFrac: { value: 0.02 },
+          // Nudged 0.02→0.026 (2026-08-01) so glyphs read as PROMINENT/present now
+          // that each also spends part of its life drifting off-face (see uDrift*).
+          uOnFrac: { value: 0.026 },
           // ⚙️ how fast the change happens. Each glyph stays lit for
           // ~uOnFrac/uRoveSpeed seconds, so LOWER = each glyph lingers longer and
           // fades more gently (smoother), and the whole set relocates more slowly —
           // WITHOUT changing coverage (that's uOnFrac's job). 0.1 flickered (~0.2s
           // per glyph); 0.02 ≈ ~1s per glyph with a soft ~0.5s fade in/out.
           uRoveSpeed: { value: 0.02 },
+          // ⚙️ DISSIPATION knobs — how a glyph floats off the face as it fades.
+          // uDriftUp = rise in model units over its lifetime (face is ~1.2 tall);
+          // uDriftOut = how far it peels forward off the surface; uDriftSide = sway.
+          // Bigger = more theatrical lift-off; 0 = glyphs stay put on the face.
+          uDriftUp: { value: 0.16 },
+          uDriftOut: { value: 0.1 },
+          uDriftSide: { value: 0.05 },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
           // ⚙️ Overdriven past (1,1,1) on purpose: additive blending + Bloom read
