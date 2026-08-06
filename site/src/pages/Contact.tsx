@@ -17,7 +17,7 @@ const LINKS = [
     value: 'github.com/melvinchirag',
   },
   {
-    label: 'Résumé',
+    label: 'Resume',
     href: '/resume.pdf',
     value: 'Download PDF',
   },

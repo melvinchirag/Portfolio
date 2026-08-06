@@ -251,7 +251,7 @@ body {
 .beyond-link {
   position: relative;
   color: #ffdcae;
-  font-style: italic; /* Instrument Serif italic gives it a display flourish */
+  font-style: italic; /* Times New Roman italic gives it a display flourish */
   text-shadow: 0 0 16px rgba(255, 190, 130, 0.35);
   transition:
     color 400ms var(--ease-out-expo),

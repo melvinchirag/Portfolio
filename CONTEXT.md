@@ -18,6 +18,60 @@ other pages' content/UI** at the same time. To avoid collisions:
 - `.sync-glass-rect` on a card = it gets liquid-glass; that class is the ONLY
   hook AGY needs from the WebGL side — don't touch the shader to use it.
 
+## 🗂️ WORK ON LATER (running list — Melvin's, 2026-08-06)
+Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
+- **Assets from Melvin:** X + Instagram profile URLs (icons render dimmed until
+  given) · confirm canonical email (code uses melvinchirag@gmail.com) · Manas's
+  real scope + stack · the actual hackathon project · project preview
+  images/video + real "Explore Project" links. (Résumé PDF EXISTS at
+  /resume.pdf — Melvin confirmed; no longer a gap.)
+- **Social buttons UI:** Melvin likes them but wants them "a little better."
+  Polish the icon-button look.
+- **"Beyond" link feel:** the glow reads "okay, not wow" to him, and he's not
+  fully sold on the display font in general (currently Times New Roman, which he
+  chose — revisit the type treatment). Make Beyond feel more special.
+- **Name lockup:** implemented equal-width "Melvin Chirag" / spread "KARUPATI".
+  Fine-tune if the letter-spacing looks off at some widths.
+- **Contact page (awaiting Melvin's UI addendum for contact + testimonials):**
+  - The bottom "Return to Start" currently looks like AI UI. Remove the little
+    thread line above it; make **Return to Start a button that GLOWS on hover**
+    and scrolls to top on click.
+  - Full contact form (Name, Email, "What would you like to discuss?" select,
+    Message, Send Message) + repeated Resume/socials.
+  - Testimonials: form (Name, Email, Role/relationship, Organization optional,
+    Testimonial, Submit), publish-notice directly above submit (submit = the
+    agreement, no separate checkbox), manual approval (no auto-publish), show
+    the person's stated relationship when published; atmospheric WebGL backdrop
+    with accessible DOM fallback + reduced-motion. Backend wired LATER.
+- **Mask:** its 5 pose keyframes no longer align to the now-4 frame centres;
+  re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
+- **Present cards:** density/layout polish once real project art + links exist.
+
+### [CLAUDE] Hero polish round — Melvin's batch of fixes (2026-08-06)
+Kept current UI. Did NOW (all in `HeroBeats.tsx` unless noted):
+- Removed the bottom **scroll cue** and the dev **frame counter**.
+- Left rail → **bottom row of dots, no connecting line** (`FrameDots`); dots are
+  clickable (jump to frame via `heroScrollToFrame`). Horizontal scroll, so the
+  position marker belongs on the bottom.
+- Removed the **( 02 )( 03 )( 04 )** eyebrow numbers above the frame titles.
+- **Projects button now → /work** (the full project view), NOT a hero slide.
+- Frames 2-4 content now sits in a **blurring `.liquid-glass` panel**; text
+  colour raised off gray (white/70-75, headings white) for readability over the
+  mask. Present cards demoted to bordered sub-panels so the panel blurs once.
+- **Name lockup:** "KARUPATI" is rendered letter-by-letter with `justify-between`
+  inside a box that stretches to the "Melvin Chirag" width, so the surname spans
+  exactly the same width at every viewport (Melvin was bothered by the mismatch).
+- Identity line: dropped "Aspiring Applied AI/ML Engineer" (he found it
+  amateurish) → "Computer Science Student · Applied AI · Computer Vision · Full
+  Stack" (areas, not a claimed title).
+- **"Résumé" → "Resume"** (hero button + `Contact.tsx` link label).
+- **Copy voice:** stripped em-dashes and most hyphens from ALL hero + project
+  copy; rewrote to sound human (his repeated ask — em-dashes read as AI to him).
+  Created skill **`melvin-voice`** (~/.claude/skills) + memory
+  `portfolio-copy-voice` to enforce this going forward.
+Font check: `--font-display` is already `'Times New Roman'` — no change needed.
+Build + oxlint clean. Contact/testimonials rebuild waits for his UI addendum.
+
 ### [CLAUDE] Hero brief — Home frames restructured + real copy (2026-08-06)
 Melvin delivered a full implementation brief. Decisions locked with him:
 - **Palette:** the emerald-green/gold idea in the brief was a MISTAKE — KEEP the

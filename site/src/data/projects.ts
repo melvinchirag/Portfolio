@@ -24,7 +24,7 @@ export const PROJECTS: Project[] = [
   {
     name: 'Manas',
     blurb:
-      'An astrophysics-inspired AI agent that turns dense scientific ideas into something you can question, probe, and explore. It pairs intelligent-system design with a genuine curiosity for how we come to understand the universe.',
+      'An astrophysics inspired AI agent that takes dense scientific ideas and makes them something you can actually poke at and explore. It brings together intelligent system design and a real curiosity about how we come to understand the universe.',
     stack: ['AI Agents', 'Python', 'LLMs', 'Scientific Computing'],
     href: '', // TODO: repo / demo link
     tentative: true, // refine with Manas's actual final scope + stack
@@ -32,14 +32,14 @@ export const PROJECTS: Project[] = [
   {
     name: 'This Portfolio',
     blurb:
-      'A cinematic digital environment built to tell a technical story through motion, interaction, and intentional interface design. It runs as a real-time WebGL experience engineered from scratch — not a template.',
+      'A cinematic space built to tell a technical story through motion, interaction, and careful interface design. It runs as a real time WebGL experience I built from scratch, not a template.',
     stack: ['React', 'TypeScript', 'Three.js', 'React Three Fiber', 'WebGL / GLSL', 'GSAP'],
     href: '', // TODO: public repo link (if the source is to be shared)
   },
   {
     name: 'Hackathon Project',
     blurb:
-      'A rapid prototype built under pressure to turn a real problem into a working experience. The final project, demo, and write-up are on the way.',
+      'A fast prototype built under pressure to turn a real problem into something that works. The final project and demo are on the way.',
     stack: ['TBD'],
     href: '',
     tentative: true, // reserve for the strongest public hackathon project

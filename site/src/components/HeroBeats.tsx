@@ -11,15 +11,13 @@
  * WHY a rAF loop and not React state for the pan: scroll fires ~60×/second.
  * Driving `transform` through state would re-render the whole hero every frame
  * and wreck the framerate. So we read `heroScroll.progress` each frame and write
- * the strip's transform imperatively (same pattern as the beat-rail fill).
- * React state (`useHeroFrame`) is used ONLY to swap which frame is
- * interactive/aria-visible — a handful of changes per scroll.
+ * the strip's transform imperatively. React state (`useHeroFrame`) is used ONLY
+ * to swap which frame is interactive/aria-visible.
  *
- * The mask + liquid glass live in GlobalScene (App.tsx) and read the same
- * `heroScroll` store, so they pan in lockstep with these frames for free.
- *
- * Copy here is REAL (per Melvin's brief). Project cards / résumé / X + Instagram
- * still await final assets — see data/projects.ts and data/profile.ts.
+ * Because the pan is horizontal, the frame indicator is a row of DOTS along the
+ * BOTTOM (no connecting line — Melvin's call). Frames 2-4 sit inside a
+ * blurring glass panel so their text stays readable over the mask without
+ * hiding it. Copy is written to sound human: no em-dashes, few hyphens.
  * ========================================================================= */
 
 import { useEffect, useRef } from 'react'
@@ -30,7 +28,7 @@ import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
 import { SocialLinks } from './SocialLinks'
 
-/** Frame order — also the labels shown on the left rail. */
+/** Frame order — also the labels announced by the bottom indicator dots. */
 const FRAMES = [
   { id: 'identity', label: 'Identity' },
   { id: 'past', label: 'The Past' },
@@ -38,70 +36,42 @@ const FRAMES = [
   { id: 'future', label: 'The Future' },
 ]
 
-/** Index of the featured-projects frame — the target of the "Projects" button. */
-const PRESENT_FRAME = 2
-
 /** Areas Melvin is EXPLORING — framed as directions, not titles he claims. */
 const AREAS = [
   'Applied AI',
   'Machine Learning',
   'MLOps',
   'Computer Vision',
-  'Full-stack Engineering',
+  'Full Stack',
   'World Models',
-  'Vision-Language-Action',
+  'Vision, Language, Action',
   'Robotics',
   'Neurotechnology',
   'Aerospace',
 ]
 
 /* ---------------------------------------------------------------------------
- * The left-edge frame rail: which frame is centred + a line that fills as you
- * scroll. Structural navigation that keeps the 4-frame architecture legible.
+ * The bottom frame indicator: just dots, no connecting line. Each dot jumps to
+ * its frame. Centred along the bottom so it reads as a horizontal-scroll
+ * position marker rather than a vertical rail.
  * ------------------------------------------------------------------------ */
-function FrameRail({ active }: { active: number }) {
-  const fillRef = useRef<HTMLDivElement>(null)
-
-  // Drive the fill straight from the scroll store each frame — no React state,
-  // so it costs nothing and stays perfectly in sync with Lenis' smooth scroll.
-  useEffect(() => {
-    let raf = 0
-    const tick = () => {
-      if (fillRef.current) {
-        fillRef.current.style.transform = `scaleY(${heroScroll.progress})`
-      }
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [])
-
+function FrameDots({ active }: { active: number }) {
   return (
-    <div className="pointer-events-none absolute top-1/2 left-6 z-20 hidden -translate-y-1/2 md:block">
-      <div className="relative flex flex-col gap-6">
-        <div className="absolute top-0 bottom-0 left-[3px] w-px bg-white/10">
-          <div
-            ref={fillRef}
-            className="h-full w-full origin-top bg-gradient-to-b from-white/70 to-white/15"
-          />
-        </div>
-        {FRAMES.map((f, i) => (
-          <div key={f.id} className="group pointer-events-auto flex cursor-default items-center gap-3">
-            <span
-              className={`relative z-10 block h-[7px] w-[7px] rounded-full transition-all duration-500 ${
-                i === active ? 'scale-125 bg-white shadow-[0_0_10px_2px_rgba(255,255,255,0.45)]' : 'bg-white/25'
-              }`}
-            />
-            <span
-              className={`text-[10px] tracking-[0.22em] whitespace-nowrap uppercase opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${
-                i === active ? 'text-white' : 'text-white/60'
-              }`}
-            >
-              {f.label}
-            </span>
-          </div>
-        ))}
-      </div>
+    <div className="absolute bottom-7 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
+      {FRAMES.map((f, i) => (
+        <button
+          key={f.id}
+          type="button"
+          onClick={() => heroScrollToFrame(i)}
+          aria-label={`Go to ${f.label}`}
+          aria-current={i === active}
+          className={`block rounded-full transition-all duration-500 ${
+            i === active
+              ? 'h-[9px] w-[9px] bg-white shadow-[0_0_10px_2px_rgba(255,255,255,0.4)]'
+              : 'h-[7px] w-[7px] bg-white/25 hover:bg-white/50'
+          }`}
+        />
+      ))}
     </div>
   )
 }
@@ -111,43 +81,58 @@ function FrameRail({ active }: { active: number }) {
  * actions, and the social row. This is the recruiter's first 3 seconds.
  * ------------------------------------------------------------------------ */
 function IdentityFrame() {
+  // Surname is rendered letter-by-letter with `justify-between` inside a box
+  // that stretches to the width of the first-name line above it. That makes
+  // "KARUPATI" span EXACTLY the same width as "Melvin Chirag", evenly spaced —
+  // the balanced lockup Melvin wanted, and it stays matched at every viewport.
+  const surname = 'KARUPATI'.split('')
+
   return (
     <div className="flex h-full items-center justify-center px-6">
       <div className="flex max-w-2xl flex-col items-center text-center">
-        <h1 className="font-display leading-[0.95] text-white">
-          <span className="block text-[clamp(3rem,8vw,6.5rem)] tracking-[-0.01em]">Melvin Chirag</span>
-          <span className="mt-1 block text-[clamp(1.4rem,3.4vw,2.6rem)] tracking-[0.06em] text-white/60">
-            Karupati
+        <h1 className="inline-flex flex-col text-white">
+          <span className="font-display text-[clamp(2.6rem,7.5vw,5.4rem)] leading-[0.95] tracking-[-0.005em]">
+            Melvin Chirag
+          </span>
+          <span
+            aria-label="Karupati"
+            className="mt-2 flex justify-between font-display text-[clamp(1.15rem,3vw,2.1rem)] text-white/65"
+          >
+            {surname.map((ch, i) => (
+              <span key={i} aria-hidden>
+                {ch}
+              </span>
+            ))}
           </span>
         </h1>
 
-        <p className="mt-5 text-[11px] tracking-[0.28em] text-white/45 uppercase">
-          Computer Science Student · Aspiring Applied AI/ML Engineer
+        <p className="mt-6 text-[11px] tracking-[0.26em] text-white/60 uppercase">
+          Computer Science Student · Applied AI · Computer Vision · Full Stack
         </p>
 
         {/* Signature tagline — "Beyond" glows and links to the Vision page. */}
-        <p className="mt-6 font-display text-[clamp(1.4rem,3vw,2.1rem)] text-white/80">
+        <p className="mt-6 font-display text-[clamp(1.4rem,3vw,2.1rem)] text-white/85">
           Computer Science and{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
             Beyond
           </Link>
         </p>
 
-        <p className="mt-6 max-w-md text-[13px] leading-relaxed text-white/55">
-          I'm exploring computer vision, intelligent systems, machine learning, and full-stack
-          products — building projects where software meets the real world, thinking in systems,
-          connecting domains, and turning curiosity into working experiences.
+        <p className="mt-6 max-w-md text-[13.5px] leading-relaxed text-white/70">
+          I'm exploring computer vision, intelligent systems, machine learning, and full stack
+          products. I like building things where software meets the real world, connecting ideas
+          across domains and turning curiosity into something that actually works.
         </p>
 
-        {/* The three hero actions. */}
+        {/* The three hero actions. Projects goes to the Work page (the full,
+            detailed view of what Melvin builds), NOT a hero slide. */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => heroScrollToFrame(PRESENT_FRAME)}
+          <Link
+            to="/work"
             className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide text-white/90"
           >
             Projects
-          </button>
+          </Link>
           <button
             type="button"
             onClick={() => heroScrollTo('contact')}
@@ -161,7 +146,7 @@ function IdentityFrame() {
             rel="noopener noreferrer"
             className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide text-white/90"
           >
-            Résumé <span aria-hidden>↗</span>
+            Resume <span aria-hidden>↗</span>
           </a>
         </div>
 
@@ -172,34 +157,34 @@ function IdentityFrame() {
 }
 
 /* ---------------------------------------------------------------------------
- * Frame 1 — The Past. A short emotional origin, not a timeline (that's About).
+ * Frame 1 — The Past. A short origin, not a timeline (that's the About page).
+ * Content sits in a blurring glass panel so it reads clearly over the mask.
  * ------------------------------------------------------------------------ */
 function PastFrame() {
   return (
-    <div className="flex h-full items-center justify-center px-6 md:px-24">
-      <div className="max-w-xl">
-        <p className="text-[11px] tracking-[0.4em] text-white/30 uppercase">( 02 )</p>
-        <h2 className="mt-4 font-display text-[clamp(2.4rem,6vw,4rem)] leading-[0.95] text-white/90">
+    <div className="flex h-full items-center justify-center px-6">
+      <div className="liquid-glass max-w-xl rounded-3xl p-8 md:p-10">
+        <h2 className="font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95] text-white">
           The Past
         </h2>
-        <div className="mt-8 space-y-4 text-[14px] leading-relaxed text-white/60">
+        <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/75">
           <p>
             Born in Hyderabad and raised in Kuwait, I later continued my education in India before
-            moving to Michigan to pursue computer science.
+            moving to Michigan for computer science.
           </p>
           <p>
-            I originally considered engineering because I wanted to build things with my hands. Then
-            I found computer science — a field where an idea can become a real tool, system, or
-            experience at the speed of curiosity.
+            I first thought about engineering because I wanted to build things with my hands. Then I
+            found computer science, where an idea can turn into a real tool, system, or experience
+            at the speed of your own curiosity.
           </p>
           <p>
-            That was the shift: I wasn't looking for a single job title. I was looking for a way to
+            That was the shift. I wasn't looking for a single job title. I was looking for a way to
             keep creating.
           </p>
         </div>
         <Link
           to="/about"
-          className="mt-8 inline-block text-[13px] tracking-wide text-white/70 transition-colors duration-300 hover:text-white"
+          className="mt-7 inline-block text-[13px] tracking-wide text-white/80 transition-colors duration-300 hover:text-white"
         >
           Read the full story <span aria-hidden>→</span>
         </Link>
@@ -215,7 +200,7 @@ function PastFrame() {
 function ExploreLink({ href }: { href: string }) {
   if (!href) {
     return (
-      <span className="mt-4 inline-block text-[12px] tracking-wide text-white/25" title="Link coming soon">
+      <span className="mt-4 inline-block text-[12px] tracking-wide text-white/30" title="Link coming soon">
         Explore Project <span aria-hidden>→</span>
       </span>
     )
@@ -225,7 +210,7 @@ function ExploreLink({ href }: { href: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-4 inline-block text-[12px] tracking-wide text-white/70 transition-colors duration-300 hover:text-white"
+      className="mt-4 inline-block text-[12px] tracking-wide text-white/80 transition-colors duration-300 hover:text-white"
     >
       Explore Project <span aria-hidden>→</span>
     </a>
@@ -233,93 +218,93 @@ function ExploreLink({ href }: { href: string }) {
 }
 
 /* ---------------------------------------------------------------------------
- * Frame 2 — The Present. Three featured project cards.
+ * Frame 2 — The Present. Three featured project cards, inside a glass panel.
+ * The cards are plain bordered sub-panels (not their own glass) so the panel
+ * blurs once, not twice.
  * ------------------------------------------------------------------------ */
 function PresentFrame() {
   return (
-    <div className="flex h-full flex-col items-center justify-center px-6 py-20 md:px-20">
-      <div className="text-center">
-        <p className="text-[11px] tracking-[0.4em] text-white/30 uppercase">( 03 )</p>
-        <h2 className="mt-4 font-display text-[clamp(2.4rem,6vw,4rem)] leading-[0.95] text-white/90">
+    <div className="flex h-full items-center justify-center px-6 py-16">
+      <div className="liquid-glass w-full max-w-5xl rounded-3xl p-7 md:p-9">
+        <h2 className="font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95] text-white">
           The Present
         </h2>
-        <p className="mx-auto mt-5 max-w-xl text-[13px] leading-relaxed text-white/50">
-          Right now I'm building at the intersection of computer vision, AI/ML, interactive
-          software, and scientific curiosity.
+        <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-white/70">
+          Right now I'm building at the intersection of computer vision, machine learning,
+          interactive software, and a lot of scientific curiosity.
         </p>
-      </div>
 
-      <div className="mt-10 grid w-full max-w-5xl gap-5 md:grid-cols-3">
-        {PROJECTS.map((p) => (
-          <article
-            key={p.name}
-            className="liquid-glass flex flex-col rounded-2xl p-5 text-left"
-          >
-            {/* Preview slot — a warm gradient placeholder until real art lands. */}
-            <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-xl bg-gradient-to-br from-white/[0.08] to-transparent">
-              <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/10">
-                {p.name.charAt(0)}
-              </span>
-              <span className="m-3 text-[9px] tracking-[0.25em] text-white/30 uppercase">
-                {p.tentative ? 'Preview coming' : 'Preview'}
-              </span>
-            </div>
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
+          {PROJECTS.map((p) => (
+            <article
+              key={p.name}
+              className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left"
+            >
+              <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-xl bg-gradient-to-br from-white/[0.1] to-transparent">
+                <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
+                  {p.name.charAt(0)}
+                </span>
+                <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">
+                  {p.tentative ? 'Preview coming' : 'Preview'}
+                </span>
+              </div>
 
-            <h3 className="font-display text-xl text-white/90">{p.name}</h3>
-            <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-white/55">{p.blurb}</p>
+              <h3 className="font-display text-xl text-white">{p.name}</h3>
+              <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-white/70">{p.blurb}</p>
 
-            <ul className="mt-3 flex flex-wrap gap-1.5">
-              {p.stack.map((tech) => (
-                <li
-                  key={tech}
-                  className="rounded-full border border-white/10 px-2.5 py-0.5 text-[10px] tracking-wide text-white/50"
-                >
-                  {tech}
-                </li>
-              ))}
-            </ul>
+              <ul className="mt-3 flex flex-wrap gap-1.5">
+                {p.stack.map((tech) => (
+                  <li
+                    key={tech}
+                    className="rounded-full border border-white/10 px-2.5 py-0.5 text-[10px] tracking-wide text-white/60"
+                  >
+                    {tech}
+                  </li>
+                ))}
+              </ul>
 
-            <ExploreLink href={p.href} />
-          </article>
-        ))}
+              <ExploreLink href={p.href} />
+            </article>
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
 /* ---------------------------------------------------------------------------
- * Frame 3 — The Future. Ambition + the areas he's exploring.
+ * Frame 3 — The Future. Ambition + the areas he's exploring, in a glass panel.
  * ------------------------------------------------------------------------ */
 function FutureFrame() {
   return (
-    <div className="flex h-full items-center justify-center px-6 md:px-24">
-      <div className="max-w-2xl">
-        <p className="text-[11px] tracking-[0.4em] text-white/30 uppercase">( 04 )</p>
-        <h2 className="mt-4 font-display text-[clamp(2.4rem,6vw,4rem)] leading-[0.95] text-white/90">
+    <div className="flex h-full items-center justify-center px-6">
+      <div className="liquid-glass max-w-2xl rounded-3xl p-8 md:p-10">
+        <h2 className="font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95] text-white">
           The Future
         </h2>
-        <div className="mt-8 space-y-4 text-[14px] leading-relaxed text-white/60">
+        <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/75">
           <p>
-            I want to build intelligent systems that move beyond screens — systems that can perceive
+            I want to build intelligent systems that move past the screen, systems that can perceive
             the world, reason about it, and act within it.
           </p>
           <p>
             I'm especially drawn to computer vision, applied machine learning, robotics, world
-            models, and vision-language-action systems. Long term, I want to connect AI with domains
-            such as robotics, neurotechnology, aerospace, and scientific discovery.
+            models, and systems that connect vision, language, and action. Longer term I want to
+            bring AI into fields like robotics, neurotechnology, aerospace, and scientific discovery.
           </p>
           <p>
-            My goal is to turn emerging research into useful, reliable products — and eventually
-            build systems that make complex technology more capable, accessible, and human-centered.
+            The goal is to turn new research into things that are genuinely useful and reliable, and
+            eventually to build systems that make hard technology feel more capable, more open, and
+            more human.
           </p>
         </div>
 
-        <p className="mt-8 text-[10px] tracking-[0.3em] text-white/30 uppercase">Areas I'm exploring</p>
+        <p className="mt-7 text-[10px] tracking-[0.3em] text-white/45 uppercase">Areas I'm exploring</p>
         <ul className="mt-3 flex flex-wrap gap-2">
           {AREAS.map((area) => (
             <li
               key={area}
-              className="rounded-full border border-white/10 px-3 py-1 text-[11px] tracking-wide text-white/55"
+              className="rounded-full border border-white/10 px-3 py-1 text-[11px] tracking-wide text-white/70"
             >
               {area}
             </li>
@@ -331,8 +316,8 @@ function FutureFrame() {
 }
 
 export function HeroBeats() {
-  // The centred frame (round of progress×(N-1)) — drives the rail dot, the
-  // counter, and which frame is interactive. Re-renders only on frame change.
+  // The centred frame (round of progress×(N-1)) — drives the indicator dots and
+  // which frame is interactive. Re-renders only on frame change.
   const frame = useHeroFrame()
   const stripRef = useRef<HTMLDivElement>(null)
 
@@ -355,7 +340,6 @@ export function HeroBeats() {
   return (
     <>
       <HeroClockRail />
-      <FrameRail active={frame} />
 
       {/* The horizontal frame strip. Width = N × 100vw; the sticky parent's
           overflow-hidden clips everything but the centred frame. Each cell only
@@ -385,23 +369,7 @@ export function HeroBeats() {
         ))}
       </div>
 
-      {/* Scroll cue — only while you're still on the first frame. */}
-      <div
-        className={`pointer-events-none absolute bottom-8 left-1/2 z-20 -translate-x-1/2 transition-opacity duration-500 ${
-          frame === 0 ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-[10px] tracking-[0.3em] text-white/35 uppercase">Scroll</span>
-          <span className="scroll-cue" aria-hidden />
-        </div>
-      </div>
-
-      {/* Frame counter, bottom — structural readout while building. Offset from
-          the right edge so it clears the clock rail. */}
-      <div className="pointer-events-none absolute right-28 bottom-8 z-20 hidden text-[10px] tracking-[0.25em] text-white/25 tabular-nums md:block">
-        {String(frame + 1).padStart(2, '0')} / {String(BEAT_COUNT).padStart(2, '0')}
-      </div>
+      <FrameDots active={frame} />
     </>
   )
 }
