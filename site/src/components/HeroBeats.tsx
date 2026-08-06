@@ -5,22 +5,25 @@
  * Present (featured projects) · The Future. You scroll VERTICALLY (native
  * wheel/trackpad, via Lenis) and the strip slides LEFT — moving down walks you
  * rightward through time, matching the "life in three tenses" timeline motif.
- * No scroll-jacking: the browser's vertical scroll is untouched; we only
- * translate the strip in response to it.
  *
- * WHY a rAF loop and not React state for the pan: scroll fires ~60×/second.
- * Driving `transform` through state would re-render the whole hero every frame
- * and wreck the framerate. So we read `heroScroll.progress` each frame and write
- * the strip's transform imperatively. React state (`useHeroFrame`) is used ONLY
- * to swap which frame is interactive/aria-visible.
+ * THE GLASS PANEL (read this before touching it):
+ * The strip is CSS-transformed (that's the pan). A transformed ancestor stops
+ * `backdrop-filter` from sampling anything behind it, so a glass box placed
+ * INSIDE the strip blurs nothing — the mask sits further back. That was the
+ * "glass doesn't blur" bug. Fix: ONE glass panel (`.hero-glass`) lives in the
+ * sticky layer OUTSIDE the strip, where its backdrop really is the mask, so the
+ * blur is real. It is centred, auto-sized each frame to the centred frame's
+ * measured content, and only fades in as a frame SETTLES at centre (so you
+ * never see text half-on / half-off a static box while panning). The Identity
+ * frame gets a soft vignette instead of a panel.
  *
- * Because the pan is horizontal, the frame indicator is a row of DOTS along the
- * BOTTOM (no connecting line — Melvin's call). Frames 2-4 sit inside a
- * blurring glass panel so their text stays readable over the mask without
- * hiding it. Copy is written to sound human: no em-dashes, few hyphens.
+ * Perf note: everything scroll-driven is written imperatively in one rAF loop
+ * (transform + panel size/opacity). React state (`useHeroFrame`) only swaps
+ * which frame is interactive — a few times per scroll, never per frame.
  * ========================================================================= */
 
 import { useEffect, useRef } from 'react'
+import type { Ref } from 'react'
 import { Link } from 'react-router-dom'
 import { BEAT_COUNT, heroScroll, useHeroFrame } from '../hooks/heroScroll'
 import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
@@ -51,9 +54,7 @@ const AREAS = [
 ]
 
 /* ---------------------------------------------------------------------------
- * The bottom frame indicator: just dots, no connecting line. Each dot jumps to
- * its frame. Centred along the bottom so it reads as a horizontal-scroll
- * position marker rather than a vertical rail.
+ * Bottom frame indicator: dots only, no connecting line. Each jumps to a frame.
  * ------------------------------------------------------------------------ */
 function FrameDots({ active }: { active: number }) {
   return (
@@ -77,26 +78,36 @@ function FrameDots({ active }: { active: number }) {
 }
 
 /* ---------------------------------------------------------------------------
- * Frame 0 — Identity. Name, who he is, the interactive tagline, the three
- * actions, and the social row. This is the recruiter's first 3 seconds.
+ * Frame 0 — Identity. A soft centred vignette lifts the text off the mask so
+ * the whole block reads as one clean, centred lockup.
  * ------------------------------------------------------------------------ */
 function IdentityFrame() {
   // Surname is rendered letter-by-letter with `justify-between` inside a box
-  // that stretches to the width of the first-name line above it. That makes
-  // "KARUPATI" span EXACTLY the same width as "Melvin Chirag", evenly spaced —
-  // the balanced lockup Melvin wanted, and it stays matched at every viewport.
+  // that stretches to the width of the first-name line above it, so "KARUPATI"
+  // spans EXACTLY the same width as "Melvin Chirag" at every viewport.
   const surname = 'KARUPATI'.split('')
 
   return (
-    <div className="flex h-full items-center justify-center px-6">
-      <div className="flex max-w-2xl flex-col items-center text-center">
+    <div className="relative flex h-full items-center justify-center px-6">
+      {/* Vignette: darkens the mask just behind the text, fading to nothing so
+          the scene is softened, not hidden. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(46% 42% at 50% 47%, rgba(6,7,13,0.62) 0%, rgba(6,7,13,0.32) 45%, transparent 72%)',
+        }}
+      />
+
+      <div className="relative flex max-w-2xl flex-col items-center text-center [text-shadow:0_1px_24px_rgba(0,0,0,0.5)]">
         <h1 className="inline-flex flex-col text-white">
           <span className="font-display text-[clamp(2.6rem,7.5vw,5.4rem)] leading-[0.95] tracking-[-0.005em]">
             Melvin Chirag
           </span>
           <span
             aria-label="Karupati"
-            className="mt-2 flex justify-between font-display text-[clamp(1.15rem,3vw,2.1rem)] text-white/65"
+            className="mt-2 flex justify-between font-display text-[clamp(1.15rem,3vw,2.1rem)] text-white/70"
           >
             {surname.map((ch, i) => (
               <span key={i} aria-hidden>
@@ -106,26 +117,24 @@ function IdentityFrame() {
           </span>
         </h1>
 
-        <p className="mt-6 text-[11px] tracking-[0.26em] text-white/60 uppercase">
+        <p className="mt-6 text-[11px] tracking-[0.26em] text-white/65 uppercase">
           Computer Science Student · Applied AI · Computer Vision · Full Stack
         </p>
 
-        {/* Signature tagline — "Beyond" glows and links to the Vision page. */}
-        <p className="mt-6 font-display text-[clamp(1.4rem,3vw,2.1rem)] text-white/85">
+        <p className="mt-6 font-display text-[clamp(1.4rem,3vw,2.1rem)] text-white/90">
           Computer Science and{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
             Beyond
           </Link>
         </p>
 
-        <p className="mt-6 max-w-md text-[13.5px] leading-relaxed text-white/70">
+        <p className="mt-6 max-w-md text-[13.5px] leading-relaxed text-white/75">
           I'm exploring computer vision, intelligent systems, machine learning, and full stack
           products. I like building things where software meets the real world, connecting ideas
           across domains and turning curiosity into something that actually works.
         </p>
 
-        {/* The three hero actions. Projects goes to the Work page (the full,
-            detailed view of what Melvin builds), NOT a hero slide. */}
+        {/* Projects goes to the Work page (the full view of what Melvin builds). */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/work"
@@ -157,17 +166,17 @@ function IdentityFrame() {
 }
 
 /* ---------------------------------------------------------------------------
- * Frame 1 — The Past. A short origin, not a timeline (that's the About page).
- * Content sits in a blurring glass panel so it reads clearly over the mask.
+ * Frame 1 — The Past. Short origin, not a timeline (that's About). `innerRef`
+ * lets HeroBeats measure this content so the glass panel can size to it.
  * ------------------------------------------------------------------------ */
-function PastFrame() {
+function PastFrame({ innerRef }: { innerRef?: Ref<HTMLDivElement> }) {
   return (
     <div className="flex h-full items-center justify-center px-6">
-      <div className="liquid-glass max-w-xl rounded-3xl p-8 md:p-10">
+      <div ref={innerRef} className="max-w-xl px-8 py-9">
         <h2 className="font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95] text-white">
           The Past
         </h2>
-        <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/75">
+        <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/80">
           <p>
             Born in Hyderabad and raised in Kuwait, I later continued my education in India before
             moving to Michigan for computer science.
@@ -218,18 +227,16 @@ function ExploreLink({ href }: { href: string }) {
 }
 
 /* ---------------------------------------------------------------------------
- * Frame 2 — The Present. Three featured project cards, inside a glass panel.
- * The cards are plain bordered sub-panels (not their own glass) so the panel
- * blurs once, not twice.
+ * Frame 2 — The Present. Three featured project cards over the glass panel.
  * ------------------------------------------------------------------------ */
-function PresentFrame() {
+function PresentFrame({ innerRef }: { innerRef?: Ref<HTMLDivElement> }) {
   return (
     <div className="flex h-full items-center justify-center px-6 py-16">
-      <div className="liquid-glass w-full max-w-5xl rounded-3xl p-7 md:p-9">
+      <div ref={innerRef} className="w-full max-w-5xl px-8 py-8">
         <h2 className="font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95] text-white">
           The Present
         </h2>
-        <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-white/70">
+        <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-white/80">
           Right now I'm building at the intersection of computer vision, machine learning,
           interactive software, and a lot of scientific curiosity.
         </p>
@@ -238,25 +245,25 @@ function PresentFrame() {
           {PROJECTS.map((p) => (
             <article
               key={p.name}
-              className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left"
+              className="flex flex-col rounded-2xl border border-white/12 bg-white/[0.04] p-5 text-left"
             >
-              <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-xl bg-gradient-to-br from-white/[0.1] to-transparent">
-                <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
+              <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-xl bg-gradient-to-br from-white/[0.12] to-transparent">
+                <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/20">
                   {p.name.charAt(0)}
                 </span>
-                <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">
+                <span className="m-3 text-[9px] tracking-[0.25em] text-white/45 uppercase">
                   {p.tentative ? 'Preview coming' : 'Preview'}
                 </span>
               </div>
 
               <h3 className="font-display text-xl text-white">{p.name}</h3>
-              <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-white/70">{p.blurb}</p>
+              <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-white/75">{p.blurb}</p>
 
               <ul className="mt-3 flex flex-wrap gap-1.5">
                 {p.stack.map((tech) => (
                   <li
                     key={tech}
-                    className="rounded-full border border-white/10 px-2.5 py-0.5 text-[10px] tracking-wide text-white/60"
+                    className="rounded-full border border-white/12 px-2.5 py-0.5 text-[10px] tracking-wide text-white/65"
                   >
                     {tech}
                   </li>
@@ -273,16 +280,16 @@ function PresentFrame() {
 }
 
 /* ---------------------------------------------------------------------------
- * Frame 3 — The Future. Ambition + the areas he's exploring, in a glass panel.
+ * Frame 3 — The Future. Ambition + the areas he's exploring.
  * ------------------------------------------------------------------------ */
-function FutureFrame() {
+function FutureFrame({ innerRef }: { innerRef?: Ref<HTMLDivElement> }) {
   return (
     <div className="flex h-full items-center justify-center px-6">
-      <div className="liquid-glass max-w-2xl rounded-3xl p-8 md:p-10">
+      <div ref={innerRef} className="max-w-2xl px-8 py-9">
         <h2 className="font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95] text-white">
           The Future
         </h2>
-        <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/75">
+        <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/80">
           <p>
             I want to build intelligent systems that move past the screen, systems that can perceive
             the world, reason about it, and act within it.
@@ -299,12 +306,12 @@ function FutureFrame() {
           </p>
         </div>
 
-        <p className="mt-7 text-[10px] tracking-[0.3em] text-white/45 uppercase">Areas I'm exploring</p>
+        <p className="mt-7 text-[10px] tracking-[0.3em] text-white/50 uppercase">Areas I'm exploring</p>
         <ul className="mt-3 flex flex-wrap gap-2">
           {AREAS.map((area) => (
             <li
               key={area}
-              className="rounded-full border border-white/10 px-3 py-1 text-[11px] tracking-wide text-white/70"
+              className="rounded-full border border-white/12 px-3 py-1 text-[11px] tracking-wide text-white/75"
             >
               {area}
             </li>
@@ -316,20 +323,59 @@ function FutureFrame() {
 }
 
 export function HeroBeats() {
-  // The centred frame (round of progress×(N-1)) — drives the indicator dots and
-  // which frame is interactive. Re-renders only on frame change.
   const frame = useHeroFrame()
   const stripRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  // Measured content box of frames 1-3 (index 0 unused — Identity has no panel).
+  const contentRefs = useRef<(HTMLDivElement | null)[]>([])
+  const contentSizes = useRef<({ w: number; h: number } | null)[]>([null, null, null, null])
 
-  // The pan. Slide the wide strip left by `progress × (N-1) × viewportWidth`, so
-  // frame k is dead-centre exactly when progress === k/(N-1). innerWidth is read
-  // each frame (cheap) so it stays correct across window resizes.
+  // Measure each frame's content so the glass panel can match its footprint.
+  // offsetWidth/Height are layout metrics, unaffected by the strip's transform.
   useEffect(() => {
+    const measure = () => {
+      contentRefs.current.forEach((el, i) => {
+        if (el) contentSizes.current[i] = { w: el.offsetWidth, h: el.offsetHeight }
+      })
+    }
+    measure()
+    // Re-measure once shortly after mount, in case layout settles late.
+    const t = window.setTimeout(measure, 300)
+    window.addEventListener('resize', measure)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
+
+  // One rAF loop drives BOTH the pan and the glass panel.
+  useEffect(() => {
+    const LAST = BEAT_COUNT - 1
     let raf = 0
     const tick = () => {
+      const p = heroScroll.progress
+
+      // Pan: slide the strip so frame k is centred when progress === k/LAST.
       if (stripRef.current) {
-        const shift = heroScroll.progress * (BEAT_COUNT - 1) * window.innerWidth
-        stripRef.current.style.transform = `translate3d(${-shift}px,0,0)`
+        stripRef.current.style.transform = `translate3d(${-p * LAST * window.innerWidth}px,0,0)`
+      }
+
+      // Glass panel: size to the nearest frame's content, fade in as it settles.
+      if (panelRef.current) {
+        const nf = Math.round(p * LAST) // nearest frame index
+        const center = nf / LAST
+        // 1 at dead-centre, easing to 0 by 0.11 of progress away (before the
+        // midpoint between frames), so glass is present only when settled.
+        const settle = Math.max(0, 1 - Math.abs(p - center) / 0.11)
+        const size = contentSizes.current[nf]
+        if (nf === 0 || !size) {
+          panelRef.current.style.opacity = '0'
+        } else {
+          // +64/+48 gives the glass a margin around the measured text box.
+          panelRef.current.style.width = `${size.w + 64}px`
+          panelRef.current.style.height = `${size.h + 48}px`
+          panelRef.current.style.opacity = String(settle)
+        }
       }
       raf = requestAnimationFrame(tick)
     }
@@ -341,10 +387,19 @@ export function HeroBeats() {
     <>
       <HeroClockRail />
 
+      {/* The real-blur glass panel. Sits OUTSIDE the transformed strip (so its
+          backdrop is the mask, not empty strip space) and is centred; size +
+          opacity are set each frame in the rAF loop above. */}
+      <div
+        ref={panelRef}
+        aria-hidden
+        className="hero-glass pointer-events-none absolute top-1/2 left-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 rounded-[1.9rem]"
+        style={{ opacity: 0, width: 0, height: 0 }}
+      />
+
       {/* The horizontal frame strip. Width = N × 100vw; the sticky parent's
           overflow-hidden clips everything but the centred frame. Each cell only
-          becomes interactive when it's the centred one, so off-screen frames
-          never steal clicks or tab focus. */}
+          becomes interactive when it's the centred one. */}
       <div
         ref={stripRef}
         className="absolute top-0 left-0 z-10 flex h-full will-change-transform"
@@ -359,11 +414,11 @@ export function HeroBeats() {
             {i === 0 ? (
               <IdentityFrame />
             ) : i === 1 ? (
-              <PastFrame />
+              <PastFrame innerRef={(el) => { contentRefs.current[1] = el }} />
             ) : i === 2 ? (
-              <PresentFrame />
+              <PresentFrame innerRef={(el) => { contentRefs.current[2] = el }} />
             ) : (
-              <FutureFrame />
+              <FutureFrame innerRef={(el) => { contentRefs.current[3] = el }} />
             )}
           </div>
         ))}

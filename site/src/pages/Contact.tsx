@@ -1,4 +1,4 @@
-
+import { heroScrollToTop } from '../hooks/useLenis'
 
 const LINKS = [
   {
@@ -54,12 +54,15 @@ export function Contact() {
         ))}
       </div>
       
-      {/* Visual cue to loop back to home, keeping with the "thread" motif */}
-      <div className="mt-24 flex flex-col items-center gap-4">
-        <div className="h-16 w-px bg-gradient-to-b from-white/20 to-transparent"></div>
-        <button 
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
-          className="text-[10px] tracking-widest text-white/30 transition-colors hover:text-white/70 uppercase cursor-pointer"
+      {/* Loop back to the top of the hero. Uses Lenis (heroScrollToTop) so it
+          glides instead of fighting the smooth-scroll engine. The thread line
+          is gone; this is a glass button now. Full contact-page restyle is a
+          later pass. */}
+      <div className="mt-24 flex justify-center">
+        <button
+          type="button"
+          onClick={heroScrollToTop}
+          className="glass-cta rounded-full px-7 py-2.5 text-sm tracking-wide text-white/80 transition-colors hover:text-white"
         >
           Return to Start
         </button>

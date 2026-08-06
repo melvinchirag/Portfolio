@@ -47,6 +47,30 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Hero fixes — real glass blur, centering, scroll lag (2026-08-06)
+Melvin's screenshot review. Root-caused + fixed:
+- **Glass wasn't blurring (the real bug):** the glass boxes were INSIDE the
+  transformed panning strip, and a transformed ancestor kills `backdrop-filter`
+  (it can't sample the mask behind the strip). Fix: one `.hero-glass` panel now
+  lives in the sticky layer OUTSIDE the strip (backdrop = the actual mask, so
+  the blur is REAL), centred, auto-sized each frame to the centred frame's
+  MEASURED content box (offsetWidth/Height via refs), and fades in only as a
+  frame settles at centre (so text is never half-on a static box mid-pan).
+  Premium look: strong blur + dark vertical wash for contrast + hairline rim +
+  top inner highlight + deep shadow. In-strip `.liquid-glass` wrappers removed.
+- **Scroll lag / "stuck":** Contact's "Return to Start" used native
+  `window.scrollTo` which fights Lenis. New `heroScrollToTop()` routes it
+  through Lenis; the button is now a glass-cta (glows on hover). Removed the
+  little thread line.
+- **Identity centering/clutter:** added a soft centred radial vignette + a
+  subtle text-shadow so the lockup reads as one clean centred block over the
+  mask (content was already flex-centred).
+Files: `index.css` (.hero-glass), `useLenis.ts` (heroScrollToTop), `Contact.tsx`,
+`HeroBeats.tsx`. Build + oxlint clean.
+NOTE: panel sizes are measured (auto-fit) but the settle window (0.11) and panel
+padding (+64/+48) are eyeballed — tune if the glass feels too big/small or
+flickers between frames.
+
 ### [CLAUDE] Hero polish round — Melvin's batch of fixes (2026-08-06)
 Kept current UI. Did NOW (all in `HeroBeats.tsx` unless noted):
 - Removed the bottom **scroll cue** and the dev **frame counter**.

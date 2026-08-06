@@ -31,6 +31,23 @@ export function heroScrollTo(id: string) {
 }
 
 /**
+ * Smoothly scroll back to the very top through Lenis. IMPORTANT: never use the
+ * browser's native `window.scrollTo({behavior:'smooth'})` while Lenis is
+ * running — the two scroll engines fight each other, which is what made the
+ * "Return to Start" button feel stuck. Routing through Lenis keeps it smooth.
+ */
+export function heroScrollToTop() {
+  if (activeLenis) {
+    activeLenis.scrollTo(0, {
+      duration: 1.4,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    })
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+/**
  * Scroll so hero frame `index` is centred. Because the strip pans exactly one
  * viewport-height of scroll per frame, the target Y is simply the track's top
  * plus `index × viewportHeight`. Used by the hero's "Projects" button to glide
