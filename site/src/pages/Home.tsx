@@ -16,7 +16,9 @@
  * later — this is the frame those will hang off, not a replacement for them.
  *
  * The hero is the ONLY page with scrollytelling — hard rule from the project
- * architecture. Beats 2-5 are placeholders; see HeroBeats.tsx.
+ * architecture. It now PANS HORIZONTALLY through four frames (Identity · Past ·
+ * Present · Future); see HeroBeats.tsx. The Contact section below is a normal
+ * vertical section the pan hands off into once the track ends.
  * ========================================================================= */
 
 import { useRef } from 'react'
@@ -33,7 +35,7 @@ export function Home() {
 
   return (
     <>
-      <section ref={trackRef} className="relative" style={{ height: `${BEAT_COUNT * 100}vh` }}>
+      <section id="hero-track" ref={trackRef} className="relative" style={{ height: `${BEAT_COUNT * 100}vh` }}>
         <div className="sticky top-0 h-screen w-full overflow-hidden">
           {/* The persistent WebGL layer (particle mask + liquid glass) is now
               rendered globally in App.tsx -> GlobalScene so it persists across pages. */}

@@ -30,6 +30,26 @@ export function heroScrollTo(id: string) {
   }
 }
 
+/**
+ * Scroll so hero frame `index` is centred. Because the strip pans exactly one
+ * viewport-height of scroll per frame, the target Y is simply the track's top
+ * plus `index × viewportHeight`. Used by the hero's "Projects" button to glide
+ * to the Present frame without the visitor hunting for it.
+ */
+export function heroScrollToFrame(index: number) {
+  const track = document.getElementById('hero-track')
+  const top = track ? track.offsetTop : 0
+  const y = top + index * window.innerHeight
+  if (activeLenis) {
+    activeLenis.scrollTo(y, {
+      duration: 1.6,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    })
+  } else {
+    window.scrollTo({ top: y, behavior: 'smooth' })
+  }
+}
+
 export function useLenis() {
   useEffect(() => {
     const isMobile = window.innerWidth < 768

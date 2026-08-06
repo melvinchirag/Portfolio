@@ -19,8 +19,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-/** How many full-viewport "beats" the hero scrolls through. */
-export const BEAT_COUNT = 5
+/**
+ * How many full-viewport frames the hero pans through: Hero · Past · Present ·
+ * Future. (Was 5 — the old "Invitation" frame was removed; the Contact section
+ * now lives as its own vertical section after the pan, not as a frame.)
+ */
+export const BEAT_COUNT = 4
 
 /**
  * Live scroll state. Mutated by `useHeroScrollTrack`, read by everyone else.

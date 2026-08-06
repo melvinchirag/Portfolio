@@ -241,6 +241,66 @@ body {
     0 6px 22px -6px rgba(0, 0, 0, 0.6);
 }
 
+/* The interactive word "Beyond" in the hero tagline "Computer Science and
+ * Beyond", which links to the Vision page. It must read as intentional and
+ * cinematic — NOT a blue underline hyperlink — but stay within the restrained
+ * warm palette (a loud ember→violet gradient reads cheap here, per the note on
+ * .glass-cta above). So: warm luminous text with a slow ambient glow, and a
+ * light sweep underline that draws in on hover/focus. It is a real, focusable
+ * link; the effects are pure decoration on top. */
+.beyond-link {
+  position: relative;
+  color: #ffdcae;
+  font-style: italic; /* Instrument Serif italic gives it a display flourish */
+  text-shadow: 0 0 16px rgba(255, 190, 130, 0.35);
+  transition:
+    color 400ms var(--ease-out-expo),
+    text-shadow 400ms var(--ease-out-expo);
+  animation: beyond-glow 4.5s ease-in-out infinite;
+}
+.beyond-link:hover,
+.beyond-link:focus-visible {
+  color: #fff0dc;
+  text-shadow: 0 0 26px rgba(255, 200, 150, 0.7);
+}
+/* The underline is a centred light-sweep that scales in — not a static rule. */
+.beyond-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.1em;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 214, 165, 0.9), transparent);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 500ms var(--ease-out-expo);
+}
+.beyond-link:hover::after,
+.beyond-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+@keyframes beyond-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 14px rgba(255, 190, 130, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 24px rgba(255, 190, 130, 0.6);
+  }
+}
+
+/* Respect reduced-motion: keep the look, drop the ambient pulse + sweep. */
+@media (prefers-reduced-motion: reduce) {
+  .beyond-link {
+    animation: none;
+  }
+  .beyond-link::after {
+    transition: none;
+  }
+}
+
 /* Per-character reveal. Fade and rise only — nothing bounces, per the motion
    language in CLAUDE.md. */
 .reveal-char {

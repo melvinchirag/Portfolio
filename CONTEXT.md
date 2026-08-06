@@ -18,6 +18,45 @@ other pages' content/UI** at the same time. To avoid collisions:
 - `.sync-glass-rect` on a card = it gets liquid-glass; that class is the ONLY
   hook AGY needs from the WebGL side — don't touch the shader to use it.
 
+### [CLAUDE] Hero brief — Home frames restructured + real copy (2026-08-06)
+Melvin delivered a full implementation brief. Decisions locked with him:
+- **Palette:** the emerald-green/gold idea in the brief was a MISTAKE — KEEP the
+  current UI (warm amber glass on near-black, Instrument Serif + Inter). No
+  CLAUDE.md change, mask colours untouched.
+- **Forms:** build the UI now, wire the backend later.
+- **Sequencing:** he has a UI reference coming AFTER this; build structure + real
+  copy now, do the visual/palette polish pass against that UI when it lands.
+- Hidden future CV face-mask interaction is a SURPRISE — do not mention it in
+  site copy.
+
+Shipped this pass (Home frames only; Contact + Testimonials is the next pass):
+- **Removed the 5th "Invitation" frame.** `BEAT_COUNT` 5→4 (Identity · Past ·
+  Present · Future). Contact stays a vertical section after the pan (forms need
+  vertical space / keyboard / mobile — panning into a form fights all three).
+- **Identity frame:** identity line ("Computer Science Student · Aspiring Applied
+  AI/ML Engineer"), the signature tagline "Computer Science and *Beyond*" where
+  **Beyond** is a glowing link to /vision (new `.beyond-link` — warm luminous
+  glow + hover sweep, NOT a loud gradient which reads cheap here; reduced-motion
+  honoured), primary description, three actions (Projects → pans to Present via
+  `heroScrollToFrame`; Contact → `#contact`; Résumé → new tab), and a social row.
+- **Past / Future frames:** the brief's real copy verbatim; Past → /about
+  ("Read the full story"), Future → an "Areas I'm exploring" chip set.
+- **Present frame:** 3 featured project cards from new `data/projects.ts`
+  (Manas, This Portfolio, Hackathon placeholder) — glass cards, 2-sentence
+  blurbs, stack chips, "Explore Project" (dimmed until a href exists).
+- New shared `data/profile.ts` (email/résumé/socials) + `SocialLinks.tsx`
+  (inline SVG brand marks; empty href → dimmed inert icon).
+Files: `heroScroll.ts` (BEAT_COUNT), `useLenis.ts` (`heroScrollToFrame`),
+`Home.tsx` (id="hero-track"), `HeroBeats.tsx` (rewrite), `index.css`
+(`.beyond-link`), `data/profile.ts`, `data/projects.ts`, `SocialLinks.tsx`.
+Build + oxlint clean.
+**ASSET GAPS (needed before production):** real `/resume.pdf`; X + Instagram
+URLs; confirm canonical email (code uses melvinchirag@gmail.com); Manas's real
+scope + stack; the hackathon project; project preview images + "Explore" links.
+**Mask note:** its 5 pose keyframes (p=0,.25,.5,.75,1) no longer land exactly on
+the now-4 frame centres (0,.333,.667,1) — left MaskField untouched (fragile,
+approved motion); re-key later only if the drift reads wrong.
+
 ### [CLAUDE] Hero → HORIZONTAL scrollytelling + Contact button (2026-08-05)
 Reframed the hero with Melvin: it's a 5-frame filmic sequence (mask in every
 frame), and scroll should pan it **horizontally** — matching the "life in three
