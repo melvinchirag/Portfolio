@@ -79,6 +79,10 @@ uniform vec4 u_tint;
 // quad only contributes refraction inside the shapes. When 0.0 (scene-capture
 // mode) the quad is opaque and reproduces the whole captured scene.
 uniform float u_glassOnly;
+// 0 = liquid lens (clear centre, frosted rim). Toward 1 = uniform FROST across
+// the whole interior, so text over the glass is readable and the mask behind is
+// softly blurred rather than sharp. Set per-page (high on the hero).
+uniform float u_frost;
 
 uniform int u_numRects;
 uniform vec4 u_rects[10]; // x, y, width, height (in CSS pixels, from center of screen)
@@ -200,8 +204,9 @@ void main() {
 
     // blurEdge (JSON): the centre samples the SHARP background (clear), and only
     // the refracting rim blends toward the blurred copy — a frosted rim, clear
-    // core. Chromatic dispersion splits R/G/B along the same offset.
-    float edgeBlur = clamp(edgeFactor * 5.0, 0.0, 1.0);
+    // core. u_frost raises the FLOOR of that blend so the whole interior frosts
+    // uniformly when requested. Chromatic dispersion splits R/G/B along offset.
+    float edgeBlur = max(clamp(edgeFactor * 5.0, 0.0, 1.0), u_frost);
     outColor = getTextureDispersion(u_bg, u_blurredBg, edgeBlur, offset, u_refDispersion);
 
     // Optional glass tint (alpha is 0 in the JSON → this is a no-op, kept for spec parity).
@@ -258,7 +263,14 @@ void main() {
  *   straight to the shader and let the quad draw ONLY the glass shapes
  *   (transparent elsewhere), over the real background plane.
  */
-export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
+export function LiquidGlassField({
+  bgTexture,
+  frost = 0,
+}: {
+  bgTexture?: THREE.Texture
+  /** 0 = liquid lens; toward 1 = uniform frost (used on the hero). */
+  frost?: number
+}) {
   const { size } = useThree()
 
   const dpr = window.devicePixelRatio
@@ -309,6 +321,7 @@ export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
       u_shadowPosition: { value: new THREE.Vector2(0, -10) },
       u_tint: { value: new THREE.Vector4(8 / 255, 102 / 255, 165 / 255, 0.0) },
       u_glassOnly: { value: 0.0 },
+      u_frost: { value: 0.0 },
       // DOM rects tracking
       u_numRects: { value: 0 },
       u_rects: { value: Array(10).fill(new THREE.Vector4()) },
@@ -329,6 +342,11 @@ export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
     )
     glassMat.uniforms.u_dpr.value = window.devicePixelRatio
   }, [size, vBlurMat, hBlurMat, glassMat])
+
+  // Push the frost amount to the shader whenever the page (prop) changes.
+  useEffect(() => {
+    glassMat.uniforms.u_frost.value = frost
+  }, [frost, glassMat])
 
   // Setup offscreen scenes for blur passes
   const blurCamera = useMemo(() => new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), [])
@@ -373,7 +391,11 @@ export function LiquidGlassField({ bgTexture }: { bgTexture?: THREE.Texture }) {
     els.forEach((el) => {
       if (rects.length >= 10) return
       const rect = el.getBoundingClientRect()
-      if (rect.bottom < -50 || rect.top > vh + 50) return // fully off-screen → skip
+      if (rect.bottom < -50 || rect.top > vh + 50) return // off-screen vertically
+      // Also skip boxes panned off-screen HORIZONTALLY (the hero frames slide
+      // sideways). Without this the glass pipeline runs every frame on the hero
+      // even when no box is visible.
+      if (rect.right < -50 || rect.left > window.innerWidth + 50) return
       const style = window.getComputedStyle(el)
       const radius = parseFloat(style.borderRadius) || 0
 

@@ -47,6 +47,37 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Hero — REAL glass via WebGL, gold name, box-as-slide (2026-08-06)
+Melvin (on xhigh) reported the glass was still broken: text drifted OUT of the
+box, and it wasn't frosty. Root cause + real fix this time:
+- **Why CSS glass failed:** CSS `backdrop-filter` over a near-black sparse
+  particle field is invisible (nothing bright to blur), AND my "external panel"
+  detached the box from the panning text (text drifted out). WRONG approach.
+- **Real fix — use the project's WebGL glass.** `LiquidGlassField` already
+  renders true refracting glass into the canvas for any `.sync-glass-rect` DOM
+  element, tracking its live rect each frame. So frames 1-3 now wrap their text
+  in a `.sync-glass-rect` box INSIDE the panning strip: box + text pan together
+  as one slide, and the WebGL glass follows the box exactly. Added a `u_frost`
+  uniform to the glass shader (floor on the interior blur) so the hero reads as
+  a uniform FROSTED panel, not a clear lens; passed `frost={isHome?0.82:0}` from
+  GlobalScene (About glass unchanged). Also added HORIZONTAL off-screen culling
+  to the rect loop so the 3-pass glass pipeline doesn't run every frame on the
+  hero when boxes are panned away (perf / lag).
+- **Identity restructure (his notes):** dropped the "Computer Science Student ·
+  Applied AI..." line entirely; moved "Computer Science and Beyond" ABOVE the
+  name as a smaller kicker; made "Melvin Chirag" GOLD (`.name-gold`, matching the
+  Beyond accent) with a glow; surname KARUPATI a dim gold. Kept the vignette +
+  text-shadow.
+- **Scroll lag:** the horizontal cull should reduce the jump jank; Return-to-Start
+  already routes through Lenis.
+Files: `LiquidGlassField.tsx` (u_frost + h-cull), `GlobalScene.tsx` (frost prop),
+`HeroBeats.tsx` (rewrite, .sync-glass-rect boxes + identity), `index.css`
+(.name-gold, removed .hero-glass). Build + oxlint clean; shader backticks intact.
+STILL OPEN: exact identity centering (Melvin unsure himself, "let it slide" for
+now — mask sits left, content centres); glass frost amount (0.82) + box dark film
+(0.22) are eyeballed; watch WebGL glass perf on the hero (3 passes/frame when a
+box is centred).
+
 ### [CLAUDE] Hero fixes — real glass blur, centering, scroll lag (2026-08-06)
 Melvin's screenshot review. Root-caused + fixed:
 - **Glass wasn't blurring (the real bug):** the glass boxes were INSIDE the

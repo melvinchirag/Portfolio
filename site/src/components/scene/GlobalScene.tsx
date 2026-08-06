@@ -140,8 +140,13 @@ function SceneContents({
 
       {/* On About, hand the video texture straight to the glass (it refracts THAT
           rather than capturing the scene — see LiquidGlassField). Elsewhere it
-          falls back to scene capture. */}
-      <LiquidGlassField bgTexture={isAbout ? aboutTex ?? undefined : undefined} />
+          falls back to scene capture. On the hero we want the glass to read as a
+          frosted panel (uniform blur) rather than a clear lens, so text is
+          legible over the mask. */}
+      <LiquidGlassField
+        bgTexture={isAbout ? aboutTex ?? undefined : undefined}
+        frost={isHome ? 0.82 : 0}
+      />
 
       <EffectComposer>
         <Bloom intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
