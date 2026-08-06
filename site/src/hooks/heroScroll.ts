@@ -33,6 +33,17 @@ export const heroScroll = {
   beat: 0,
   /** 0 → 1 WITHIN the current beat. Useful for per-beat animations. */
   beatProgress: 0,
+  /**
+   * Which frame is CENTRED on screen right now: 0 … BEAT_COUNT-1.
+   *
+   * Distinct from `beat`. The hero pans HORIZONTALLY — the frame strip slides
+   * left linearly with `progress`, so frame k is dead-centre when
+   * `progress === k / (BEAT_COUNT-1)`. `frame` is that nearest-centre index
+   * (a ROUND), which is what should light the rail dot and become interactive.
+   * `beat` (a FLOOR over BEAT_COUNT) is the older even-slice index, kept for
+   * any per-beat scrubbing; the two differ by up to half a frame mid-pan.
+   */
+  frame: 0,
 }
 
 const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n)
@@ -63,6 +74,8 @@ export function useHeroScrollTrack(ref: React.RefObject<HTMLElement | null>) {
         const scaled = p * BEAT_COUNT
         heroScroll.beat = Math.min(BEAT_COUNT - 1, Math.floor(scaled))
         heroScroll.beatProgress = clamp01(scaled - heroScroll.beat)
+        // Nearest-centre frame for the horizontal pan (see the store comment).
+        heroScroll.frame = Math.round(p * (BEAT_COUNT - 1))
       }
       raf = requestAnimationFrame(tick)
     }
@@ -94,4 +107,29 @@ export function useHeroBeat() {
   }, [])
 
   return beat
+}
+
+/**
+ * Like `useHeroBeat`, but returns the CENTRED frame (`heroScroll.frame`) — the
+ * value that tracks the horizontal pan. Re-renders only when the centred frame
+ * changes, so it's cheap enough to gate which frame is interactive/visible.
+ */
+export function useHeroFrame() {
+  const [frame, setFrame] = useState(0)
+  const last = useRef(0)
+
+  useEffect(() => {
+    let raf = 0
+    const tick = () => {
+      if (heroScroll.frame !== last.current) {
+        last.current = heroScroll.frame
+        setFrame(heroScroll.frame)
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  return frame
 }

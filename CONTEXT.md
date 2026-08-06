@@ -18,6 +18,32 @@ other pages' content/UI** at the same time. To avoid collisions:
 - `.sync-glass-rect` on a card = it gets liquid-glass; that class is the ONLY
   hook AGY needs from the WebGL side — don't touch the shader to use it.
 
+### [CLAUDE] Hero → HORIZONTAL scrollytelling + Contact button (2026-08-05)
+Reframed the hero with Melvin: it's a 5-frame filmic sequence (mask in every
+frame), and scroll should pan it **horizontally** — matching the "life in three
+tenses" timeline motif. Shipped Round 1 (structure):
+- **Vertical scroll input is untouched** (no scroll-jacking / a11y hit). The
+  five frames now sit in one wide strip inside the sticky viewport; a rAF loop
+  reads `heroScroll.progress` and slides the strip left by
+  `progress × (N-1) × innerWidth`. Frame k is dead-centre at `progress = k/(N-1)`
+  — which is exactly where the mask's 5 pose keyframes already sit, so mask and
+  frames pan in lockstep for free.
+- New `heroScroll.frame` (ROUND of `progress×(N-1)`) + `useHeroFrame()` — the
+  centred-frame index. Drives the rail dot, the counter, and which frame is
+  interactive/aria-visible. Kept the old `beat` (FLOOR over N) for later
+  per-frame scrubbing; they differ by up to half a frame mid-pan.
+- **Availability is now a quiet one-line status** (pulsing ember dot + "Open to
+  internships & jobs") — NOT the earlier quiz-card widget (dropped as
+  over-engineered for the hero's primary action).
+- **Contact button** is the hero's one ask: `heroScrollTo('contact')` glides
+  (via the shared Lenis instance, now exported from `useLenis.ts`) to the
+  `#contact` slide at the end of the track; native-smooth fallback on mobile.
+Files: `heroScroll.ts`, `useLenis.ts`, `HeroBeats.tsx`. Build + oxlint clean.
+**Still placeholders:** frames 02–05 copy. Have the raw material — About
+milestones are **Kuwait → India → Michigan** (see checklist) — awaiting
+Melvin's origin / present-focus / aspiration lines before those frames are real.
+Round 2 (motion: pan easing / per-frame parallax) and Round 3 (polish) pending.
+
 ### [CLAUDE] Hero Step 2 idea — prototyped, SHELVED for now (2026-07-31)
 Explored a companion particle field (separate from the mask) that would morph a
 cloud into procedural landmark silhouettes — Kuwait Towers, a generic skyline for
