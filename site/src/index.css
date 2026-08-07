@@ -105,15 +105,85 @@ body {
 }
 
 /* The hero name "Melvin Chirag" in warm gold (matching the "Beyond" accent),
- * with a soft glow plus a dark legibility shadow so it holds up over the mask.
- * The frosted glass on the story frames is drawn in WebGL (LiquidGlassField via
- * `.sync-glass-rect`), not CSS — CSS backdrop-filter can't meaningfully blur a
- * near-black particle field. */
+ * with a soft glow plus a dark legibility shadow so it holds up over the mask. */
 .name-gold {
   color: #ffdcae;
   text-shadow:
     0 2px 22px rgba(0, 0, 0, 0.55),
     0 0 36px rgba(255, 190, 130, 0.35);
+}
+
+/* ---------------------------------------------------------------------------
+ * SLIDE GLASS — the frosted panel behind each story frame (Past/Present/Future)
+ * ----------------------------------------------------------------------------
+ * IMPORTANT — why this is CSS and not the WebGL LiquidGlassField:
+ * The mask behind the hero is a near-black void with sparse glowing dots. A
+ * refraction/backdrop blur has almost NOTHING there to blur, so it renders
+ * invisible no matter how it's tuned (this cost us several rounds). So the panel
+ * must read as glass from its OWN material, independent of what's behind it:
+ *   - a translucent dark-glass fill with a diagonal sheen (light on the surface)
+ *   - a bright rim drawn by ::before (the single strongest "this is glass" tell)
+ *   - a deep drop shadow so it lifts cleanly off the mask
+ *   - backdrop-filter on top as a bonus (smears any dot that drifts behind it)
+ * The whole box + its text live in one element inside the panning strip, so they
+ * always move together as a single slide. */
+.slide-glass {
+  position: relative;
+  border-radius: 26px;
+  /* Sheen (diagonal light) layered over a soft dark-glass fill. The fill is what
+   * makes it visible over black; the sheen gives the surface a lit angle. */
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.03) 34%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    linear-gradient(to bottom, rgba(26, 22, 32, 0.44), rgba(10, 9, 14, 0.54));
+  /* Bonus blur: only bites when a particle passes behind, but it costs little
+   * and adds life. Saturate keeps any warm dot warm rather than grey. */
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    0 26px 64px -22px rgba(0, 0, 0, 0.82);
+  overflow: hidden;
+}
+
+/* The bright glass rim — brightest at the top (cool white) and bottom (a warm
+ * amber catch, tying it to the palette), invisible at the sides, exactly how
+ * light rakes a real glass edge. Same mask-subtraction trick as .liquid-glass. */
+.slide-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.16) 22%,
+    rgba(255, 255, 255, 0) 44%,
+    rgba(255, 255, 255, 0) 58%,
+    rgba(255, 236, 215, 0.16) 80%,
+    rgba(255, 236, 215, 0.42) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* The big frame titles — "The Past", "The Present", "The Future" — in warm amber
+ * gold so each slide has a strong warm anchor, with a legibility shadow + a faint
+ * glow. Distinct from .name-gold (which is the brighter hero-name tone). */
+.frame-title {
+  color: #f3c67f;
+  text-shadow:
+    0 2px 20px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(240, 179, 86, 0.22);
 }
 
 /* ---------------------------------------------------------------------------

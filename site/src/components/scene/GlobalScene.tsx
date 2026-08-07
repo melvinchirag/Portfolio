@@ -140,13 +140,11 @@ function SceneContents({
 
       {/* On About, hand the video texture straight to the glass (it refracts THAT
           rather than capturing the scene — see LiquidGlassField). Elsewhere it
-          falls back to scene capture. On the hero we want the glass to read as a
-          frosted panel (uniform blur) rather than a clear lens, so text is
-          legible over the mask. */}
-      <LiquidGlassField
-        bgTexture={isAbout ? aboutTex ?? undefined : undefined}
-        frost={isHome ? 0.82 : 0}
-      />
+          falls back to scene capture. The hero's story panels are plain CSS glass
+          (.slide-glass) now, NOT this — over the near-black mask a refraction has
+          nothing to blur — so there are no `.sync-glass-rect` elements there and
+          this whole pipeline skips itself on the hero. */}
+      <LiquidGlassField bgTexture={isAbout ? aboutTex ?? undefined : undefined} />
 
       <EffectComposer>
         <Bloom intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />

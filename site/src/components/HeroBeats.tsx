@@ -6,14 +6,13 @@
  * strip slides LEFT — moving down walks you rightward through time.
  *
  * THE GLASS (read before touching):
- * Frames 1-3 wrap their text in a `.sync-glass-rect` box. That class hooks the
- * WebGL LiquidGlassField (in GlobalScene): every frame it reads the box's live
- * on-screen rect and renders REAL refracting/frosted glass into the canvas at
- * that spot. So the box + its text pan together as one slide, and the glass
- * tracks the box exactly. This is why we do NOT use CSS backdrop-filter — over a
- * near-black particle field CSS blur is invisible; the WebGL glass captures and
- * blurs the actual scene (see LiquidGlassField `u_frost`). The DOM box keeps a
- * faint dark film + text-shadow purely so white text stays legible.
+ * Frames 1-3 wrap their text in a `.slide-glass` panel (see index.css). It is a
+ * SELF-SUFFICIENT CSS glass surface — translucent fill + bright ::before rim +
+ * drop shadow — that reads as frosted glass from its own material, NOT from what
+ * is behind it. That matters: the mask behind the hero is a near-black void, so a
+ * WebGL refraction / backdrop blur has nothing to blur and renders invisible (we
+ * learned this the hard way, and its 3-pass render also cost scroll perf). Box +
+ * text live in one element inside the strip, so they pan together as one slide.
  *
  * Perf: the pan is written imperatively in one rAF loop (transform only). React
  * state (`useHeroFrame`) only swaps which frame is interactive.
@@ -48,10 +47,10 @@ const AREAS = [
   'Aerospace',
 ]
 
-/** Shared class for the glass slide boxes. `.sync-glass-rect` + a rounded radius
- *  is what the WebGL glass reads; the dark film + text-shadow keep text legible. */
-const GLASS_BOX =
-  'sync-glass-rect relative rounded-[26px] bg-[rgba(6,8,14,0.22)] px-8 py-9 md:px-10 [text-shadow:0_1px_16px_rgba(0,0,0,0.6)]'
+/** Shared class for the glass slide boxes. `.slide-glass` (index.css) carries the
+ *  full glass material — fill, rim, shadow, radius; here we only add padding and a
+ *  text-shadow so white copy stays legible on the lighter parts of the surface. */
+const GLASS_BOX = 'slide-glass px-8 py-9 md:px-10 [text-shadow:0_1px_16px_rgba(0,0,0,0.55)]'
 
 /* ---------------------------------------------------------------------------
  * Bottom frame indicator: dots only, no connecting line. Each jumps to a frame.
@@ -168,7 +167,7 @@ function PastFrame() {
   return (
     <div className="flex h-full items-center justify-center px-6">
       <div className={`${GLASS_BOX} w-[min(88vw,600px)]`}>
-        <h2 className="font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95] text-white">
+        <h2 className="frame-title font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95]">
           The Past
         </h2>
         <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/85">
@@ -228,7 +227,7 @@ function PresentFrame() {
   return (
     <div className="flex h-full items-center justify-center px-6 py-16">
       <div className={`${GLASS_BOX} w-[min(94vw,1060px)]`}>
-        <h2 className="font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95] text-white">
+        <h2 className="frame-title font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95]">
           The Present
         </h2>
         <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-white/85">
@@ -281,7 +280,7 @@ function FutureFrame() {
   return (
     <div className="flex h-full items-center justify-center px-6">
       <div className={`${GLASS_BOX} w-[min(90vw,680px)]`}>
-        <h2 className="font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95] text-white">
+        <h2 className="frame-title font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95]">
           The Future
         </h2>
         <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/85">

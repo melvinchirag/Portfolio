@@ -47,6 +47,26 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Hero glass — reversed course to self-sufficient CSS glass (2026-08-07)
+Melvin: the WebGL glass "looks very invisible", and asked for main frame titles
+in amber. Final diagnosis and the real fix:
+- **The WebGL glass was invisible because it refracts/blurs what is BEHIND it,
+  and behind the hero is the near-black mask (a void with sparse dots) — nothing
+  to refract.** No shader tune can frost empty black. It also ran a 3-pass render
+  every frame = a real slice of the scroll lag.
+- **Fix:** dropped WebGL glass on the hero entirely. Story panels are now
+  `.slide-glass` — a self-sufficient CSS glass surface (translucent dark-glass
+  fill + diagonal sheen + bright ::before rim, warm at the bottom + deep drop
+  shadow), so it reads as frosted glass from its OWN material regardless of the
+  black behind it. Same rim trick as the nav's `.liquid-glass`. Box + text are
+  one element in the strip, so they pan as a single slide.
+- With no `.sync-glass-rect` on the hero, LiquidGlassField's `els.length===0`
+  guard skips the whole pipeline → removes that lag source. GlobalScene no longer
+  passes `frost` for the hero.
+- **Amber titles:** new `.frame-title` (warm gold #f3c67f + glow) on The Past /
+  The Present / The Future h2s.
+- Gate: `npm run build` clean, `oxlint src` exit 0.
+
 ### [CLAUDE] Hero — REAL glass via WebGL, gold name, box-as-slide (2026-08-06)
 Melvin (on xhigh) reported the glass was still broken: text drifted OUT of the
 box, and it wasn't frosty. Root cause + real fix this time:
