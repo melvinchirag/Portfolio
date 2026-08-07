@@ -5,14 +5,24 @@
  * projects) · The Future. You scroll VERTICALLY (native wheel via Lenis) and the
  * strip slides LEFT — moving down walks you rightward through time.
  *
- * THE GLASS (read before touching):
- * Frames 1-3 wrap their text in a `.slide-glass` panel (see index.css). It is a
- * SELF-SUFFICIENT CSS glass surface — translucent fill + bright ::before rim +
- * drop shadow — that reads as frosted glass from its own material, NOT from what
- * is behind it. That matters: the mask behind the hero is a near-black void, so a
- * WebGL refraction / backdrop blur has nothing to blur and renders invisible (we
- * learned this the hard way, and its 3-pass render also cost scroll perf). Box +
- * text live in one element inside the strip, so they pan together as one slide.
+ * THE GLASS — WHY THE PAN IS BUILT THE WAY IT IS (read before touching):
+ * Frames 1-3 sit in a `.slide-glass` panel whose frosted look comes from a real
+ * CSS `backdrop-filter`, blurring the particle mask behind it.
+ *
+ * `backdrop-filter` is silently killed by a TRANSFORMED ANCESTOR — a transform
+ * (also filter / opacity / will-change) on any parent makes the element sample an
+ * empty backdrop, so it renders stone flat with no blur at all. This cost several
+ * rounds of wrong fixes: the old build panned ONE wide strip via transform, and
+ * every panel inside it was therefore un-blurrable.
+ *
+ * So there is NO strip. The four frames are stacked cells (absolute inset-0, NO
+ * transform anywhere on them), and the pan transform is applied directly to each
+ * frame's own root element — the `[data-pan]` panel itself. An element having its
+ * own transform is fine; only an ancestor's breaks the backdrop. The text lives
+ * inside that same element, so panel + text still move as one slide.
+ *
+ * Corollary: never add `transform`, `filter`, `opacity < 1`, or `will-change` to
+ * the wrapper cells or to `#hero-track` — any of them silently flattens the glass.
  *
  * Perf: the pan is written imperatively in one rAF loop (transform only). React
  * state (`useHeroFrame`) only swaps which frame is interactive.
@@ -80,24 +90,27 @@ function FrameDots({ active }: { active: number }) {
  * Frame 0 — Identity. Tagline kicker on top, the name in gold, then the pitch.
  * A soft vignette lifts it off the mask so it reads as one clean centred block.
  * ------------------------------------------------------------------------ */
-function IdentityFrame() {
+function IdentityFrame({ index }: { index: number }) {
   // Surname is rendered letter-by-letter with `justify-between` inside a box
   // that stretches to the first-name line's width, so "KARUPATI" spans exactly
   // the same width as "Melvin Chirag" at every viewport.
   const surname = 'KARUPATI'.split('')
 
   return (
-    <div className="relative flex h-full items-center justify-center px-6">
+    // data-pan marks this as a panned root — the rAF loop writes its transform.
+    <div data-pan={index} className="relative flex max-w-2xl flex-col items-center text-center">
+      {/* Soft halo so the name reads cleanly wherever the mask sits behind it.
+          Oversized (negative inset) so it fades out well past the text. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute -inset-x-40 -inset-y-28"
         style={{
           background:
-            'radial-gradient(44% 42% at 50% 48%, rgba(6,7,13,0.6) 0%, rgba(6,7,13,0.3) 46%, transparent 72%)',
+            'radial-gradient(52% 50% at 50% 50%, rgba(6,7,13,0.62) 0%, rgba(6,7,13,0.3) 48%, transparent 74%)',
         }}
       />
 
-      <div className="relative flex max-w-2xl flex-col items-center text-center">
+      <div className="relative flex flex-col items-center">
         {/* Tagline kicker, above the name. "Beyond" glows and links to Vision. */}
         <p className="mb-5 font-display text-[clamp(1rem,2.1vw,1.4rem)] text-white/75 [text-shadow:0_1px_20px_rgba(0,0,0,0.6)]">
           Computer Science and{' '}
@@ -163,10 +176,9 @@ function IdentityFrame() {
 /* ---------------------------------------------------------------------------
  * Frame 1 — The Past. Short origin, not a timeline (that's About).
  * ------------------------------------------------------------------------ */
-function PastFrame() {
+function PastFrame({ index }: { index: number }) {
   return (
-    <div className="flex h-full items-center justify-center px-6">
-      <div className={`${GLASS_BOX} w-[min(88vw,600px)]`}>
+      <div data-pan={index} className={`${GLASS_BOX} w-[min(88vw,600px)]`}>
         <h2 className="frame-title font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95]">
           The Past
         </h2>
@@ -192,7 +204,6 @@ function PastFrame() {
           Read the full story <span aria-hidden>→</span>
         </Link>
       </div>
-    </div>
   )
 }
 
@@ -223,10 +234,9 @@ function ExploreLink({ href }: { href: string }) {
 /* ---------------------------------------------------------------------------
  * Frame 2 — The Present. Three featured project cards inside the glass box.
  * ------------------------------------------------------------------------ */
-function PresentFrame() {
+function PresentFrame({ index }: { index: number }) {
   return (
-    <div className="flex h-full items-center justify-center px-6 py-16">
-      <div className={`${GLASS_BOX} w-[min(94vw,1060px)]`}>
+      <div data-pan={index} className={`${GLASS_BOX} w-[min(94vw,1060px)]`}>
         <h2 className="frame-title font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95]">
           The Present
         </h2>
@@ -269,17 +279,15 @@ function PresentFrame() {
           ))}
         </div>
       </div>
-    </div>
   )
 }
 
 /* ---------------------------------------------------------------------------
  * Frame 3 — The Future. Ambition + the areas he's exploring.
  * ------------------------------------------------------------------------ */
-function FutureFrame() {
+function FutureFrame({ index }: { index: number }) {
   return (
-    <div className="flex h-full items-center justify-center px-6">
-      <div className={`${GLASS_BOX} w-[min(90vw,680px)]`}>
+      <div data-pan={index} className={`${GLASS_BOX} w-[min(90vw,680px)]`}>
         <h2 className="frame-title font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95]">
           The Future
         </h2>
@@ -312,25 +320,35 @@ function FutureFrame() {
           ))}
         </ul>
       </div>
-    </div>
   )
 }
 
 export function HeroBeats() {
   const frame = useHeroFrame()
-  const stripRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
-  // The pan. Slide the strip left by `progress × (N-1) × viewportWidth`, so
-  // frame k is centred when progress === k/(N-1). Transform only → composited,
-  // cheap. The glass boxes inside pan with it; the WebGL glass follows each box
-  // by reading its live rect (see LiquidGlassField), so box + text + glass stay
-  // locked together as one slide.
+  // THE PAN. Each frame's own root ([data-pan]) is translated to
+  // `index × step − progress × (N-1) × step`, so frame k is dead-centre when
+  // progress === k/(N-1) and the frames march past one viewport apart.
+  //
+  // Why per-element and not one strip: the transform MUST live on the same
+  // element that carries the glass's backdrop-filter (see the file header) — a
+  // transformed ancestor silently flattens the blur. Panel and its text are one
+  // element, so they still move together as a single slide.
+  //
+  // `step` is the container's own width, not 100vw: 100vw includes the
+  // scrollbar, which would drift the frames a few px off-centre per step.
   useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const panes = Array.from(root.querySelectorAll<HTMLElement>('[data-pan]'))
     const LAST = BEAT_COUNT - 1
     let raf = 0
     const tick = () => {
-      if (stripRef.current) {
-        stripRef.current.style.transform = `translate3d(${-heroScroll.progress * LAST * window.innerWidth}px,0,0)`
+      const step = root.clientWidth || window.innerWidth
+      const x = heroScroll.progress * LAST * step
+      for (const el of panes) {
+        el.style.transform = `translate3d(${Number(el.dataset.pan) * step - x}px,0,0)`
       }
       raf = requestAnimationFrame(tick)
     }
@@ -342,25 +360,25 @@ export function HeroBeats() {
     <>
       <HeroClockRail />
 
-      <div
-        ref={stripRef}
-        className="absolute top-0 left-0 z-10 flex h-full will-change-transform"
-        style={{ width: `${BEAT_COUNT * 100}vw` }}
-      >
+      {/* Stacked full-bleed cells. NOTHING here may get transform / filter /
+          opacity / will-change — see the file header; it would kill the glass. */}
+      <div ref={rootRef} className="absolute inset-0 z-10 overflow-hidden">
         {FRAMES.map((f, i) => (
           <div
             key={f.id}
             aria-hidden={i !== frame}
-            className={`relative h-full w-screen shrink-0 ${i === frame ? '' : 'pointer-events-none'}`}
+            className={`absolute inset-0 flex items-center justify-center px-6 ${
+              i === frame ? '' : 'pointer-events-none'
+            }`}
           >
             {i === 0 ? (
-              <IdentityFrame />
+              <IdentityFrame index={i} />
             ) : i === 1 ? (
-              <PastFrame />
+              <PastFrame index={i} />
             ) : i === 2 ? (
-              <PresentFrame />
+              <PresentFrame index={i} />
             ) : (
-              <FutureFrame />
+              <FutureFrame index={i} />
             )}
           </div>
         ))}

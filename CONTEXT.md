@@ -47,7 +47,46 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Hero glass — ACTUALLY FIXED, two real bugs found in-browser (2026-08-07)
+Melvin: "looks terrible and absolutely vibecoded... the glass is very invisible."
+He told me to open it in Chrome. I did, and both previous diagnoses in this file
+were WRONG. Measured in the live page, there were TWO independent real bugs:
+
+**Bug 1 — every backdrop-filter on the site was silently deleted at build time.**
+Tailwind v4 minifies with Lightning CSS, which "downlevelled" the standard
+`backdrop-filter` to `-webkit-backdrop-filter` ONLY. Chrome ignores the -webkit-
+form entirely (verified: it computes to `none` in every syntax). So `.liquid-glass`,
+`.glass-cta`, `.progressive-blur` AND `.slide-glass` shipped with NO blur at all,
+site-wide, for the whole project. That is why every glass attempt "looked
+vibe-coded" — none of them were ever blurring.
+FIX: route every backdrop-filter value through a `--glass-frost` CSS variable.
+Lightning CSS can't statically evaluate a `var()`, so it leaves both the prefixed
+and standard properties alone. (This is exactly why Tailwind's own backdrop
+utilities survive.) **Any new backdrop-filter must use this pattern.**
+
+**Bug 2 — a transformed ancestor was flattening the glass.** Even once the
+property existed, `backdrop-filter` samples an EMPTY backdrop if any ancestor has
+a transform/filter/opacity/will-change. The hero panned ONE wide strip via
+transform, so every panel inside it was un-blurrable by construction. Proved it
+live with an A/B probe: transform-on-self blurred beautifully, transform-on-
+ancestor was stone flat.
+FIX: deleted the strip. The four frames are now stacked cells (absolute inset-0,
+no transform), and the pan transform is written directly onto each frame's own
+root element (`[data-pan]`) — which is the glass panel itself. Panel + text are
+one element, so they still move as a single slide.
+
+**Corrections to my earlier entries below:** the claim that "the mask is a
+near-black void with nothing to blur" was FALSE — the mask is a big, bright,
+detailed particle face and blurs gorgeously. The WebGL LiquidGlassField was never
+the problem and never the needed solution on the hero; it stays for About only.
+
+Also: pan step now uses the container's `clientWidth` instead of `100vw` (100vw
+includes the scrollbar, which drifted frames a few px off-centre per step).
+Verified in-browser: frames 0 and 1 measure 0px and -2px off-centre.
+Gate: `npm run build` clean, `oxlint src` exit 0, visually confirmed in Chrome.
+
 ### [CLAUDE] Hero glass — reversed course to self-sufficient CSS glass (2026-08-07)
+NOTE: superseded — the diagnosis in this entry was wrong. See the entry above.
 Melvin: the WebGL glass "looks very invisible", and asked for main frame titles
 in amber. Final diagnosis and the real fix:
 - **The WebGL glass was invisible because it refracts/blurs what is BEHIND it,

@@ -61,6 +61,30 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ---------------------------------------------------------------------------
+ * BACKDROP-FILTER — WHY EVERY GLASS SURFACE GOES THROUGH A CSS VARIABLE
+ * ----------------------------------------------------------------------------
+ * Write `backdrop-filter: blur(20px)` literally here and it DISAPPEARS in the
+ * production build. Tailwind v4 minifies with Lightning CSS, which "downlevels"
+ * the standard property to `-webkit-backdrop-filter` ONLY — and Chrome ignores
+ * the -webkit- form entirely, so the shipped site rendered every piece of glass
+ * (nav, buttons, panels, the progressive blur) completely unblurred. It looked
+ * like a design problem and cost several rounds of chasing the wrong thing.
+ *
+ * Lightning CSS cannot statically evaluate a `var()`, so it leaves BOTH
+ * properties alone when the value is indirected through one. That is the only
+ * reason Tailwind's own backdrop utilities survive. So: every backdrop-filter on
+ * this site must be written as a var, exactly like the pattern below. Verify
+ * after changing by grepping dist for a standard (unprefixed) backdrop-filter.
+ * ------------------------------------------------------------------------ */
+.liquid-glass,
+.glass-cta,
+.progressive-blur,
+.slide-glass {
+  -webkit-backdrop-filter: var(--glass-frost);
+  backdrop-filter: var(--glass-frost);
+}
+
 /* Style the root <html> element. */
 html {
   /* Set the background here as well as on <body> so that "overscroll" areas —
@@ -116,34 +140,29 @@ body {
 /* ---------------------------------------------------------------------------
  * SLIDE GLASS — the frosted panel behind each story frame (Past/Present/Future)
  * ----------------------------------------------------------------------------
- * IMPORTANT — why this is CSS and not the WebGL LiquidGlassField:
- * The mask behind the hero is a near-black void with sparse glowing dots. A
- * refraction/backdrop blur has almost NOTHING there to blur, so it renders
- * invisible no matter how it's tuned (this cost us several rounds). So the panel
- * must read as glass from its OWN material, independent of what's behind it:
- *   - a translucent dark-glass fill with a diagonal sheen (light on the surface)
- *   - a bright rim drawn by ::before (the single strongest "this is glass" tell)
- *   - a deep drop shadow so it lifts cleanly off the mask
- *   - backdrop-filter on top as a bonus (smears any dot that drifts behind it)
- * The whole box + its text live in one element inside the panning strip, so they
- * always move together as a single slide. */
+ * The frost is a REAL `backdrop-filter` blurring the particle mask behind it.
+ * That works because HeroBeats applies the pan transform to THIS element rather
+ * than to a wrapping strip — a transformed ANCESTOR makes backdrop-filter sample
+ * an empty backdrop and render stone flat (the bug that made this look unstyled
+ * for several rounds). Never wrap this in a transformed/filtered/will-change'd
+ * parent. The fill is kept deliberately light so the blurred mask reads THROUGH
+ * the panel — that softly-smeared face is the whole effect; a heavy fill hides it
+ * and you are left with a plain grey box. */
 .slide-glass {
   position: relative;
   border-radius: 26px;
-  /* Sheen (diagonal light) layered over a soft dark-glass fill. The fill is what
-   * makes it visible over black; the sheen gives the surface a lit angle. */
+  /* Diagonal sheen (light raking the surface) over a light dark-glass tint. */
   background:
     linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.03) 34%,
-      rgba(255, 255, 255, 0) 60%
+      rgba(255, 255, 255, 0.028) 38%,
+      rgba(255, 255, 255, 0) 68%
     ),
-    linear-gradient(to bottom, rgba(26, 22, 32, 0.44), rgba(10, 9, 14, 0.54));
-  /* Bonus blur: only bites when a particle passes behind, but it costs little
-   * and adds life. Saturate keeps any warm dot warm rather than grey. */
-  backdrop-filter: blur(20px) saturate(135%);
-  -webkit-backdrop-filter: blur(20px) saturate(135%);
+    linear-gradient(to bottom, rgba(14, 12, 20, 0.3), rgba(8, 7, 12, 0.42));
+  /* The frost itself. Saturate keeps the mask's teal/amber alive rather than
+   * letting the blur wash it to grey. */
+  --glass-frost: blur(26px) saturate(150%);
   box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.14),
     0 26px 64px -22px rgba(0, 0, 0, 0.82);
@@ -198,10 +217,9 @@ body {
   background: rgba(255, 255, 255, 0.02);
   /* Blur whatever is rendered behind this element, and boost its colour
    * saturation slightly so the scene showing through stays vivid rather than
-   * turning grey the way a plain blur would make it. */
-  backdrop-filter: blur(12px) saturate(140%);
-  /* The same rule with a `-webkit-` prefix, for Safari support. */
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
+   * turning grey the way a plain blur would make it. Applied via the shared rule
+   * above — see the BACKDROP-FILTER note for why it must be a var(). */
+  --glass-frost: blur(12px) saturate(140%);
   /* No hard border — the bright edge is drawn by the ::before rule below,
    * which can fade around the shape instead of being a flat uniform line. */
   border: none;
@@ -277,10 +295,9 @@ body {
   z-index: 30;
   /* Never intercept clicks — this is purely decorative. */
   pointer-events: none;
-  /* Blur whatever shows through it. */
-  backdrop-filter: blur(4px);
-  /* Safari-prefixed version of the same. */
-  -webkit-backdrop-filter: blur(4px);
+  /* Blur whatever shows through it (via the shared var rule — see the
+   * BACKDROP-FILTER note near the top of this file). */
+  --glass-frost: blur(4px);
   /* A mask controls where this element is visible: fully visible at the very
    * bottom, fading to nothing toward the top. That gradual fade is what makes
    * the blur feel like depth rather than a visible band. */
@@ -302,8 +319,7 @@ body {
   background: rgba(255, 240, 220, 0.05);
   /* Blur the scene behind it, and lift its saturation so the amber showing
    * through stays warm instead of washing to grey. */
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  --glass-frost: blur(14px) saturate(150%);
   /* A hairline warm rim plus a soft dark drop shadow to lift it off the page. */
   box-shadow:
     0 0 0 1px rgba(255, 214, 165, 0.18) inset,
