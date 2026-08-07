@@ -247,15 +247,16 @@ function PresentFrame({ index }: { index: number }) {
 
         <div className="mt-8 grid gap-5 md:grid-cols-3">
           {PROJECTS.map((p) => (
-            <article
-              key={p.name}
-              className="flex flex-col rounded-2xl border border-white/12 bg-white/[0.05] p-5 text-left"
-            >
-              <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-xl bg-gradient-to-br from-white/[0.12] to-transparent">
-                <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/20">
+            /* No card chrome: a translucent bordered box INSIDE a translucent
+               bordered panel reads as muddy nesting, and is the "cards on cards"
+               look that makes a page feel templated. The columns are separated by
+               space alone; only the preview well carries a surface. */
+            <article key={p.name} className="flex flex-col text-left">
+              <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-lg bg-white/[0.045]">
+                <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
                   {p.name.charAt(0)}
                 </span>
-                <span className="m-3 text-[9px] tracking-[0.25em] text-white/45 uppercase">
+                <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">
                   {p.tentative ? 'Preview coming' : 'Preview'}
                 </span>
               </div>
@@ -263,13 +264,17 @@ function PresentFrame({ index }: { index: number }) {
               <h3 className="font-display text-xl text-white">{p.name}</h3>
               <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-white/80">{p.blurb}</p>
 
-              <ul className="mt-3 flex flex-wrap gap-1.5">
-                {p.stack.map((tech) => (
-                  <li
-                    key={tech}
-                    className="rounded-full border border-white/15 px-2.5 py-0.5 text-[10px] tracking-wide text-white/70"
-                  >
+              {/* Same reasoning as the areas list: a quiet separated run, not
+                  chips. See the note in FutureFrame. */}
+              <ul className="mt-3 flex flex-wrap items-center text-[11px] leading-[1.8] text-white/55">
+                {p.stack.map((tech, i) => (
+                  <li key={tech}>
                     {tech}
+                    {i < p.stack.length - 1 && (
+                      <span aria-hidden className="px-1.5 text-white/25">
+                        /
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -308,14 +313,22 @@ function FutureFrame({ index }: { index: number }) {
           </p>
         </div>
 
-        <p className="mt-7 text-[10px] tracking-[0.3em] text-white/55 uppercase">Areas I'm exploring</p>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {AREAS.map((area) => (
-            <li
-              key={area}
-              className="rounded-full border border-white/15 px-3 py-1 text-[11px] tracking-wide text-white/80"
-            >
+        {/* Set as a plain typographic run, NOT bordered pills. Chips make ten
+            equal-weight nouns look like filter controls you can click, and they
+            are the most templated element on any portfolio. A quiet separated
+            line reads as prose, which is what this actually is. */}
+        <p className="mt-7 text-[10px] tracking-[0.3em] text-white/45 uppercase">
+          Areas I'm exploring
+        </p>
+        <ul className="mt-3 flex flex-wrap items-center text-[12.5px] leading-[1.9] text-white/70">
+          {AREAS.map((area, i) => (
+            <li key={area}>
               {area}
+              {i < AREAS.length - 1 && (
+                <span aria-hidden className="px-2.5 text-white/25">
+                  /
+                </span>
+              )}
             </li>
           ))}
         </ul>

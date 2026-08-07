@@ -47,6 +47,30 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Glass made realistic — killed the fake light + the pills (2026-08-07)
+Melvin, after seeing the working blur: too blurry ("should look like you're
+looking at the mask from a window"), the panels have "artificial light being
+thrown on them", and the pill tags (Applied AI / Machine Learning / MLOps) "look
+so vibe coded".
+- **The fake light was mine:** a 135deg white sheen painted across the surface
+  plus a bright gradient rim (white at top, warm at bottom) drawn by ::before.
+  That is the glassmorphism cliché — real glass does not glow, and nothing in the
+  scene lights it from that angle. BOTH DELETED. The pane is now one flat
+  near-neutral tint (rgba(10,11,16,0.34)), a uniform hairline inset edge at
+  0.075 white, and a soft ambient shadow. No gradients on the surface at all.
+- **Blur 26px → 9px**, saturate 150% → 112%. You now clearly read the face
+  through the pane; it is knocked back, not dissolved.
+- **Pills → typographic runs.** The areas list and each project's stack are now
+  quiet `/`-separated text, not bordered chips. Chips made ten equal-weight nouns
+  look like clickable filters and are the single most templated element on a
+  portfolio.
+- **Project cards lost their chrome** (border + white fill). A translucent card
+  inside a translucent panel read as muddy nesting; columns are separated by
+  space now, and only the preview well carries a surface.
+- Verified in Chrome at frames 0/1/3 + mid-pan. NOTE: jumping scroll instantly
+  can leave the mask momentarily black (the particle sim needs to morph) — scroll
+  gradually when checking, it is not a regression.
+
 ### [CLAUDE] Hero glass — ACTUALLY FIXED, two real bugs found in-browser (2026-08-07)
 Melvin: "looks terrible and absolutely vibecoded... the glass is very invisible."
 He told me to open it in Chrome. I did, and both previous diagnoses in this file

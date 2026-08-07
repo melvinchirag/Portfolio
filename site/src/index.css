@@ -145,54 +145,31 @@ body {
  * than to a wrapping strip — a transformed ANCESTOR makes backdrop-filter sample
  * an empty backdrop and render stone flat (the bug that made this look unstyled
  * for several rounds). Never wrap this in a transformed/filtered/will-change'd
- * parent. The fill is kept deliberately light so the blurred mask reads THROUGH
- * the panel — that softly-smeared face is the whole effect; a heavy fill hides it
- * and you are left with a plain grey box. */
+ * parent.
+ *
+ * IT IS A WINDOW, NOT A LIGHT SOURCE. The earlier version painted a big diagonal
+ * white sheen across the surface and a bright gradient rim along the top/bottom
+ * edges. That is the glassmorphism cliché, and it is exactly what read as fake —
+ * real glass does not glow, and light does not rake it from a direction nothing
+ * in the scene is lit from. So: no sheen, no gradient rim. Just an even, barely
+ * tinted pane, a uniform hairline edge, and a soft shadow for depth.
+ *
+ * The blur is deliberately LOW. Enough to knock the mask back so text sits on a
+ * calm ground, not so much that the face dissolves — you should still clearly
+ * read the mask through the pane, like looking through a window. */
 .slide-glass {
   position: relative;
   border-radius: 26px;
-  /* Diagonal sheen (light raking the surface) over a light dark-glass tint. */
-  background:
-    linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.028) 38%,
-      rgba(255, 255, 255, 0) 68%
-    ),
-    linear-gradient(to bottom, rgba(14, 12, 20, 0.3), rgba(8, 7, 12, 0.42));
-  /* The frost itself. Saturate keeps the mask's teal/amber alive rather than
-   * letting the blur wash it to grey. */
-  --glass-frost: blur(26px) saturate(150%);
+  /* One flat, near-neutral tint. No gradient — a gradient here reads as painted
+   * light. This is what makes the text legible; the blur only softens. */
+  background: rgba(10, 11, 16, 0.34);
+  --glass-frost: blur(9px) saturate(112%);
+  /* A uniform hairline edge (the pane's boundary) plus a soft ambient shadow.
+   * No inset white highlight — that was more of the fake specular light. */
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.14),
-    0 26px 64px -22px rgba(0, 0, 0, 0.82);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.075),
+    0 24px 60px -34px rgba(0, 0, 0, 0.85);
   overflow: hidden;
-}
-
-/* The bright glass rim — brightest at the top (cool white) and bottom (a warm
- * amber catch, tying it to the palette), invisible at the sides, exactly how
- * light rakes a real glass edge. Same mask-subtraction trick as .liquid-glass. */
-.slide-glass::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.4px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(255, 255, 255, 0.16) 22%,
-    rgba(255, 255, 255, 0) 44%,
-    rgba(255, 255, 255, 0) 58%,
-    rgba(255, 236, 215, 0.16) 80%,
-    rgba(255, 236, 215, 0.42) 100%
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
 }
 
 /* The big frame titles — "The Past", "The Present", "The Future" — in warm amber
