@@ -86,6 +86,14 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
     Role/relationship, Organization (optional), Testimonial, Submit; the publish
     notice sits directly ABOVE submit and submitting IS the agreement (no
     separate checkbox). Backend wired LATER.
+- **Resume reachability (raised by me, needs Melvin's call):** removing the nav
+  Resume button means Resume is now only reachable from the hero and the contact
+  section. On /work, /vision and /about there is NO resume link at all. If that
+  matters for recruiters, put it in the mobile menu and page footers rather than
+  reinstating the nav button (which is what caused the duplicate).
+- ~~**ACCENT COLOUR SYSTEM**~~ DONE 2026-08-07, see log. Melvin chose mid amber
+  `#f3c67f`, now the `--color-accent` token. Original note kept below for the
+  reasoning.
 - **ACCENT COLOUR SYSTEM (do this before more UI).** Melvin 2026-08-07: the site
   has no consistent accent. One accent colour must be defined as a token and
   applied to every "important" element site-wide: his name, the frame titles
@@ -128,6 +136,31 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
 - **Mask:** its 5 pose keyframes no longer align to the now-4 frame centres;
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
+
+### [CLAUDE] Accent colour system + melvin-voice skill rebuilt (2026-08-07)
+Melvin: the site has no consistent accent, and he was worried the copy does not
+sound like him.
+- **`--color-accent: #f3c67f` (mid amber), his pick**, declared in `@theme` so
+  Tailwind also exposes `text-accent` / `border-accent`. Everything accent
+  coloured now references the token instead of a hard coded hex. Refactored onto
+  it: `.name-gold`, `.frame-title`, `.beyond-link`, `.glass-cta` (label + hover
+  rim + a warm halo), `.field:focus` ring, and the new `.social-btn`.
+- Applied per his list: nav "Melvin Chirag" logo, the clock and the MICHIGAN /
+  EDT rail labels (held back to 35 to 65 percent opacity, they are ambient
+  furniture and at full strength they out-shout his name), the social buttons
+  (neutral at rest, accent + amber halo on hover AND focus), the hero Projects /
+  Contact / Resume buttons, "Read the full story", "Explore Project".
+- **Removed the nav Resume button.** There were two on screen at once; the hero
+  one is the keeper. See the reachability note in WORK ON LATER.
+- **melvin-voice skill rebuilt.** It was 100 percent "don'ts", which produces
+  neutral corporate copy, not his voice. Now leads with a positive model built
+  from his ACTUAL words (his headings "Let's Build Something Meaningful.",
+  "Work With Me?", his testimonial CTA copy, "always on the lookout for
+  internships and jobs"), plus a rewrite table for calibration, and a note that
+  his spoken register (with the "like"s and "you know"s) must NOT be transcribed
+  into site copy. Add new samples to section 1 whenever he writes copy himself.
+- Verified in Chrome: token resolves, nav logo amber, zero nav Resume buttons,
+  CTAs amber, social hover glow confirmed. Build + oxlint clean.
 
 ### [CLAUDE] Contact page — form built, restyled (2026-08-07)
 Melvin pasted the Testimonials UI addendum (full text saved below in WORK ON

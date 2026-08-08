@@ -42,9 +42,12 @@ export function Nav() {
           once there is content behind it. */}
       <div className="transition-all duration-500 border-b border-transparent bg-transparent">
         <nav className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6 md:h-20 md:px-10">
+          {/* His name carries the site accent here as well as in the hero, so
+              the one element that appears on every page reads as the same
+              thing in both places. */}
           <NavLink
             to="/"
-            className="font-display text-lg tracking-tight text-white transition-opacity duration-300 hover:opacity-70 md:text-xl"
+            className="text-accent font-display text-lg tracking-tight transition-opacity duration-300 hover:opacity-75 md:text-xl"
           >
             Melvin Chirag
           </NavLink>
@@ -66,17 +69,10 @@ export function Nav() {
               ))}
             </div>
 
-            {/* The most important recruiter action, so it stays visually
-                distinct on every page — but as glass rather than a bright
-                gradient pill, which read as cheap against the warm field. */}
-            <a
-              href="/resume.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="glass-cta ml-1 rounded-full px-5 py-2 text-sm tracking-wide text-white/90"
-            >
-              Resume
-            </a>
+            {/* NOTE: the nav Resume button was REMOVED (Melvin, 2026-08-07).
+                There were two on screen at once, here and under his name in the
+                hero, which made the page look unconsidered. The hero one is the
+                keeper. Do not reinstate this without removing the other. */}
 
             <button
               type="button"
@@ -102,8 +98,7 @@ export function Nav() {
         </nav>
       </div>
 
-      {/* Mobile menu. Résumé deliberately stays in the bar above rather than
-          moving in here — it is too important to hide behind a tap.
+      {/* Mobile menu.
 
           `inert` matters: collapsing with max-height leaves the links visually
           hidden but still in the tab order, so a keyboard user would tab

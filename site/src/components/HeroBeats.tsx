@@ -146,14 +146,14 @@ function IdentityFrame({ index }: { index: number }) {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/work"
-            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide text-white/90"
+            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide"
           >
             Projects
           </Link>
           <button
             type="button"
             onClick={() => heroScrollTo('contact')}
-            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide text-white/90"
+            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide"
           >
             Contact
           </button>
@@ -161,7 +161,7 @@ function IdentityFrame({ index }: { index: number }) {
             href="/resume.pdf"
             target="_blank"
             rel="noopener noreferrer"
-            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide text-white/90"
+            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide"
           >
             Resume <span aria-hidden>↗</span>
           </a>
@@ -199,7 +199,7 @@ function PastFrame({ index }: { index: number }) {
         </div>
         <Link
           to="/about"
-          className="mt-7 inline-block text-[13px] tracking-wide text-white/85 transition-colors duration-300 hover:text-white"
+          className="text-accent/85 hover:text-accent mt-7 inline-block text-[13px] tracking-wide transition-colors duration-300"
         >
           Read the full story <span aria-hidden>→</span>
         </Link>
@@ -224,7 +224,7 @@ function ExploreLink({ href }: { href: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-4 inline-block text-[12px] tracking-wide text-white/85 transition-colors duration-300 hover:text-white"
+      className="text-accent/85 hover:text-accent mt-4 inline-block text-[12px] tracking-wide transition-colors duration-300"
     >
       Explore Project <span aria-hidden>→</span>
     </a>

@@ -41,9 +41,9 @@ export function SocialLinks({ size = 18, className = '' }: { size?: number; clas
             <path d={path} />
           </svg>
         )
-        // Shared sizing/shape for both the live and pending states.
-        const shape =
-          'flex h-9 w-9 items-center justify-center rounded-full border border-white/10 transition-colors duration-300'
+        // Shared sizing/shape for both the live and pending states. The colour,
+        // the accent hover and the warm halo live in `.social-btn` (index.css).
+        const shape = 'flex h-9 w-9 items-center justify-center rounded-full border'
         return (
           <li key={s.label}>
             {s.href ? (
@@ -53,7 +53,7 @@ export function SocialLinks({ size = 18, className = '' }: { size?: number; clas
                 rel="noopener noreferrer"
                 aria-label={s.label}
                 title={s.label}
-                className={`${shape} text-white/60 hover:border-white/25 hover:text-white focus-visible:text-white`}
+                className={`${shape} social-btn`}
               >
                 {icon}
               </a>
@@ -61,7 +61,7 @@ export function SocialLinks({ size = 18, className = '' }: { size?: number; clas
               <span
                 aria-label={`${s.label} — link coming soon`}
                 title={`${s.label} — link coming soon`}
-                className={`${shape} cursor-default text-white/20`}
+                className={`${shape} cursor-default border-white/8 text-white/20`}
               >
                 {icon}
               </span>

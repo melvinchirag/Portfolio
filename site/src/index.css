@@ -50,6 +50,20 @@
   --color-amber: #c87a2e;
   /* Hot gold — the brightest highlight. Used rarely, on purpose. */
   --color-gold: #f0b356;
+
+  /* ------------------------------------------------------------------------
+   * THE SITE ACCENT (mid amber). Chosen by Melvin 2026-08-07.
+   * ------------------------------------------------------------------------
+   * One warm, used for everything "important" across the WHOLE site: his name
+   * (nav + hero), section titles, primary actions, and hover/focus states.
+   * Before this, four different warms had drifted apart (#ffdcae on the name and
+   * Beyond, #f3c67f on the frame titles, #f0b356 in this token, plus assorted
+   * inline values) and nothing had chosen them together, so the site read as
+   * having no identity. Everything accent-coloured must reference THIS token.
+   * Declaring it in @theme also gives us the Tailwind utilities text-accent,
+   * border-accent and so on.
+   * --------------------------------------------------------------------- */
+  --color-accent: #f3c67f;
 }
 
 /* `:root` targets the <html> element. Tokens here are plain CSS variables that
@@ -128,13 +142,33 @@ body {
   overflow: hidden;
 }
 
-/* The hero name "Melvin Chirag" in warm gold (matching the "Beyond" accent),
- * with a soft glow plus a dark legibility shadow so it holds up over the mask. */
+/* The hero name "Melvin Chirag", in the site accent, with a soft glow plus a
+ * dark legibility shadow so it holds up over the mask. */
 .name-gold {
-  color: #ffdcae;
+  color: var(--color-accent);
   text-shadow:
     0 2px 22px rgba(0, 0, 0, 0.55),
-    0 0 36px rgba(255, 190, 130, 0.35);
+    0 0 36px rgba(243, 198, 127, 0.32);
+}
+
+/* The social icon buttons. Neutral at rest so the row stays quiet, then the
+ * accent plus a warm halo on hover/focus. Focus is included deliberately: a
+ * keyboard user must get the same signal a mouse user does. */
+.social-btn {
+  color: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.1);
+  transition:
+    color 300ms var(--ease-out-expo),
+    border-color 300ms var(--ease-out-expo),
+    box-shadow 300ms var(--ease-out-expo);
+}
+
+.social-btn:hover,
+.social-btn:focus-visible {
+  color: var(--color-accent);
+  border-color: rgba(243, 198, 127, 0.5);
+  box-shadow: 0 0 20px -3px rgba(243, 198, 127, 0.45);
+  outline: none;
 }
 
 /* ---------------------------------------------------------------------------
@@ -214,7 +248,7 @@ body {
 .field:focus {
   outline: none;
   background-color: rgba(255, 255, 255, 0.055);
-  box-shadow: inset 0 0 0 1px rgba(255, 214, 165, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(243, 198, 127, 0.55);
 }
 
 /* Native select arrows are unstyleable and look like an OS widget dropped onto
@@ -232,10 +266,10 @@ body {
  * gold so each slide has a strong warm anchor, with a legibility shadow + a faint
  * glow. Distinct from .name-gold (which is the brighter hero-name tone). */
 .frame-title {
-  color: #f3c67f;
+  color: var(--color-accent);
   text-shadow:
     0 2px 20px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(240, 179, 86, 0.22);
+    0 0 30px rgba(243, 198, 127, 0.22);
 }
 
 /* ---------------------------------------------------------------------------
@@ -348,6 +382,9 @@ body {
 .glass-cta {
   /* Positioning context for the ::before rim below. */
   position: relative;
+  /* Primary actions carry the site accent (Melvin, 2026-08-07): the label is
+   * accent-coloured at rest, and the rim warms further on hover. */
+  color: var(--color-accent);
   /* A faint warm film rather than plain white, so it belongs to the palette. */
   background: rgba(255, 240, 220, 0.05);
   /* Blur the scene behind it, and lift its saturation so the amber showing
@@ -355,7 +392,7 @@ body {
   --glass-frost: blur(14px) saturate(150%);
   /* A hairline warm rim plus a soft dark drop shadow to lift it off the page. */
   box-shadow:
-    0 0 0 1px rgba(255, 214, 165, 0.18) inset,
+    0 0 0 1px rgba(243, 198, 127, 0.22) inset,
     0 4px 18px -6px rgba(0, 0, 0, 0.55);
   /* Animate hover changes on our standard easing curve. */
   transition:
@@ -365,11 +402,14 @@ body {
 
 /* On hover the glass brightens and its rim warms — a gentle "this is live"
  * signal. No lift or scale: nothing on this site bounces. */
-.glass-cta:hover {
+.glass-cta:hover,
+.glass-cta:focus-visible {
   background: rgba(255, 240, 220, 0.1);
   box-shadow:
-    0 0 0 1px rgba(255, 214, 165, 0.34) inset,
-    0 6px 22px -6px rgba(0, 0, 0, 0.6);
+    0 0 0 1px rgba(243, 198, 127, 0.5) inset,
+    0 6px 22px -6px rgba(0, 0, 0, 0.6),
+    0 0 22px -6px rgba(243, 198, 127, 0.45);
+  outline: none;
 }
 
 /* The interactive word "Beyond" in the hero tagline "Computer Science and
@@ -381,9 +421,9 @@ body {
  * link; the effects are pure decoration on top. */
 .beyond-link {
   position: relative;
-  color: #ffdcae;
+  color: var(--color-accent);
   font-style: italic; /* Times New Roman italic gives it a display flourish */
-  text-shadow: 0 0 16px rgba(255, 190, 130, 0.35);
+  text-shadow: 0 0 16px rgba(243, 198, 127, 0.35);
   transition:
     color 400ms var(--ease-out-expo),
     text-shadow 400ms var(--ease-out-expo);

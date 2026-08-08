@@ -35,21 +35,25 @@ export function HeroClockRail() {
       aria-hidden
       className="pointer-events-none fixed top-0 right-0 z-40 hidden h-screen w-[76px] flex-col items-center justify-between border-l border-white/10 py-8 md:flex"
     >
+      {/* The rail carries the site accent (Melvin, 2026-08-07), but held well
+          back in opacity. It is ambient furniture, not a call to action: at full
+          strength three amber elements down the edge would out-shout his name. */}
+
       {/* top label */}
-      <span className="rotate-90 text-[9px] tracking-[0.35em] whitespace-nowrap text-white/25 uppercase">
+      <span className="text-accent/35 rotate-90 text-[9px] tracking-[0.35em] whitespace-nowrap uppercase">
         Michigan
       </span>
 
       {/* the clock — rotated so HH:MM:SS runs up the strip */}
       <span
         ref={timeRef}
-        className="-rotate-90 font-display text-[1.6rem] tracking-[0.15em] whitespace-nowrap text-white/55 tabular-nums"
+        className="text-accent/65 -rotate-90 font-display text-[1.6rem] tracking-[0.15em] whitespace-nowrap tabular-nums"
       >
         --:--:--
       </span>
 
       {/* bottom label — the tense/zone marker */}
-      <span className="rotate-90 text-[9px] tracking-[0.35em] whitespace-nowrap text-white/25 uppercase">
+      <span className="text-accent/35 rotate-90 text-[9px] tracking-[0.35em] whitespace-nowrap uppercase">
         EDT
       </span>
     </aside>

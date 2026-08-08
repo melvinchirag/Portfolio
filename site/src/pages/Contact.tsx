@@ -160,7 +160,7 @@ export function Contact() {
               <div className="mt-2 flex flex-wrap items-center gap-5">
                 <button
                   type="submit"
-                  className="glass-cta rounded-full px-7 py-2.5 text-sm tracking-wide text-white/90"
+                  className="glass-cta rounded-full px-7 py-2.5 text-sm tracking-wide"
                 >
                   Send message
                 </button>
@@ -217,7 +217,7 @@ export function Contact() {
         <button
           type="button"
           onClick={heroScrollToTop}
-          className="glass-cta rounded-full px-7 py-2.5 text-sm tracking-wide text-white/80 transition-colors hover:text-white"
+          className="glass-cta rounded-full px-7 py-2.5 text-sm tracking-wide"
         >
           Return to Start
         </button>
