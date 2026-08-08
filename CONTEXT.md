@@ -86,6 +86,45 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
     Role/relationship, Organization (optional), Testimonial, Submit; the publish
     notice sits directly ABOVE submit and submitting IS the agreement (no
     separate checkbox). Backend wired LATER.
+- **ACCENT COLOUR SYSTEM (do this before more UI).** Melvin 2026-08-07: the site
+  has no consistent accent. One accent colour must be defined as a token and
+  applied to every "important" element site-wide: his name, the frame titles
+  (The Past / The Present / The Future), and equivalent headings on every page.
+  Currently `.name-gold` (#ffdcae), `.frame-title` (#f3c67f), `.beyond-link`
+  (#ffdcae) and the `--color-gold` token (#f0b356) are four different warms that
+  nobody chose together. Pick ONE, tokenise it, refactor all of them onto it.
+  Foundational: everything built after inherits it, so it should come first.
+- **CONTACT + TESTIMONIALS SLIDE (Melvin's spec, 2026-08-07).** It is ONE slide
+  with a toggle, not two pages. Rename it "contact and testimonials".
+  - **Toggle** at top CENTRE of the slide to switch between Contact and
+    Testimonials. Each side has its OWN background (see below); they must not
+    look the same.
+  - **Socials must not show URLs.** Showing the full URL reads "very very
+    amateur" to him. Icon buttons only, glowing AMBER on hover.
+  - **Contact background: many small masks.** Go into MaskField/mask source,
+    shrink the mask a lot, and fit about TEN of them across the contact side.
+    Behaviour: they sit in FIXED positions and never travel. They only ANGLE
+    toward the cursor, like a head turning while the body stays put. The turn
+    LAGS the cursor by roughly 3 seconds. If the cursor is idle about 10
+    seconds they all return to neutral and look straight ahead again.
+  - **Testimonials background: ink.** Approved testimonials appear in the
+    background as INK: letters bleeding/flowing in like a fountain pen or
+    sharpie writing, resolving into clean readable sentences, holding for about
+    30 to 40 seconds, then going. Melvin has an HTML reference for the ink
+    effect (an artifact shown to him previously) and can supply it.
+  - **Excerpt algorithm:** given a long testimonial, automatically pick the best
+    three or four lines to show in the background, plus the author's name.
+  - **Click to expand:** clicking a background testimonial opens it as a small
+    window WITHIN the testimonials slide. It zooms open, everything behind it
+    blurs, and you read the full testimonial plus details.
+  - Still applies from the earlier addendum above: form fields, publish notice
+    directly above submit, manual approval, no auto-publish, reduced-motion and
+    no-WebGL fallbacks, and the foreground form always stays readable.
+  - **PERF FLAG (mine, not his):** the mask is a GPGPU particle simulation. Ten
+    independent instances would almost certainly not hold 60fps. The way to do
+    this is ONE simulation drawn as ten instanced/repeated heads sharing a
+    buffer, with per-instance rotation uniforms, not ten sims. Raise this before
+    building.
 - **Mask:** its 5 pose keyframes no longer align to the now-4 frame centres;
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
