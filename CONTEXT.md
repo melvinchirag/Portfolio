@@ -32,20 +32,87 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   chose — revisit the type treatment). Make Beyond feel more special.
 - **Name lockup:** implemented equal-width "Melvin Chirag" / spread "KARUPATI".
   Fine-tune if the letter-spacing looks off at some widths.
-- **Contact page (awaiting Melvin's UI addendum for contact + testimonials):**
-  - The bottom "Return to Start" currently looks like AI UI. Remove the little
-    thread line above it; make **Return to Start a button that GLOWS on hover**
-    and scrolls to top on click.
-  - Full contact form (Name, Email, "What would you like to discuss?" select,
-    Message, Send Message) + repeated Resume/socials.
-  - Testimonials: form (Name, Email, Role/relationship, Organization optional,
-    Testimonial, Submit), publish-notice directly above submit (submit = the
-    agreement, no separate checkbox), manual approval (no auto-publish), show
-    the person's stated relationship when published; atmospheric WebGL backdrop
-    with accessible DOM fallback + reduced-motion. Backend wired LATER.
+- **Contact page:** form + restyle DONE 2026-08-07 (see log below). Still open:
+  wire a real backend (Submit currently composes a `mailto:`, deliberately — see
+  the log entry) and confirm the canonical email address.
+- **TESTIMONIALS — Melvin's UI addendum, verbatim (pasted 2026-08-07).** Scoped
+  out of the contact pass; this is the brief for its own pass. Do not water it
+  down into a carousel.
+  - **Core experience:** entering/scrolling into Testimonials should feel like
+    revealing a *living archive* of previous collaborations. Approved
+    testimonials live in the BACKGROUND, emerging from visual depth behind the
+    form. Feeling: "memories, signals, smoke, depth, and voices gradually
+    becoming visible."
+  - **Background animation:** approved excerpts as floating text fragments /
+    translucent cards / softly illuminated typographic layers. Start far away,
+    partially hidden, blurred, small, low opacity; travel slowly FORWARD toward
+    the viewer; briefly become readable, then dissolve, drift sideways, fade, or
+    pass behind another layer. Like text out of smoke or a distant digital
+    memory, NOT cards sliding in from the side. Staggered timing, never all at
+    once. Vary speed, scale, blur, depth, opacity, rotation, trajectory so it
+    feels organic. Slow, elegant, atmospheric, cinematic, not chaotic or
+    game-like. Subtle emerald / warm gold / soft off-white glow; never so bright
+    it hurts foreground contrast.
+  - **Foreground vs background:** the form is the primary interaction and must
+    stay easy to read and use. Background = ambient layer only. ALWAYS show one
+    or more fully readable approved testimonial cards in an accessible
+    foreground layer, with the complete approved text, name and relationship.
+    Background excerpts may be shortened. Background animation must NEVER be the
+    only way to reach testimonial content.
+  - **Flow:** heading `Let's Build Something Meaningful.` → contact form first →
+    then a visually distinct CTA `Work With Me?` with copy: "If we have built,
+    learned, organized, or collaborated together, share a few words about the
+    experience. Submitted testimonials may be reviewed and published on this
+    site." → opening the testimonial area activates the background archive → the
+    testimonial form enters cleanly, with NO competing motion near the fields →
+    after submit, a polished confirmation that does NOT promise publication.
+  - **Technical:** R3F / Three.js / WebGL (or WebGPU) for the depth layer if perf
+    is good. Text as planes, particles, shader text, or light floating cards;
+    prefer performant over heavy simulation. Depth of field, noise, drift, blur,
+    opacity, soft bloom used SPARINGLY. The form and the complete readable
+    testimonials must be real semantic DOM. Static fallback with no WebGL.
+    Honour `prefers-reduced-motion` (calm static display / minimal fades).
+    Responsive, touch friendly, non blocking on mobile. No autoplay audio.
+  - **Optional polish:** hover a floating testimonial to slow it and sharpen it;
+    click/tap opens the full one in the foreground, then it recedes; subtle
+    cursor parallax on desktop but never required for the effect; show the
+    author's relationship (teammate, classmate, collaborator, organizer, mentor,
+    coworker) as a small metadata signal.
+  - **Non-negotiable:** no generic static carousel as the sole experience; no
+    unreadable text or excessive movement; NO automatic public publishing of
+    submissions (manual approval); and no mention of the hidden computer-vision
+    mask feature anywhere in visible copy.
+  - Earlier notes still standing: testimonial form fields are Name, Email,
+    Role/relationship, Organization (optional), Testimonial, Submit; the publish
+    notice sits directly ABOVE submit and submitting IS the agreement (no
+    separate checkbox). Backend wired LATER.
 - **Mask:** its 5 pose keyframes no longer align to the now-4 frame centres;
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
+
+### [CLAUDE] Contact page — form built, restyled (2026-08-07)
+Melvin pasted the Testimonials UI addendum (full text saved below in WORK ON
+LATER) but scoped THIS pass to "contact form only".
+- Heading is now the addendum's `Let's Build Something Meaningful.`, with intro
+  copy in Melvin's voice (no em-dashes, checked).
+- Two column layout: the form on the left, direct links on the right as a quiet
+  hairline list. The four big glass link cards are gone (they competed with the
+  form for attention and this is the secondary path). Dropped `.sync-glass-rect`
+  from them too: the contact section sits on an OPAQUE bg above the canvas, so
+  the WebGL glass it requested was invisible work every frame.
+- Fields use a new `.field` class in the same flat material as `.slide-glass`:
+  flat tint, uniform hairline, NO sheen or glow. Warm amber ring on focus only.
+  Custom select chevron (native arrows look like an OS widget). `color-scheme:
+  dark` so the native dropdown is not a bright white menu on a near-black page.
+- **Sending: there is no backend, so Submit composes a `mailto:` with the form
+  contents rather than faking success.** A fake "message sent" would silently
+  drop a real person's email. Confirmation copy says the mail app opened and
+  gives the address as a fallback; it never claims the message was sent. Swap
+  the body of `handleSubmit` when a real endpoint exists.
+- Deliberately did NOT stub the "Work With Me?" testimonial CTA — with the
+  submission flow out of scope it would be a dead control on a live page. It
+  lands with the testimonials pass.
+- Verified in Chrome: layout, focus ring, chevron. Build + oxlint clean.
 
 ### [CLAUDE] Glass made realistic — killed the fake light + the pills (2026-08-07)
 Melvin, after seeing the working blur: too blurry ("should look like you're
