@@ -137,6 +137,42 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Contact + Testimonials toggle, socials fixed (2026-08-09)
+Melvin: move fast, stop being pedantic, make changes. Built the next two items
+off his list without asking further clarifying questions.
+- **Socials no longer show URLs anywhere.** The Contact page's "Or find me
+  here" list used to print the raw handle (github.com/melvinchirag etc,
+  flagged as "very very amateur"). Replaced with icon-only buttons, reusing
+  `<SocialLinks>` for GitHub/LinkedIn/X/Instagram plus two new icon buttons
+  (Email, Resume) in the same `.social-btn` material: neutral at rest, accent
+  plus a warm halo on hover/focus. Address/link still lives in href +
+  aria-label/title, just not printed on screen.
+- **Contact.tsx is now ONE slide with a centred toggle** between Contact and
+  Testimonials (Melvin's spec), not two separate pages. Kept `id="contact"`
+  on the OUTER wrapper in Home.tsx untouched, so the hero's Contact button
+  still scrolls to the right place regardless of which tab is active.
+  - Contact tab: unchanged form + the fixed icon-only "find me here" row.
+  - Testimonials tab: NEW submission form (Name, Email, "How we worked
+    together" — Teammate/Classmate/Collaborator/Organizer/Mentor/Coworker/
+    Something else, Organization optional, Testimonial), publish notice
+    directly ABOVE Submit, submitting IS the agreement (no checkbox),
+    confirmation copy that does NOT promise publication. Heading "Work With
+    Me?" and the supporting paragraph are Melvin's own words from the
+    addendum, verbatim.
+  - Sends via `mailto:`, same pattern as Contact — and for testimonials this
+    doubles as the review step: "manual approval" just means Melvin reads the
+    email before anything is published, which a plain inbox already gives us.
+- **NOT built this pass, on purpose:** the atmospheric "ink" background
+  archive of approved testimonials, and the visually distinct backgrounds per
+  tab. Both were meant to come FROM the ink layer and the ten-mask contact
+  background (neither exists yet) — faking a difference now would mean
+  redoing it once those land. The ink layer also needs real approved
+  testimonials to have anything to show, which this submission form is what
+  starts collecting.
+- Verified in Chrome: toggle switches views, active tab highlights amber,
+  socials render icon-only, testimonial form fields and publish-notice
+  placement all confirmed via screenshot. Build + oxlint clean.
+
 ### [CLAUDE] Buttons fixed: the fill didn't match the accent (2026-08-09)
 Melvin, after the type fix: buttons still felt "vibe coded", and asked whether
 the accent COLOUR itself was the cause.
