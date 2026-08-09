@@ -28,5 +28,13 @@ Thumbs.db
 .vercel/
 scratchpad/
 
+# Agent skills installed via `npx skills add`. Third-party files that land inside
+# the repo (the installer targets the cwd, so they appear at the root OR under
+# site/ depending on where it was run). They are tooling for whoever is editing
+# the site, not part of the site, so keep them out of a routine `git add -A`.
+.claude/skills/
+.agents/skills/
+skills-lock.json
+
 # Large video master (compressed 4.6MB version ships in site/public/; keep the 209MB 4K master local only)
 video-source/
