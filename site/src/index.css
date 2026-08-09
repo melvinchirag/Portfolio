@@ -390,42 +390,46 @@ body {
   -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 100%);
 }
 
-/* The Resume button.
+/* The Projects / Contact / Resume / Send buttons.
  *
- * Was a bright ember→violet gradient pill; Melvin found it cheap-looking, and
- * with the field now amber a warm gradient would also stop reading as scarce.
- * It is glass instead: still the most distinct thing in the nav (it is the only
- * element with a filled surface) without shouting. */
+ * History: started as a bright ember→violet gradient pill (Melvin: "cheap").
+ * Became a translucent blurred glass pill instead. Melvin flagged THAT as
+ * "vibe coded" too, 2026-08-09, and checking it against his own references
+ * (eladiodieste.com, cyrillic.digital) explains why: the fill was
+ * rgba(255,240,220,...) — an unrelated warm WHITE — while the rim and the
+ * label were the accent. Three separate decisions layered on one button, not
+ * one material, plus a soft blurred glow on hover, which is one of the most
+ * overused dark-mode-SaaS button patterns there is. Neither reference does
+ * this: Cyrillic's CTA is a solid tinted pill with bold, confident type;
+ * Dieste barely uses buttons at all. So: the fill IS the accent (tinted, not a
+ * different colour bolted on), no backdrop blur (this is a confident object,
+ * not a lens to see through), and the hover state is a fill/border shift, not
+ * a diffuse halo. Weight bumped off the body's default 300 (thin reads as
+ * uncommitted on something you're meant to press). */
 .glass-cta {
   /* Positioning context for the ::before rim below. */
   position: relative;
-  /* Primary actions carry the site accent (Melvin, 2026-08-07): the label is
-   * accent-coloured at rest, and the rim warms further on hover. */
   color: var(--color-accent);
-  /* A faint warm film rather than plain white, so it belongs to the palette. */
-  background: rgba(255, 240, 220, 0.05);
-  /* Blur the scene behind it, and lift its saturation so the amber showing
-   * through stays warm instead of washing to grey. */
-  --glass-frost: blur(14px) saturate(150%);
-  /* A hairline warm rim plus a soft dark drop shadow to lift it off the page. */
+  font-weight: 500;
+  background: rgba(243, 198, 127, 0.12);
   box-shadow:
-    0 0 0 1px rgba(243, 198, 127, 0.22) inset,
+    0 0 0 1px rgba(243, 198, 127, 0.38) inset,
     0 4px 18px -6px rgba(0, 0, 0, 0.55);
   /* Animate hover changes on our standard easing curve. */
   transition:
-    background 500ms var(--ease-out-expo),
-    box-shadow 500ms var(--ease-out-expo);
+    background 400ms var(--ease-out-expo),
+    box-shadow 400ms var(--ease-out-expo);
 }
 
-/* On hover the glass brightens and its rim warms — a gentle "this is live"
- * signal. No lift or scale: nothing on this site bounces. */
+/* On hover/focus the fill deepens and the rim sharpens — a direct, immediate
+ * state change. No lift or scale (nothing on this site bounces) and no glow
+ * halo (that was the cliché). */
 .glass-cta:hover,
 .glass-cta:focus-visible {
-  background: rgba(255, 240, 220, 0.1);
+  background: rgba(243, 198, 127, 0.2);
   box-shadow:
-    0 0 0 1px rgba(243, 198, 127, 0.5) inset,
-    0 6px 22px -6px rgba(0, 0, 0, 0.6),
-    0 0 22px -6px rgba(243, 198, 127, 0.45);
+    0 0 0 1px rgba(243, 198, 127, 0.68) inset,
+    0 6px 22px -6px rgba(0, 0, 0, 0.6);
   outline: none;
 }
 

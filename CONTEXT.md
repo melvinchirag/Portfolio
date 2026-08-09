@@ -137,6 +137,33 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Buttons fixed: the fill didn't match the accent (2026-08-09)
+Melvin, after the type fix: buttons still felt "vibe coded", and asked whether
+the accent COLOUR itself was the cause.
+- **Answered the colour question directly: no.** `#f3c67f` is deliberate and
+  already documented as a considered choice (CLAUDE.md's own history: it
+  replaced an earlier blue-violet placeholder that read as generic). The
+  hue isn't the problem.
+- **The actual bug, found by inspecting `.glass-cta`:** the fill was
+  `rgba(255,240,220,...)`, an unrelated warm WHITE, while the rim and the
+  label were the accent. Three separate decisions layered on one button
+  instead of one material, at 5% opacity (barely visible), plus a soft
+  blurred glow on hover, one of the most overused dark-mode-SaaS button
+  patterns there is. Checked against Melvin's own references: Cyrillic's CTA
+  is a solid tinted pill; Dieste barely uses buttons at all. Neither does the
+  translucent-blur-glow thing.
+- **Fix:** the fill IS the accent now (tinted, not a different colour bolted
+  on), opacity raised so it reads as a real object at rest. Dropped
+  `--glass-frost` entirely, no backdrop blur, this is a confident pressable
+  object, not a lens. Hover/focus is a direct fill+border shift, no diffuse
+  glow halo. Added `font-weight: 500` (was inheriting the body's default 300,
+  which reads as uncommitted on something you're meant to press).
+  `.glass-cta` is shared by Projects/Contact/Resume, Send message, and Return
+  to Start, so all five picked up the fix at once.
+- Verified in Chrome: rest state and hover state both screenshotted and
+  zoomed, confirmed on the hero buttons and the Contact page buttons. Build +
+  oxlint clean.
+
 ### [CLAUDE] Real typography: General Sans, at real display scale (2026-08-09)
 Melvin gave two references he likes: eladiodieste.com and cyrillic.digital. I
 browsed both in Chrome rather than guessing from the URLs.
