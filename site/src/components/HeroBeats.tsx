@@ -98,7 +98,12 @@ function IdentityFrame({ index }: { index: number }) {
 
   return (
     // data-pan marks this as a panned root — the rAF loop writes its transform.
-    <div data-pan={index} className="relative flex max-w-2xl flex-col items-center text-center">
+    // NO max-width here (there was one, max-w-2xl, until 2026-08-09): the name
+    // now runs at real display scale, per the eladiodieste.com reference, and a
+    // 672px cap would force it to wrap mid-word. The column shrink-wraps to its
+    // widest child instead; the description paragraph below keeps its own
+    // narrower max-w-md so body copy still reads at a comfortable measure.
+    <div data-pan={index} className="relative flex flex-col items-center px-4 text-center">
       {/* Soft halo so the name reads cleanly wherever the mask sits behind it.
           Oversized (negative inset) so it fades out well past the text. */}
       <div
@@ -112,20 +117,24 @@ function IdentityFrame({ index }: { index: number }) {
 
       <div className="relative flex flex-col items-center">
         {/* Tagline kicker, above the name. "Beyond" glows and links to Vision. */}
-        <p className="mb-5 font-display text-[clamp(1rem,2.1vw,1.4rem)] text-white/75 [text-shadow:0_1px_20px_rgba(0,0,0,0.6)]">
+        <p className="mb-6 font-display text-[clamp(1.05rem,2.4vw,1.5rem)] text-white/75 [text-shadow:0_1px_20px_rgba(0,0,0,0.6)]">
           Computer Science and{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
             Beyond
           </Link>
         </p>
 
+        {/* Scale bumped 2026-08-09, per the Dieste reference: display type is
+            meant to run uncomfortably big, closer to the viewport edge than
+            feels safe, not a "nice size". Tracking tightened to match (huge
+            letters read as loose at the old -0.01em). */}
         <h1 className="inline-flex flex-col">
-          <span className="name-gold font-display text-[clamp(2.8rem,8vw,5.8rem)] leading-[0.95] tracking-[-0.01em]">
+          <span className="name-gold font-display text-[clamp(2.75rem,11vw,9rem)] leading-[0.95] tracking-[-0.02em]">
             Melvin Chirag
           </span>
           <span
             aria-label="Karupati"
-            className="mt-2 flex justify-between font-display text-[clamp(1.2rem,3.1vw,2.2rem)]"
+            className="mt-3 flex justify-between font-display text-[clamp(1.4rem,3.6vw,2.6rem)]"
             style={{ color: 'rgba(255,220,174,0.6)' }}
           >
             {surname.map((ch, i) => (
@@ -179,10 +188,10 @@ function IdentityFrame({ index }: { index: number }) {
 function PastFrame({ index }: { index: number }) {
   return (
       <div data-pan={index} className={`${GLASS_BOX} w-[min(88vw,600px)]`}>
-        <h2 className="frame-title font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95]">
+        <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
           The Past
         </h2>
-        <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/85">
+        <div className="mt-7 space-y-5 text-[14px] leading-relaxed text-white/85">
           <p>
             Born in Hyderabad and raised in Kuwait, I later continued my education in India before
             moving to Michigan for computer science.
@@ -237,7 +246,7 @@ function ExploreLink({ href }: { href: string }) {
 function PresentFrame({ index }: { index: number }) {
   return (
       <div data-pan={index} className={`${GLASS_BOX} w-[min(94vw,1060px)]`}>
-        <h2 className="frame-title font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95]">
+        <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
           The Present
         </h2>
         <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-white/85">
@@ -293,10 +302,10 @@ function PresentFrame({ index }: { index: number }) {
 function FutureFrame({ index }: { index: number }) {
   return (
       <div data-pan={index} className={`${GLASS_BOX} w-[min(90vw,680px)]`}>
-        <h2 className="frame-title font-display text-[clamp(2.2rem,5.5vw,3.6rem)] leading-[0.95]">
+        <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
           The Future
         </h2>
-        <div className="mt-6 space-y-4 text-[14px] leading-relaxed text-white/85">
+        <div className="mt-7 space-y-5 text-[14px] leading-relaxed text-white/85">
           <p>
             I want to build intelligent systems that move past the screen, systems that can perceive
             the world, reason about it, and act within it.

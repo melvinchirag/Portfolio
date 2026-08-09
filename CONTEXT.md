@@ -137,6 +137,53 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Real typography: General Sans, at real display scale (2026-08-09)
+Melvin gave two references he likes: eladiodieste.com and cyrillic.digital. I
+browsed both in Chrome rather than guessing from the URLs.
+- **Dieste**: a bespoke rounded grotesk (proprietary, licensed, cannot be
+  reproduced) blown up to bleed off the viewport edge. No glass, no card
+  borders, no shadows. A single hairline vertical thread with diamond node
+  markers and year labels for its "life" content, images placed asymmetrically
+  off it, real photography, not abstraction, this is structurally the same idea
+  as our own "life in three tenses" thread motif.
+- **Cyrillic Digital**: a single locked hero, no scroll. The huge wordmark
+  turned out to be plain Inter at weight 900, no special font at all, scale and
+  weight alone did the work. Second line sunk into the background by opacity,
+  same two-tone move we already use for "Melvin Chirag" / "KARUPATI" (so our own
+  structure was already right, just running at roughly half the confidence).
+- Shared principles across both, despite looking very different: type runs at
+  real uncomfortable scale, not a "nice size"; one accent used with total
+  confidence; minimal chrome (no stacked card borders/shadows); ONE technique
+  carries the wow per moment, not several small effects stacked on the same
+  panel.
+- Melvin picked the **Dieste lane**: quiet, huge, editorial.
+- **Font: General Sans** (Fontshare / Indian Type Foundry, free for commercial
+  use, verified the CDN endpoint resolves before wiring it in). Rounded,
+  humanist, warm rather than geometric-cold; closest freely licensable match to
+  Dieste's character. Replaces the Times New Roman placeholder AND removes the
+  still-imported-but-unused Instrument Serif Google Fonts request (dead weight,
+  and it was the earlier rejected face). `--font-display` now `'General Sans',
+  'Inter', system-ui, sans-serif`.
+- **Scale, real bump, not cosmetic:** hero name `clamp(2.8rem,8vw,5.8rem)` →
+  `clamp(2.75rem,11vw,9rem)` (144px at desktop, was 93px), tracking -0.01em →
+  -0.02em (huge letters read loose at the old tracking). Frame titles
+  (Past/Present/Future) `clamp(2.2rem,5.5vw,3.6rem)` → `clamp(2.6rem,7vw,5.2rem)`
+  with -0.015em tracking, all three occurrences.
+- **Removed `max-w-2xl` from IdentityFrame's outer wrapper.** At the new scale
+  it would force "Melvin Chirag" to wrap mid-word; the description paragraph
+  already had its own independent `max-w-md` so body copy readability is
+  unaffected. Verified the mobile floor (2.75rem) against a proper natural-width
+  text measurement (not scrollWidth, which floors at container width and gave a
+  false borderline reading first try): 260px of text vs 343px available at a
+  360px viewport, 83px of margin.
+- Loosened body copy spacing in the Past/Future panels (`space-y-4`→`space-y-5`,
+  `mt-6`→`mt-7`) per the "spacing/density" pain point.
+- **Buttons were flagged as a pain point too but NOT touched this pass** — type
+  needed to land first since buttons inherit sizing/spacing decisions from it.
+- Build + oxlint clean. Verified in Chrome: font resolves as `"General Sans"`
+  (not a fallback), name renders at 144px, frame title bigger and confirmed via
+  screenshot.
+
 ### [CLAUDE] Motion bug: two easing curves were running site-wide (2026-08-09)
 Melvin: typography, some buttons, and "motion does not feel smooth and
 seamless" are what's bothering him about "vibe coded." Chose the cinematic and

@@ -17,11 +17,20 @@
  * portfolio looks like it. See docs/references.md.
  * ========================================================================= */
 
-/* Load our two typefaces from Google Fonts before anything else, so text never
- * renders in a fallback font first. Instrument Serif is the display face (big
- * headings); Inter is the body face. `display=swap` shows fallback text
- * immediately rather than leaving a blank space while fonts download. */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap');
+/* Load our two typefaces before anything else, so text never renders in a
+ * fallback font first. General Sans is the display face (the name, headings);
+ * Inter is the body face. `display=swap` shows fallback text immediately
+ * rather than leaving a blank space while fonts download.
+ *
+ * General Sans is from Fontshare (Indian Type Foundry), free for commercial
+ * use. Chosen 2026-08-09 after Melvin reviewed two references (eladiodieste.com,
+ * cyrillic.digital) and picked the Dieste lane: a rounded, humanist, NOT
+ * geometric-cold grotesk, run at real display scale rather than a "nice size".
+ * Dieste itself uses a bespoke licensed typeface we cannot legally reproduce;
+ * General Sans is the closest freely licensable match to that character
+ * (rounded terminals, humanist proportions, warm rather than clinical). */
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
 /* Pull in the whole Tailwind CSS framework. This one line is what makes utility
  * classes like `flex`, `px-6`, and `text-white/40` work in our components. */
 @import 'tailwindcss';
@@ -30,11 +39,11 @@
  * declared here becomes BOTH a normal CSS variable AND a Tailwind utility —
  * `--color-ember` automatically enables classes like `text-ember`. */
 @theme {
-  /* The display typeface, used for large headings like the hero name. */
-  /* Times New Roman "for now" per Melvin (2026-07-28) — Instrument Serif was
-     rejected as "ugly / vibe-coded". This is a placeholder display face, not a
-     final type decision. */
-  --font-display: 'Times New Roman', Times, serif;
+  /* The display typeface, used for large headings like the hero name.
+     General Sans, Melvin's pick 2026-08-09 (see the @import note above for
+     why). Falls back to Inter, not a serif, if it fails to load, since the
+     two read as the same family visually and neither surprises the layout. */
+  --font-display: 'General Sans', 'Inter', system-ui, sans-serif;
   /* The body typeface, used for everything else. The fallbacks after it apply
    * only if Inter fails to load. */
   --font-sans: 'Inter', system-ui, sans-serif;

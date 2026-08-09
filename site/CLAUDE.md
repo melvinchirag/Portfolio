@@ -14,7 +14,9 @@ thread** motif persists across every page; scroll moves you along it.
 - One accent gradient: ember `#ff6b35` → violet `#8b5cf6`. Used rarely — power
   through scarcity.
 - Liquid glass for all UI chrome (`.liquid-glass` in `index.css`).
-- Display face: Instrument Serif. Body: Inter, weight 300.
+- Display face: General Sans (Melvin's pick, 2026-08-09, chosen against the
+  eladiodieste.com reference — see index.css for the full note). Body: Inter,
+  weight 300.
 - Motion is slow, physical, inertial. Nothing bounces; everything glides.
 
 ## Hard rules
