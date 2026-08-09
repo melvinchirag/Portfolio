@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Agent skills installed via `npx skills add`. These are third-party files that
+# land inside the repo, and they are tooling for whoever is editing the site, not
+# part of the site itself. Ignored so a routine `git add -A` cannot sweep someone
+# else's code into this repo. (site/.claude/launch.json IS tracked on purpose.)
+.claude/skills/
+.agents/skills/
+skills-lock.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
