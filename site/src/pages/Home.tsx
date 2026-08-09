@@ -45,8 +45,13 @@ export function Home() {
         </div>
       </section>
 
-      {/* The contact footer rolls up naturally when the sticky hero scroll track ends */}
-      <section id="contact" className="relative z-20 w-full bg-[#06070d]">
+      {/* The contact footer rolls up naturally when the sticky hero scroll track
+          ends. NO opaque background (was bg-[#06070d] until 2026-08-09): the
+          section now has its own WebGL background, a swarm of ten small masks
+          (ContactMaskSwarm, gated in GlobalScene by useContactInView) rendered
+          on the fixed scene layer BEHIND everything. An opaque fill here would
+          hide it completely. Falls back to GlobalScene's own #050609 base. */}
+      <section id="contact" className="relative z-20 w-full">
         <Contact />
       </section>
     </>

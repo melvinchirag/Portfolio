@@ -4,8 +4,10 @@ import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { useLocation } from 'react-router-dom'
 import { MaskParticles } from './MaskField'
+import { ContactMaskSwarm } from './ContactMaskSwarm'
 import { LiquidGlassField } from './LiquidGlassField'
 import { VideoPlane } from './VideoBackground'
+import { useContactInView } from '../../hooks/contactVisibility'
 
 /**
  * Creates the looping VideoTexture for the About background. Lives OUTSIDE the
@@ -121,10 +123,12 @@ function SceneContents({
   isHome,
   isAbout,
   aboutTex,
+  contactInView,
 }: {
   isHome: boolean
   isAbout: boolean
   aboutTex: THREE.VideoTexture | null
+  contactInView: boolean
 }) {
   // Force the video texture to re-upload the current frame each render so both
   // the background plane and the glass see live video.
@@ -136,7 +140,14 @@ function SceneContents({
     <>
       {isAbout && aboutTex && <VideoPlane texture={aboutTex} />}
 
-      {isHome && <MaskParticles />}
+      {/* The hero's single mask and the Contact section's swarm of ten are
+          mutually exclusive (Melvin, 2026-08-09) — both live on the same route
+          ('/'), so isHome alone can't tell them apart; contactInView (an
+          IntersectionObserver on #contact, see contactVisibility.ts) is the
+          missing signal. Hiding the hero mask while Contact is in view also
+          avoids it sitting frozen at its final scroll pose behind the swarm. */}
+      {isHome && !contactInView && <MaskParticles />}
+      {isHome && contactInView && <ContactMaskSwarm />}
 
       {/* On About, hand the video texture straight to the glass (it refracts THAT
           rather than capturing the scene — see LiquidGlassField). Elsewhere it
@@ -158,6 +169,7 @@ export function GlobalScene() {
   const isHome = loc.pathname === '/'
   const isAbout = loc.pathname === '/about'
   const aboutTex = useAboutVideoTexture(isAbout)
+  const contactInView = useContactInView()
 
   return (
     <div className="fixed inset-0 z-0 bg-[#050609]">
@@ -169,7 +181,7 @@ export function GlobalScene() {
         }}
       >
         <color attach="background" args={['#050609']} />
-        <SceneContents isHome={isHome} isAbout={isAbout} aboutTex={aboutTex} />
+        <SceneContents isHome={isHome} isAbout={isAbout} aboutTex={aboutTex} contactInView={contactInView} />
       </Canvas>
     </div>
   )

@@ -247,6 +247,92 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] The ten cursor-following masks, Contact section (2026-08-09)
+Built the last big item from Melvin's spec: shrink the mask, fit about ten
+across the Contact section, fixed positions, only ANGLE toward the cursor
+(head-turn, not travel), ~3s lag, recentre after ~10s idle.
+- **New file `ContactMaskSwarm.tsx`.** Per my earlier perf flag: ONE shared
+  GPGPU simulation (SIZE=56, ~3100 particles, vs the hero's SIZE=384/~147k),
+  computed once per frame; ten cheap draws of the SAME live position texture,
+  each with its own `<group>` transform (fixed screen slot + its own yaw).
+  They breathe in sync rather than ten independent sims — reads as one
+  coordinated field, costs a fraction of ten real sims.
+- Reused the hero's proven face-crop constants and sim-shader SHAPE
+  (`MaskField.tsx`) but DUPLICATED rather than imported, so that tuned,
+  working file stays completely untouched — confirmed zero diff before
+  committing. v1 deliberately drops glyphs, blink, eye/nose brightening, and
+  cursor-repulsion shimmer (not visible at this scale / not what was asked;
+  the requested cursor interaction is the head turning, not the particles
+  reacting) — flagged as follow-ups if he wants parity later.
+- **New `contactVisibility.ts`**: `useContactInView()`, an IntersectionObserver
+  on `#contact`. Needed because the hero's single mask and the swarm are
+  mutually exclusive (avoids the hero mask sitting frozen at its final scroll
+  pose behind the swarm) but both live on route '/', so route-based gating
+  can't tell them apart.
+  It also carries a documented `window.__forceContactInView` polling escape
+  hatch for manual devtools testing — real users never touch it (no-op unless
+  explicitly set), kept because it's genuinely useful for testing this without
+  scrolling+waiting for the real observer, INCLUDING for Melvin later.
+- **Removed the opaque `bg-[#06070d]` from the Contact `<section>` in
+  Home.tsx** — it would have completely hidden the WebGL swarm rendered
+  behind it. Falls back to GlobalScene's own #050609 base.
+- **Cursor-follow math**: reads `#contact`'s live `getBoundingClientRect()`
+  every frame (so the swarm scrolls naturally with the section, no scroll-
+  track bookkeeping of its own) and converts each mask's fixed FRACTIONAL
+  slot to world space via the same screen-to-world perspective math implied
+  by the hero's own camera-extent comment. Yaw only (rotation.y), not full
+  pitch+yaw look-at — reads clearly as "turning toward the cursor" without
+  needing real 3D look-at math. Target yaw is proportional to horizontal
+  cursor offset, clamped to ±0.7rad (~40deg); approached via the same
+  exponential-smoothing pattern MaskField already uses for scroll (so
+  "roughly three seconds" is the smoothing time constant, not a hard cutoff).
+  A shared idle timer (any `pointermove` resets it) forces every yaw target to
+  0 after ~10s of no movement.
+- **THE VERIFICATION ODYSSEY (worth logging so it isn't repeated):** this took
+  a long detour before I got a real look at it. In order:
+  1. First suspected a code bug: no console output, no network request for
+     the model file, nothing rendering. Chased this through several rounds of
+     window-exposed debug flags.
+  2. Found `document.hidden === true` on the automation tab. Chrome
+     suppresses IntersectionObserver callbacks (and heavily throttles
+     timers/intervals) for hidden documents — confirmed with an isolated
+     IntersectionObserver test that never fired, and a setInterval(200ms)
+     that only ticked 3 times in 2 seconds. This is a real browser behavior,
+     not a bug, but it broke my ability to test the visibility gate normally.
+  3. Force-mounted the swarm unconditionally to bypass the gate — STILL
+     nothing rendered, not even on a fresh tab, and NEITHER component (mine
+     nor the proven MaskParticles) ever fired its model-load network request.
+  4. Bisected with `git stash` back to the last clean commit (7b77f1c) —
+     ALSO broken. This ruled out my new code entirely: even the untouched,
+     previously-working hero mask wasn't rendering.
+  5. Confirmed independently on `/about` (video+glass, unrelated code path) —
+     also dark. This meant something browser/session-level, not code.
+  6. Tested raw `canvas.getContext('webgl')` directly — worked fine, GPU
+     correctly identified (AMD Radeon via ANGLE/D3D11), context not lost.
+     So WebGL itself wasn't broken either.
+  7. **The actual answer**: patience. The model load + face-crop rejection
+     sampling (147k particles, yielding to the main thread periodically)
+     simply takes much longer than normal in a hidden/throttled tab, and my
+     wait windows (5 to 10s) weren't long enough. A longer wait (30s+) showed
+     the hero mask rendering perfectly. Every "broken" signal above was real
+     (IO suppression, timer throttling are genuine), but the root cause was
+     simpler: I wasn't waiting long enough, not a rendering failure.
+  8. Re-tested the swarm with real patience (~25s) and the force-override:
+     confirmed via screenshot — multiple small glowing teal mask silhouettes
+     scattered across the Contact section, matching the ten fixed slots,
+     scrolling correctly with the section content.
+  Net effect: an embarrassing number of turns spent chasing what turned out
+  to be a wait-longer issue, but it DID surface two genuine, worth-knowing
+  facts about this environment (IO suppression + timer throttling on hidden
+  tabs) that could bite future debugging here again.
+- **NOT independently verified**: the exact yaw lag/idle-recentre FEEL (hard
+  to test precisely without genuine, continuous OS-level mouse movement,
+  which this automation surface can't easily simulate). The math follows the
+  same proven smoothing pattern already used elsewhere in this codebase; the
+  exact constants (YAW_LAG, IDLE_SECS, MAX_YAW) are one-line tunes once
+  Melvin watches it live with a real cursor.
+- Build + oxlint clean.
+
 ### [CLAUDE] Motion bug: two easing curves were running site-wide (2026-08-09)
 Melvin: typography, some buttons, and "motion does not feel smooth and
 seamless" are what's bothering him about "vibe coded." Chose the cinematic and
