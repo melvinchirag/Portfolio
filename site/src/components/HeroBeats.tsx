@@ -75,7 +75,7 @@ function FrameDots({ active }: { active: number }) {
           onClick={() => heroScrollToFrame(i)}
           aria-label={`Go to ${f.label}`}
           aria-current={i === active}
-          className={`block rounded-full transition-all duration-500 ${
+          className={`ease-out-expo block rounded-full transition-all duration-500 ${
             i === active
               ? 'h-[9px] w-[9px] bg-white shadow-[0_0_10px_2px_rgba(255,255,255,0.4)]'
               : 'h-[7px] w-[7px] bg-white/25 hover:bg-white/50'
@@ -199,7 +199,7 @@ function PastFrame({ index }: { index: number }) {
         </div>
         <Link
           to="/about"
-          className="text-accent/85 hover:text-accent mt-7 inline-block text-[13px] tracking-wide transition-colors duration-300"
+          className="ease-out-expo text-accent/85 hover:text-accent mt-7 inline-block text-[13px] tracking-wide transition-colors duration-300"
         >
           Read the full story <span aria-hidden>→</span>
         </Link>
@@ -224,7 +224,7 @@ function ExploreLink({ href }: { href: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-accent/85 hover:text-accent mt-4 inline-block text-[12px] tracking-wide transition-colors duration-300"
+      className="ease-out-expo text-accent/85 hover:text-accent mt-4 inline-block text-[12px] tracking-wide transition-colors duration-300"
     >
       Explore Project <span aria-hidden>→</span>
     </a>

@@ -33,21 +33,20 @@ export function Nav() {
 
   return (
     <header
-      className={`fixed top-0 right-0 left-0 z-50 transition-transform duration-500 ${
+      className={`ease-out-expo fixed top-0 right-0 left-0 z-50 transition-transform duration-500 ${
         hidden ? '-translate-y-full' : 'translate-y-0'
       }`}
-      style={{ transitionTimingFunction: 'var(--ease-out-expo)' }}
     >
       {/* Nearly frameless over the hero; the glass earns its background only
           once there is content behind it. */}
-      <div className="transition-all duration-500 border-b border-transparent bg-transparent">
+      <div className="ease-out-expo transition-all duration-500 border-b border-transparent bg-transparent">
         <nav className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6 md:h-20 md:px-10">
           {/* His name carries the site accent here as well as in the hero, so
               the one element that appears on every page reads as the same
               thing in both places. */}
           <NavLink
             to="/"
-            className="text-accent font-display text-lg tracking-tight transition-opacity duration-300 hover:opacity-75 md:text-xl"
+            className="text-accent ease-out-expo font-display text-lg tracking-tight transition-opacity duration-300 hover:opacity-75 md:text-xl"
           >
             Melvin Chirag
           </NavLink>
@@ -59,7 +58,7 @@ export function Nav() {
                   key={p.to}
                   to={p.to}
                   className={({ isActive }) =>
-                    `rounded-full px-4 py-2 text-sm tracking-wide transition-colors duration-300 ${
+                    `ease-out-expo rounded-full px-4 py-2 text-sm tracking-wide transition-colors duration-300 ${
                       isActive ? 'text-white' : 'text-white/55 hover:text-white/90'
                     }`
                   }
@@ -79,16 +78,16 @@ export function Nav() {
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((v) => !v)}
-              className="ml-1 flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white md:hidden"
+              className="ease-out-expo ml-1 flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white md:hidden"
             >
               <span className="relative block h-3 w-4">
                 <span
-                  className={`absolute left-0 block h-px w-4 bg-current transition-transform duration-300 ${
+                  className={`ease-out-expo absolute left-0 block h-px w-4 bg-current transition-transform duration-300 ${
                     menuOpen ? 'top-1.5 rotate-45' : 'top-0'
                   }`}
                 />
                 <span
-                  className={`absolute left-0 block h-px w-4 bg-current transition-transform duration-300 ${
+                  className={`ease-out-expo absolute left-0 block h-px w-4 bg-current transition-transform duration-300 ${
                     menuOpen ? 'top-1.5 -rotate-45' : 'top-3'
                   }`}
                 />
@@ -105,7 +104,7 @@ export function Nav() {
           through invisible links. */}
       <div
         inert={!menuOpen}
-        className={`overflow-hidden border-b border-white/[0.06] bg-[#06070d]/90 backdrop-blur-xl transition-[max-height,opacity] duration-500 md:hidden ${
+        className={`ease-out-expo overflow-hidden border-b border-white/[0.06] bg-[#06070d]/90 backdrop-blur-xl transition-[max-height,opacity] duration-500 md:hidden ${
           menuOpen ? 'max-h-72 opacity-100' : 'max-h-0 opacity-0'
         }`}
       >

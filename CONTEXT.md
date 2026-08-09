@@ -137,6 +137,34 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Motion bug: two easing curves were running site-wide (2026-08-09)
+Melvin: typography, some buttons, and "motion does not feel smooth and
+seamless" are what's bothering him about "vibe coded." Chose the cinematic and
+immersive lane (validates the current direction, wants tighter execution).
+- **Found a real, verifiable bug while auditing.** `--ease-out-expo` (the site's
+  one motion curve, per CLAUDE.md: "every transition on the site should use it
+  so the whole page moves with one personality") was declared under a plain
+  `:root` block, not inside `@theme`. Tailwind v4 only turns `@theme` tokens
+  into utility classes, so `ease-out-expo` was never a real Tailwind class.
+  Every hand-written CSS transition (`.glass-cta`, `.social-btn`, `.field`,
+  `.beyond-link`) correctly used `var(--ease-out-expo)` and got the intended
+  curve. Every Tailwind className transition (nav links, the hamburger, the
+  mobile menu, the hero dots, the two accent text links) silently fell back to
+  the browser default `ease`. Two different motion personalities were running
+  side by side across the same page: exactly what "not smooth and seamless"
+  describes. `Work.tsx`'s accordion already had `ease-out-expo` written in its
+  className, so someone had already tried this fix; it had been a silent no-op.
+- **Fix:** moved the declaration into `@theme`. Tailwind v4 still emits every
+  `@theme` token as a `:root` CSS variable too, so nothing using `var()` broke.
+  Swept every Tailwind-class transition across Nav.tsx and HeroBeats.tsx onto
+  the now-real `ease-out-expo` utility. Verified via computed style in Chrome:
+  nav links and the header both now resolve to `cubic-bezier(0.16, 1, 0.3, 1)`
+  instead of the default `ease`.
+- Typography and "some buttons" are still open; typography needs Melvin's input
+  given two prior rejections (emerald palette, Instrument Serif). Not yet asked.
+- Build + oxlint clean. Grepped dist for `.ease-out-expo{` to confirm the
+  utility survives minification.
+
 ### [CLAUDE] Accent colour system + melvin-voice skill rebuilt (2026-08-07)
 Melvin: the site has no consistent accent, and he was worried the copy does not
 sound like him.

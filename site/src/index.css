@@ -64,14 +64,22 @@
    * border-accent and so on.
    * --------------------------------------------------------------------- */
   --color-accent: #f3c67f;
-}
 
-/* `:root` targets the <html> element. Tokens here are plain CSS variables that
- * don't need to become Tailwind utilities. */
-:root {
-  /* Our standard easing curve: fast at first, then a long gentle settle. This
-   * is what makes motion feel physical rather than mechanical. Every transition
-   * on the site should use it so the whole page moves with one personality. */
+  /* ------------------------------------------------------------------------
+   * THE SITE'S ONE EASING CURVE. Fast at first, then a long gentle settle —
+   * this is what makes motion feel physical rather than mechanical, and every
+   * transition on the site is meant to use it so the whole page moves with one
+   * personality (see CLAUDE.md). It used to live under a plain `:root` block,
+   * which meant `var(--ease-out-expo)` worked in hand-written CSS but Tailwind
+   * never generated an `ease-out-expo` UTILITY class from it. Every className
+   * transition (nav links, the hamburger, the mobile menu, the hero dots, the
+   * Work page accordion) was silently falling back to the browser's default
+   * `ease` curve instead, so two different easing personalities were running
+   * side by side across the same page. Declaring it here, in `@theme`, is what
+   * makes `ease-out-expo` a real Tailwind class as well as keeping the `var()`
+   * form working (Tailwind v4 still emits every @theme token as a plain :root
+   * variable). Found and fixed 2026-08-09.
+   * --------------------------------------------------------------------- */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
