@@ -20,11 +20,11 @@ other pages' content/UI** at the same time. To avoid collisions:
 
 ## 🗂️ WORK ON LATER (running list — Melvin's, 2026-08-06)
 Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
-- **Assets from Melvin:** X + Instagram profile URLs (icons render dimmed until
-  given) · confirm canonical email (code uses melvinchirag@gmail.com) · Manas's
-  real scope + stack · the actual hackathon project · project preview
-  images/video + real "Explore Project" links. (Résumé PDF EXISTS at
-  /resume.pdf — Melvin confirmed; no longer a gap.)
+- **Assets from Melvin:** confirm canonical email (code uses
+  melvinchirag@gmail.com) · Manas's real scope + stack · the actual hackathon
+  project · project preview images/video + real "Explore Project" links.
+  (Résumé PDF EXISTS at /resume.pdf — Melvin confirmed. X + Instagram URLs
+  filled 2026-08-10 — both no longer gaps.)
 - **Social buttons UI:** Melvin likes them but wants them "a little better."
   Polish the icon-button look.
 - **"Beyond" link feel:** the glow reads "okay, not wow" to him, and he's not
@@ -32,6 +32,22 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   chose — revisit the type treatment). Make Beyond feel more special.
 - **Name lockup:** implemented equal-width "Melvin Chirag" / spread "KARUPATI".
   Fine-tune if the letter-spacing looks off at some widths.
+- **SECOND HERO MASK — Melvin's concept, 2026-08-10, explicitly deferred:**
+  "I wanna make changes to how the mask moves or perhaps I might have two
+  different masks in the hero page, so this original one will follow the same
+  trajectory and stay the same but the new one will be a mask and then break
+  into matter and follow us and then only form on the left side of the future
+  page and then on the right side is the first mask, the blue one." His own
+  call: "we can implement this later ... prioritise finishing the site first."
+  So: TWO masks on Future. Mask A = the current one, unchanged, on the RIGHT.
+  Mask B = new — starts formed, breaks apart into loose particles ("matter"),
+  those particles track scroll/the viewer through the earlier beats, then
+  re-cohere into a second mask on the LEFT once Future arrives. This is a
+  structural change to MaskField.tsx (a currently-protected, tuned file — see
+  its own header) or a new sibling scene component; do not start it without
+  re-reading his exact wording above first, and confirm which side / which
+  mask is "blue" before touching anything, since that's still just his prose,
+  not a spec.
 - **Contact page:** form + restyle DONE 2026-08-07 (see log below). Still open:
   wire a real backend (Submit currently composes a `mailto:`, deliberately — see
   the log entry) and confirm the canonical email address.
