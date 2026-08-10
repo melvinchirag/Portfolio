@@ -247,6 +247,47 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Fixing round 3's mistakes: swarm collision, dropdown, infinity path (2026-08-10)
+Melvin, on round 3, still unseen by me at that point (extension still down):
+- **"Same plane" was misread.** Round 3 mounted the swarm starting on the
+  Future frame so it would be on screen at the same time as the big mask —
+  Melvin clarifies that is NOT what he meant: "their effect should be shown
+  simultaneously" meant the GLYPHS should read as reaching toward the big
+  mask, not that the big mask and swarm should physically render together.
+  Having both on screen at once on the Future frame was "colliding". Fixed:
+  swarm is CONTACT-ONLY again (`isHome && contactInView`, the `contactInView`
+  prop it still needs is for the viewport-vs-section layout basis, not for
+  gating mount at all anymore — see GlobalScene.tsx). The big mask's
+  always-mounted fix from round 3 stays (that solved a real disappear/
+  reappear glitch he did confirm). Removed the now-dead `showSwarm`/
+  `useHeroFrame`/`BEAT_COUNT` plumbing this created in GlobalScene.tsx.
+- **Dropdown option list was rendering white.** `color-scheme: dark` on
+  `.field` (added earlier) covers the select box itself but Chromium doesn't
+  reliably extend it to the native option POPUP, which is its own OS-level
+  surface. Fixed with an explicit, SOLID `background-color`/`color` on
+  `.field-select option` — solid because the popup doesn't composite with the
+  page behind it, a translucent value would just look grey/wrong there.
+- **Infinity loop "flowing from two different directions".** The round-2
+  path hand-stitched two circular arcs with manually chosen sweep flags —
+  apparently that produced a real discontinuity (or at least read as one),
+  exactly what "two streams instead of one" describes. Replaced with a
+  genuine Lemniscate of Gerono, x(t)=cx+ax·cos(t), y(t)=cy+ay·sin(t)·cos(t),
+  sampled at 60 points over one continuous 0→2π sweep via a Node one-liner
+  (not hand-placed), so there is mathematically only one direction of travel,
+  no seam. Noted for Melvin: a true figure-eight's two lobes necessarily curl
+  in OPPOSITE senses relative to each other — that's what makes tracing it
+  read as one flowing S through the centre rather than two circles side by
+  side, so don't mistake that (correct) property for the bug again if it's
+  still visible; if the OVERALL sense still reads backwards,
+  `animation-direction: reverse` is a one-line fix.
+- **VERIFICATION GAP, still open:** tried the Chrome extension again before
+  this round and it's still disconnected. Same call as last round: shipped
+  on build+lint cleanliness and the underlying reasoning (especially for the
+  infinity path, verified mathematically via the generator script rather than
+  eyeballed) rather than block further. Two rounds in a row now without a
+  live check — flagging this pattern explicitly since it's no longer a
+  one-off.
+
 ### [CLAUDE] Mask swarm round 3 + infinity-loop socials + Contact copy (2026-08-10)
 Melvin, after seeing round 2 live — a big list, worked through all of it:
 - **Facial features still not visible** → ported the hero's eye/nose

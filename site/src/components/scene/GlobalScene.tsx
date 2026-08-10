@@ -8,7 +8,6 @@ import { ContactMaskSwarm } from './ContactMaskSwarm'
 import { LiquidGlassField } from './LiquidGlassField'
 import { VideoPlane } from './VideoBackground'
 import { useContactInView } from '../../hooks/contactVisibility'
-import { useHeroFrame, BEAT_COUNT } from '../../hooks/heroScroll'
 
 /**
  * Creates the looping VideoTexture for the About background. Lives OUTSIDE the
@@ -125,13 +124,11 @@ function SceneContents({
   isAbout,
   aboutTex,
   contactInView,
-  showSwarm,
 }: {
   isHome: boolean
   isAbout: boolean
   aboutTex: THREE.VideoTexture | null
   contactInView: boolean
-  showSwarm: boolean
 }) {
   // Force the video texture to re-upload the current frame each render so both
   // the background plane and the glass see live video.
@@ -143,19 +140,23 @@ function SceneContents({
     <>
       {isAbout && aboutTex && <VideoPlane texture={aboutTex} />}
 
-      {/* The hero's single mask now stays mounted for the WHOLE home route
+      {/* The hero's single mask stays mounted for the WHOLE home route
           (Melvin, 2026-08-10: it was disappearing and reappearing whenever he
           crossed the Future ↔ Contact boundary, which read as a glitch, not a
           transition). It used to hide once Contact came into view; that
-          exclusivity is gone.
-          The small swarm now joins it starting on the Future frame (not just
-          once Contact is in view) and stays mounted continuously through
-          Contact, so its glyphs keep roving/floating without a reset when you
-          cross that boundary — `showSwarm` (computed below from
-          `useHeroFrame` OR `contactInView`) is the single source of truth for
-          that whole span. */}
+          exclusivity stays gone — this part of the fix held up.
+          The small swarm is CONTACT-ONLY (`contactInView`, not the Future
+          frame). An earlier pass also mounted it on the Future frame so its
+          glyphs would already be roving before Contact scrolled in — Melvin,
+          2026-08-10, after seeing it: that put the big mask and the swarm on
+          screen at once, "colliding" in the same spot. "Same plane" meant the
+          glyphs should read as reaching toward the big mask, not that the two
+          should physically render together. So: swarm mounts on
+          `contactInView` alone, and the glyph drift distance is what's meant
+          to imply continuity with the mask above (see the big `uDriftUp` in
+          ContactMaskSwarm.tsx) — not literal simultaneous presence. */}
       {isHome && <MaskParticles />}
-      {isHome && showSwarm && <ContactMaskSwarm contactInView={contactInView} />}
+      {isHome && contactInView && <ContactMaskSwarm contactInView={contactInView} />}
 
       {/* On About, hand the video texture straight to the glass (it refracts THAT
           rather than capturing the scene — see LiquidGlassField). Elsewhere it
@@ -178,10 +179,6 @@ export function GlobalScene() {
   const isAbout = loc.pathname === '/about'
   const aboutTex = useAboutVideoTexture(isAbout)
   const contactInView = useContactInView()
-  // FUTURE is the last hero frame (index BEAT_COUNT-1). useHeroFrame() only
-  // re-renders on a frame CHANGE (see heroScroll.ts), so this is cheap.
-  const heroFrame = useHeroFrame()
-  const showSwarm = heroFrame === BEAT_COUNT - 1 || contactInView
 
   return (
     <div className="fixed inset-0 z-0 bg-[#050609]">
@@ -198,7 +195,6 @@ export function GlobalScene() {
           isAbout={isAbout}
           aboutTex={aboutTex}
           contactInView={contactInView}
-          showSwarm={showSwarm}
         />
       </Canvas>
     </div>
