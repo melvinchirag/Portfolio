@@ -64,16 +64,22 @@ type View = 'contact' | 'testimonials'
  * The Contact / Testimonials toggle. Centred at the top of the slide. Only
  * two states, so a simple two-button tablist rather than a sliding pill —
  * less to build, nothing to desync.
+ *
+ * DISPLAY LABEL: "Kind Words", not "Testimonials" (Melvin, 2026-08-10: "we
+ * might have to think of another word for testimonials"). Kept the internal
+ * view id / element ids as `testimonials` throughout the file — that's
+ * plumbing, never shown on screen — so only the label users actually read
+ * changed.
  * ------------------------------------------------------------------------ */
 function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
   const tabs: { id: View; label: string }[] = [
     { id: 'contact', label: 'Contact' },
-    { id: 'testimonials', label: 'Testimonials' },
+    { id: 'testimonials', label: 'Kind Words' },
   ]
   return (
     <div
       role="tablist"
-      aria-label="Contact or testimonials"
+      aria-label="Contact or kind words"
       className="inline-flex gap-1 rounded-full p-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
     >
       {tabs.map((t) => (
@@ -205,9 +211,8 @@ function ContactView() {
   return (
     <div id="panel-contact" role="tabpanel" aria-labelledby="tab-contact">
       <header className="max-w-2xl">
-        <p className="mb-4 text-[11px] tracking-[0.3em] text-white/40 uppercase">( Say Hello )</p>
         <h1 className="font-display text-[clamp(2.4rem,6vw,4.2rem)] leading-[1.02] tracking-tight text-white">
-          Let's Build Something Meaningful.
+          Let's Build What Comes Next.
         </h1>
         <p className="mt-6 max-w-xl text-[14px] leading-relaxed text-white/70">
           I'm always open to internships, jobs, research, and projects worth building. If you have
@@ -315,7 +320,23 @@ function ContactView() {
           aria-labelledby="contact-direct-heading"
           className="flex flex-col items-center md:self-center"
         >
-          <h2 id="contact-direct-heading" className="text-[11px] tracking-[0.3em] text-white/40 uppercase">
+          {/* Re-checked 2026-08-10: as a flex column with `items-center`, both
+              this label and the ring below are independently centred on the
+              SAME cross-axis line, so their boxes are provably aligned — this
+              `text-align: center` is a no-op hardening, not the fix for
+              anything measured broken. If it still reads as off-centre, the
+              likely cause is the ring's OWN motion, not this layout: 6 points
+              rotating together in one direction are bilaterally symmetric
+              about a vertical axis only 12 times per lap (every 30deg) — the
+              rest of the time the cluster is genuinely, correctly lopsided,
+              which a static label above it will always look "off" against.
+              That can't be fixed without either breaking "all one direction"
+              (a mirrored pair would need half the icons going clockwise) or
+              stopping the motion — both are calls for Melvin, not a guess. */}
+          <h2
+            id="contact-direct-heading"
+            className="text-center text-[11px] tracking-[0.3em] text-white/40 uppercase"
+          >
             Stalk me here
           </h2>
 
@@ -353,7 +374,6 @@ function TestimonialsView() {
   return (
     <div id="panel-testimonials" role="tabpanel" aria-labelledby="tab-testimonials">
       <header className="max-w-2xl">
-        <p className="mb-4 text-[11px] tracking-[0.3em] text-white/40 uppercase">( Testimonials )</p>
         <h1 className="font-display text-[clamp(2.4rem,6vw,4.2rem)] leading-[1.02] tracking-tight text-white">
           Work With Me?
         </h1>

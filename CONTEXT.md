@@ -51,9 +51,21 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
 - **Contact page:** form + restyle DONE 2026-08-07 (see log below). Still open:
   wire a real backend (Submit currently composes a `mailto:`, deliberately — see
   the log entry) and confirm the canonical email address.
-- **TESTIMONIALS — Melvin's UI addendum, verbatim (pasted 2026-08-07).** Scoped
-  out of the contact pass; this is the brief for its own pass. Do not water it
-  down into a carousel.
+- **OPEN QUESTION for Melvin: the orbit ring vs "Stalk me here."** He reported
+  the label still isn't centred with the ring. Re-derived the box math and it
+  provably IS centred (both are independently centred on the same flex
+  cross-axis line regardless of width). The likely real cause: 6 icons
+  rotating together in one direction are only bilaterally symmetric about a
+  vertical axis 12 times per lap — the rest of the time the cluster is
+  genuinely lopsided relative to a static label, which is inherent to
+  single-direction rotation, not a CSS bug. Fixing THAT needs either mirrored
+  pairs going opposite directions (breaks his explicit "counter clockwise"
+  ask) or stopping the motion (breaks "orbiting"). Need his call before
+  touching it further.
+- **TESTIMONIALS (display label now "Kind Words", 2026-08-10 — internal ids
+  still `testimonials` throughout the code) — Melvin's UI addendum, verbatim
+  (pasted 2026-08-07).** Scoped out of the contact pass; this is the brief for
+  its own pass. Do not water it down into a carousel.
   - **Core experience:** entering/scrolling into Testimonials should feel like
     revealing a *living archive* of previous collaborations. Approved
     testimonials live in the BACKGROUND, emerging from visual depth behind the
@@ -262,6 +274,88 @@ browsed both in Chrome rather than guessing from the URLs.
 - Build + oxlint clean. Verified in Chrome: font resolves as `"General Sans"`
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
+
+### [CLAUDE] Hero small-things + copy pass (2026-08-10)
+Melvin: "focus on smaller things in the hero page + text and content." Asked
+what "smaller things" meant rather than guessing across a page with this many
+WebGL dependencies; his answer was a full punch list. All items below except
+one are done; the exception is flagged, not silently skipped.
+
+- **Nav links (Work/Vision/About) were never on-brand** — plain white/grey.
+  Now `text-accent` (active) / `text-accent/55` (inactive), matching the name
+  logo which already carried the accent. Desktop + mobile menu both.
+- **Present slide broke on in-between widths** ("split screen on my laptop...
+  same problem on phone"). Root cause: `md:grid-cols-3` is a binary switch —
+  fine below `md`, forced to exactly 3 columns at/above it regardless of
+  actual room, so a split-screened or landscape-narrow viewport crammed 3
+  columns into space for maybe 1.5. No single breakpoint fixes a CONTINUOUS
+  problem. Replaced the grid with `.project-rail`, a scroll-snap strip
+  (HeroBeats.tsx's `ProjectRail`) — however many cards fit at the current
+  width show, the rest scroll. On a normal desktop all 3 fit and there's
+  nothing to scroll, so it looks identical to the old grid there; it only
+  changes behaviour exactly where the grid was breaking.
+- **Same component solved the arrow-key ask** ("a feature only for that glass
+  box in the present slide to scroll like a left and right arrow key on the
+  left and right side of the box respectively") rather than bolting on a
+  second mechanism: two circular accent buttons sit on the rail's own
+  left/right edges (kept INSIDE `.slide-glass`'s `overflow: hidden` — a
+  negative-offset button hanging off the edge would just be clipped, so no
+  carousel-style overhang here), each hidden when there's nothing left to
+  scroll that direction (live scroll-position check + ResizeObserver, so
+  entering split-screen mid-session updates it), and a real ArrowLeft/
+  ArrowRight keydown handler on the rail itself. Checked first that nothing
+  else in the app already binds those keys globally — nothing does.
+- **Stack (Present) + Areas (Future) get real design, not just accent color.**
+  He asked for accent color AND to "creatively place" both lists the same way
+  in every box. Rather than invent a new decorative language, grounded it in
+  the site's OWN stated motif — this project's CLAUDE.md literally names "a
+  glowing timeline thread" as the thing that persists across every page.
+  New shared `TagThread.tsx` + `.tag-thread` (index.css): a thin accent
+  hairline (gradient-faded at both ends, so it reads as a thread laid across
+  the box, not a rule dividing it) with each word preceded by a small glowing
+  accent dot. Explicitly not pills/chips — CLAUDE.md already rules that look
+  out, and a previous round ruled it out for these exact two lists. One
+  component, one CSS block, used by both frames (`compact` prop turns it down
+  for Present's narrower cards) so it reads as ONE considered treatment, not
+  two different guesses.
+- **Kicker labels removed everywhere** ("right about 'Lets Build something
+  meaningful' there is 'Say Hello' I want things like that gone everywhere").
+  Grepped for the pattern rather than trusting memory: found and removed 4 —
+  Contact's `(Say Hello)`, Contact's `(Testimonials)`, Work's `(The Present)`,
+  Vision's `(The Future)`. About.tsx never had one.
+- **Headline rewrite.** "Let's Build Something Meaningful." -> "Let's Build
+  What Comes Next." Kept his own "Let's Build" opener (his words, per the
+  voice skill's rule to reuse rather than invent when in doubt) and swapped
+  only the back half, forward-looking rather than generic, echoing the
+  Past/Present/Future frame already established through the whole hero.
+- **"Testimonials" renamed to "Kind Words"** in the one place it's user-facing
+  (the toggle tab + its aria-label). Left every internal id/type/function name
+  as `testimonials` throughout Contact.tsx on purpose — that's plumbing, never
+  shown on screen, and renaming it would just be a large diff for no visible
+  gain.
+- **"Stalk me here" vs the ring — investigated, not blindly re-"fixed".**
+  Re-derived the box math: `.orbit-ring` is 220px, `items-center` on a flex
+  column centres both the label and the ring on the same cross-axis line
+  independent of each other's width, so they are PROVABLY aligned as boxes.
+  Added `text-align: center` on the label as harmless hardening, but that's
+  not fixing anything measured broken. The likely real cause, if this still
+  reads as off to him: 6 points rotating together in ONE direction are
+  bilaterally symmetric about a vertical axis only 12 times per lap (every
+  30deg) — the rest of the time the cluster is genuinely lopsided, which will
+  always look "off" against a static label above it. That's an inherent
+  property of a single-direction rotating ring, not a layout bug, and fixing
+  it would mean either mirrored pairs going opposite directions (breaks his
+  explicit "counter clockwise" instruction) or stopping the motion (breaks
+  "orbiting" itself) — a call for him, not a guess. Flagged to him directly
+  rather than silently picking one.
+- **Not done, correctly out of scope this round:** filling in real content
+  "perfectly for every page" — he himself sequenced this as hero-first, other
+  pages after, so left for that phase. Manas/hackathon-project placeholders
+  are unchanged (still blocked on his real specifics, see WORK ON LATER).
+- Build (`tsc -b && vite build`) + oxlint clean. Verified in the built output:
+  accent nav classes present, both `.tag-thread` rules present, `.project-rail`
+  + `.project-rail-arrow` rules present, all 4 old kicker strings gone, new
+  headline and "Kind Words" both present.
 
 ### [CLAUDE] Glyphs no longer cut off on Future -> Present (2026-08-10)
 Melvin: verified round 8's ring is good. One remaining rough edge: "when we're

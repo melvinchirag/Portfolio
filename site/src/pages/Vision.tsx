@@ -17,9 +17,6 @@ export function Vision() {
   return (
     <div className="relative z-10 mx-auto max-w-5xl px-6 pt-32 pb-24 md:px-10">
       <header className="mb-24 text-center md:text-left">
-        <p className="mb-4 text-[11px] tracking-[0.3em] text-white/40 uppercase">
-          ( The Future )
-        </p>
         <h1 className="font-display text-5xl leading-[0.95] tracking-tight text-white md:text-7xl">
           Vision
         </h1>

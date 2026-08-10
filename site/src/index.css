@@ -272,6 +272,83 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+ * TAG THREAD — the accent word list for a project's stack / "Areas I'm
+ * exploring" (Melvin, 2026-08-10). See TagThread.tsx for why this shape:
+ * short version, it's the site's own "glowing thread" motif (CLAUDE.md)
+ * applied to a tag list instead of inventing a pill/chip look the brief
+ * already rules out.
+ * ----------------------------------------------------------------------------
+ * `::before` draws the hairline the words sit on — a gradient so it fades at
+ * both ends rather than terminating in a hard edge, which is what makes it
+ * read as a thread laid across the box rather than a rule dividing it.
+ * ------------------------------------------------------------------------ */
+.tag-thread {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 1.6em;
+  row-gap: 0.85em;
+  padding-top: 1.05em;
+}
+
+.tag-thread::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(243, 198, 127, 0.4) 12%,
+    rgba(243, 198, 127, 0.4) 88%,
+    transparent
+  );
+}
+
+.tag-thread-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  color: var(--color-accent);
+  opacity: 0.82;
+  font-size: 12.5px;
+  letter-spacing: 0.015em;
+  white-space: nowrap;
+}
+
+.tag-thread-dot {
+  width: 4px;
+  height: 4px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 0 6px 1px rgba(243, 198, 127, 0.55);
+}
+
+/* Present's project cards are a third the width of Future's box, so the same
+ * treatment needs to sit lighter: smaller type, tighter gaps, a dimmer dot —
+ * still clearly the same motif, just turned down for the smaller stage. */
+.tag-thread-compact {
+  column-gap: 1.1em;
+  row-gap: 0.6em;
+  padding-top: 0.85em;
+}
+
+.tag-thread-compact .tag-thread-item {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.tag-thread-compact .tag-thread-dot {
+  width: 3px;
+  height: 3px;
+  box-shadow: 0 0 4px 1px rgba(243, 198, 127, 0.5);
+}
+
+/* ---------------------------------------------------------------------------
  * SLIDE GLASS — the frosted panel behind each story frame (Past/Present/Future)
  * ----------------------------------------------------------------------------
  * The frost is a REAL `backdrop-filter` blurring the particle mask behind it.
@@ -304,6 +381,83 @@ body {
     inset 0 0 0 1px rgba(255, 255, 255, 0.075),
     0 24px 60px -34px rgba(0, 0, 0, 0.85);
   overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+ * PROJECT RAIL — Present's three cards. See the long comment on ProjectRail()
+ * in HeroBeats.tsx for why this is a scroll strip and not a breakpoint grid.
+ * ----------------------------------------------------------------------------
+ * Snap, don't just scroll: without `scroll-snap-type` a drag or an arrow click
+ * can leave a card sitting half-visible, which reads as broken rather than "in
+ * between". `start` alignment matches reading direction — the card you land on
+ * sits flush at the strip's leading edge, same as the arrow buttons' own logic. */
+.project-rail {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  /* Hide the scrollbar without hiding the ability to scroll — this already has
+     visible arrow affordances and snap, a raw OS scrollbar under a glass panel
+     would look like a stray browser chrome artifact. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.project-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.project-rail > [data-project-card] {
+  /* Sized so 3 fit a wide box (matches the old grid look there exactly), and
+     so a landscape phone still shows most of one card rather than a sliver. */
+  flex: 0 0 clamp(230px, 30vw, 320px);
+  scroll-snap-align: start;
+}
+
+/* Deliberately positioned at 0/0, NOT a negative inset that would hang the
+ * button off the card edge — `.slide-glass` clips with `overflow: hidden`
+ * (see above), so anything placed outside the box's own bounds is invisible.
+ * Sitting flush on top of the first/last card is the trade-off, and is why
+ * these are translucent circles rather than opaque — the card reads through. */
+.project-rail-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 10;
+  display: flex;
+  height: 34px;
+  width: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: rgba(6, 7, 13, 0.6);
+  color: var(--color-accent);
+  font-size: 18px;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(243, 198, 127, 0.35);
+  transition:
+    background-color 300ms var(--ease-out-expo),
+    box-shadow 300ms var(--ease-out-expo);
+}
+
+.project-rail-arrow:hover,
+.project-rail-arrow:focus-visible {
+  background: rgba(243, 198, 127, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(243, 198, 127, 0.6);
+  outline: none;
+}
+
+.project-rail-arrow-left {
+  left: 0;
+}
+
+.project-rail-arrow-right {
+  right: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-rail {
+    scroll-behavior: auto;
+  }
 }
 
 /* ---------------------------------------------------------------------------

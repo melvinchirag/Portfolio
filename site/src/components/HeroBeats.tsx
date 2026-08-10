@@ -28,13 +28,14 @@
  * state (`useHeroFrame`) only swaps which frame is interactive.
  * ========================================================================= */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BEAT_COUNT, heroScroll, useHeroFrame } from '../hooks/heroScroll'
 import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
 import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
 import { SocialLinks } from './SocialLinks'
+import { TagThread } from './TagThread'
 
 const FRAMES = [
   { id: 'identity', label: 'Identity' },
@@ -241,6 +242,145 @@ function ExploreLink({ href }: { href: string }) {
 }
 
 /* ---------------------------------------------------------------------------
+ * The project rail — Present's three cards, as a horizontally scrollable strip
+ * rather than a fixed 3-column grid (Melvin, 2026-08-10: "in the present slide
+ * the adjustment is weird when I split screen on my laptop... same problem on
+ * phone, we need to figure something out for it").
+ *
+ * WHY A GRID BROKE ON THOSE WIDTHS: `md:grid-cols-3` is a binary switch — below
+ * `md` it's one column (fine), at/above `md` it's forced to exactly three
+ * columns regardless of how much room there actually is. A split-screened
+ * laptop or a landscape phone can land ABOVE the `md` breakpoint while still
+ * being too narrow for three real columns, so the grid crammed them anyway.
+ * There is no single breakpoint that fixes this — the failure is continuous,
+ * not discrete.
+ *
+ * So this isn't a grid: it's an `overflow-x: auto` strip with scroll-snap
+ * (`.project-rail`). However much width is actually available, that many
+ * cards (or fractions of a card, snapped) show at once, and the rest is a
+ * normal horizontal scroll — the same fix at every width, not a table of
+ * breakpoints. On a wide desktop viewport all three cards fit and there is
+ * nothing to scroll, so this looks IDENTICAL to the old grid there; it only
+ * changes behaviour exactly where the grid was breaking.
+ *
+ * ARROW CONTROLS: also the explicit ask ("a feature only for that glass box in
+ * the present slide to scroll like a left and right arrow key on the left and
+ * right side of the box respectively") — solved by the SAME mechanism as the
+ * responsive fix, not a separate feature bolted on. Two circular buttons sit
+ * on the rail's own left/right edges (kept INSIDE `.slide-glass`'s
+ * `overflow: hidden`, not hanging off it — see index.css) and each scrolls by
+ * one card width; a real ArrowLeft/ArrowRight keydown handler on the rail does
+ * the same. Both are hidden at the end they'd scroll toward, via a live
+ * scroll-position check, so you're never shown a control that does nothing.
+ * ------------------------------------------------------------------------ */
+function ProjectRail() {
+  const railRef = useRef<HTMLDivElement>(null)
+  const [canLeft, setCanLeft] = useState(false)
+  const [canRight, setCanRight] = useState(false)
+
+  const updateEdges = () => {
+    const el = railRef.current
+    if (!el) return
+    // 2px slop absorbs sub-pixel scroll-end rounding some browsers produce.
+    setCanLeft(el.scrollLeft > 2)
+    setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2)
+  }
+
+  useEffect(() => {
+    const el = railRef.current
+    if (!el) return
+    updateEdges()
+    el.addEventListener('scroll', updateEdges, { passive: true })
+    // A ResizeObserver, not a `resize` listener: this needs to react to the
+    // BOX shrinking (e.g. entering split-screen) even though the window
+    // itself never fired a resize event.
+    const ro = new ResizeObserver(updateEdges)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', updateEdges)
+      ro.disconnect()
+    }
+  }, [])
+
+  const scrollByCard = (dir: 1 | -1) => {
+    const el = railRef.current
+    if (!el) return
+    const card = el.querySelector<HTMLElement>('[data-project-card]')
+    const gap = 20 // matches the `gap-5` on .project-rail below
+    const amount = card ? card.getBoundingClientRect().width + gap : el.clientWidth * 0.8
+    el.scrollBy({ left: dir * amount, behavior: 'smooth' })
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      scrollByCard(1)
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      scrollByCard(-1)
+    }
+  }
+
+  return (
+    <div className="relative mt-8">
+      {canLeft && (
+        <button
+          type="button"
+          onClick={() => scrollByCard(-1)}
+          aria-label="Scroll to the previous project"
+          className="project-rail-arrow project-rail-arrow-left"
+        >
+          <span aria-hidden>‹</span>
+        </button>
+      )}
+      {canRight && (
+        <button
+          type="button"
+          onClick={() => scrollByCard(1)}
+          aria-label="Scroll to the next project"
+          className="project-rail-arrow project-rail-arrow-right"
+        >
+          <span aria-hidden>›</span>
+        </button>
+      )}
+
+      <div
+        ref={railRef}
+        role="group"
+        aria-label="Featured projects — use the left and right arrow keys to scroll"
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        className="project-rail gap-5"
+      >
+        {PROJECTS.map((p) => (
+          /* No card chrome: a translucent bordered box INSIDE a translucent
+             bordered panel reads as muddy nesting, and is the "cards on cards"
+             look that makes a page feel templated. Only the preview well
+             carries a surface. */
+          <article key={p.name} data-project-card className="flex flex-col text-left">
+            <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-lg bg-white/[0.045]">
+              <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
+                {p.name.charAt(0)}
+              </span>
+              <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">
+                {p.tentative ? 'Preview coming' : 'Preview'}
+              </span>
+            </div>
+
+            <h3 className="font-display text-xl text-white">{p.name}</h3>
+            <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-white/80">{p.blurb}</p>
+
+            <TagThread items={p.stack} compact />
+
+            <ExploreLink href={p.href} />
+          </article>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ---------------------------------------------------------------------------
  * Frame 2 — The Present. Three featured project cards inside the glass box.
  * ------------------------------------------------------------------------ */
 function PresentFrame({ index }: { index: number }) {
@@ -254,44 +394,7 @@ function PresentFrame({ index }: { index: number }) {
           interactive software, and a lot of scientific curiosity.
         </p>
 
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
-          {PROJECTS.map((p) => (
-            /* No card chrome: a translucent bordered box INSIDE a translucent
-               bordered panel reads as muddy nesting, and is the "cards on cards"
-               look that makes a page feel templated. The columns are separated by
-               space alone; only the preview well carries a surface. */
-            <article key={p.name} className="flex flex-col text-left">
-              <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-lg bg-white/[0.045]">
-                <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
-                  {p.name.charAt(0)}
-                </span>
-                <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">
-                  {p.tentative ? 'Preview coming' : 'Preview'}
-                </span>
-              </div>
-
-              <h3 className="font-display text-xl text-white">{p.name}</h3>
-              <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-white/80">{p.blurb}</p>
-
-              {/* Same reasoning as the areas list: a quiet separated run, not
-                  chips. See the note in FutureFrame. */}
-              <ul className="mt-3 flex flex-wrap items-center text-[11px] leading-[1.8] text-white/55">
-                {p.stack.map((tech, i) => (
-                  <li key={tech}>
-                    {tech}
-                    {i < p.stack.length - 1 && (
-                      <span aria-hidden className="px-1.5 text-white/25">
-                        /
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-
-              <ExploreLink href={p.href} />
-            </article>
-          ))}
-        </div>
+        <ProjectRail />
       </div>
   )
 }
@@ -322,25 +425,15 @@ function FutureFrame({ index }: { index: number }) {
           </p>
         </div>
 
-        {/* Set as a plain typographic run, NOT bordered pills. Chips make ten
-            equal-weight nouns look like filter controls you can click, and they
-            are the most templated element on any portfolio. A quiet separated
-            line reads as prose, which is what this actually is. */}
+        {/* Not bordered pills — see TagThread.tsx for why (chips make ten
+            equal-weight nouns look like filter controls you can click, the
+            most templated element on any portfolio). Same accent-thread
+            treatment as the Present cards' stack, so both slides carry ONE
+            considered version of "a short word list", not two designs. */}
         <p className="mt-7 text-[10px] tracking-[0.3em] text-white/45 uppercase">
           Areas I'm exploring
         </p>
-        <ul className="mt-3 flex flex-wrap items-center text-[12.5px] leading-[1.9] text-white/70">
-          {AREAS.map((area, i) => (
-            <li key={area}>
-              {area}
-              {i < AREAS.length - 1 && (
-                <span aria-hidden className="px-2.5 text-white/25">
-                  /
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
+        <TagThread items={AREAS} />
       </div>
   )
 }

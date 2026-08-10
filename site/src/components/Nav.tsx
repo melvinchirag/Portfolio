@@ -59,7 +59,7 @@ export function Nav() {
                   to={p.to}
                   className={({ isActive }) =>
                     `ease-out-expo rounded-full px-4 py-2 text-sm tracking-wide transition-colors duration-300 ${
-                      isActive ? 'text-white' : 'text-white/55 hover:text-white/90'
+                      isActive ? 'text-accent' : 'text-accent/55 hover:text-accent/90'
                     }`
                   }
                 >
@@ -116,7 +116,7 @@ export function Nav() {
               onClick={() => setMenuOpen(false)}
               className={({ isActive }) =>
                 `py-3 text-base tracking-wide transition-colors ${
-                  isActive ? 'text-white' : 'text-white/60'
+                  isActive ? 'text-accent' : 'text-accent/60'
                 }`
               }
             >
