@@ -247,6 +247,48 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Round 6: organic mask layout + the infinity loop was just TOO SMALL (2026-08-10)
+Melvin approved round 5's handoff ("I like this the most"). Two remaining:
+masks too grid-like, and the socials still not reading as an infinity symbol.
+- **THE INFINITY BUG WAS SCALE, NOT MATHS — and I'd misdiagnosed it twice.**
+  Measured it instead of guessing: the container was 200x100, so after the
+  18px icon inset each lobe was only ~88x40px, while the icons riding it are
+  36px. **The icons were ~90% of the lobe height.** No arrangement of 36px
+  circles on a 40px-tall lobe can read as a figure-eight — it can only look
+  like a jostling cluster, which is exactly what his screenshots showed. Both
+  earlier "fixes" (re-stitching arcs, then swapping to a true Gerono
+  lemniscate) were fixing a curve that was already fine. The Gerono maths from
+  round 3 was correct and is kept.
+  FIX: container 200x100 → 340x155, so lobes are ~152x119 and the icons are
+  ~30% of lobe height (was 90%); path length 409px → 831px, six icons ~139px
+  apart; duration 18s → 26s so the linear speed stays calm over the longer
+  path. Added a `transform: scale(0.8)` under 420px viewport since `path()`
+  coordinates are absolute px and can't fluidly resize — safe here because
+  `.social-btn` has no backdrop-filter, so this doesn't trip the
+  transformed-ancestor trap documented at the top of index.css.
+- **Masks: jittered (stratified) grid, replacing the strict 6x4.** Round 2's
+  freehand scatter read as "uneven empty space"; rounds 3-4 over-corrected to
+  a rigid grid, which he then called "too symmetrical... rows and columns".
+  The standard answer to "irregular but evenly covering" is a jittered grid:
+  start from 6x4 so coverage is guaranteed, push each point up to ±46% of a
+  cell, drop 6 cells so the count is irregular too, vary scale per slot.
+  Rather than eyeball it, I SEARCHED the parameter space offline (node, ~900
+  candidates over seeds × jitter amounts) scoring on: no two faces
+  overlapping, coverage touching all four edges, and an explicit penalty for
+  any pair sharing a near-identical fx or fy — that last term is what
+  actually kills the "rows and columns" read, and the first search pass
+  (without it) still produced a visible bottom row. Winner: 18 masks, closest
+  pair 1.16× their mean height apart (>1 = no overlap), spanning fx
+  0.09–0.89 and fy 0.10–0.93, verified with an ASCII coverage map. Baked in
+  as literals (not a runtime hash) so the layout is stable across loads and
+  any single face can be nudged by hand later.
+- Build clean, oxlint clean; confirmed the 1073-char path and the 340px
+  container both survive Lightning CSS minification into dist.
+- **VERIFICATION GAP, sixth round:** extension still disconnected. Both fixes
+  here were derived from MEASUREMENT rather than eyeballing (icon-to-lobe
+  ratio; overlap/alignment scoring), which is the best substitute available,
+  but still not the same as seeing it.
+
 ### [CLAUDE] Round 5: the fade window was BACKWARDS — proved by arithmetic (2026-08-10)
 Melvin: still overlapping. "Create layers perhaps. The big mask should not
 come down into the contact page and needs to stay only in the future page.

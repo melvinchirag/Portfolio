@@ -201,29 +201,39 @@ body {
  * along the same path via `--start`), and "pause on hover" is a single
  * `animation-play-state` rule — no manual pause/resume bookkeeping needed.
  *
- * THE PATH, take two: the first version hand-stitched two circular arcs with
- * manually-picked sweep flags, and it read as broken — Melvin: "flowing from
- * two different directions", not one loop. That approach could produce a
- * discontinuous tangent right at the crossing point depending on how the two
- * arcs' sweep directions actually paired up, which is exactly what "two
- * streams instead of one" looks like.
+ * THE PATH — and why it read as broken twice before this.
  *
- * This path is a genuine Lemniscate of Gerono — x(t)=cx+ax·cos(t),
- * y(t)=cy+ay·sin(t)·cos(t) — sampled at 60 points for ONE continuously
- * increasing parameter t over a full 0→2π sweep, generated with Node (see
- * CONTEXT.md for the exact command) rather than hand-placed. One continuous
- * parameter guarantees one continuous direction of travel around the whole
- * shape — there is no seam to get backwards. (The two lobes of any true
- * figure-eight necessarily curl in opposite senses relative to EACH OTHER —
- * that is what makes it read as a single flowing "S" through the centre
- * rather than two circles spinning in place. That is correct, not a bug.)
+ * The curve is a Lemniscate of Gerono: x(t)=cx+ax·cos(t),
+ * y(t)=cy+ay·sin(t)·cos(t), sampled over ONE continuously increasing t across
+ * a full 0→2π sweep (generated with Node, see CONTEXT.md). A single continuous
+ * parameter guarantees a single continuous direction of travel, so there is no
+ * seam that can run backwards.
+ *
+ * That was already true in the previous version, and it still looked wrong —
+ * because the real problem was never the maths, it was SCALE. The container
+ * was 200x100, which after inset made each lobe only ~88x40px, while the icons
+ * riding it are 36px. The icons were ~90% of the lobe height: they physically
+ * could not trace a readable figure-eight, so they just looked like a jostling
+ * cluster. Measured, not guessed (see CONTEXT.md).
+ *
+ * Now 340x155 → lobes ~152x119, icons at ~30% of lobe height, six icons spaced
+ * ~139px apart along an ~831px path. The shape has room to actually read.
+ * Duration raised 18s→26s to keep the linear speed calm over the longer path.
+ *
+ * (Worth knowing for future edits: the two lobes of ANY true figure-eight curl
+ * in opposite senses relative to each other — that is what makes one stroke
+ * read as an "S" through the centre rather than two separate circles. That is
+ * correct behaviour, not the old bug.)
+ *
  * Coordinates are raw CSS pixels in the container's own box (that's how
- * `path()` in `offset-path` is specified — no separate SVG/viewBox needed).
+ * `path()` in `offset-path` is specified — no separate SVG/viewBox needed),
+ * which is also why the size is fixed and the small-screen case is handled by
+ * scaling the whole container rather than by re-authoring the path.
  * ------------------------------------------------------------------------ */
 .infinity-loop {
   position: relative;
-  width: 200px;
-  height: 100px;
+  width: 340px;
+  height: 155px;
 }
 
 .infinity-loop-item {
@@ -231,20 +241,32 @@ body {
   top: 0;
   left: 0;
   offset-path: path(
-    'M188.00,50.00 L187.52,54.16 L186.08,58.13 L183.69,61.76 L180.39,64.86 L176.21,67.32 L171.19,69.02 L165.40,69.89 L158.88,69.89 L151.73,69.02 L144.00,67.32 L135.79,64.86 L127.19,61.76 L118.30,58.13 L109.20,54.16 L100.00,50.00 L90.80,45.84 L81.70,41.87 L72.81,38.24 L64.21,35.14 L56.00,32.68 L48.27,30.98 L41.12,30.11 L34.60,30.11 L28.81,30.98 L23.79,32.68 L19.61,35.14 L16.31,38.24 L13.92,41.87 L12.48,45.84 L12.00,50.00 L12.48,54.16 L13.92,58.13 L16.31,61.76 L19.61,64.86 L23.79,67.32 L28.81,69.02 L34.60,69.89 L41.12,69.89 L48.27,69.02 L56.00,67.32 L64.21,64.86 L72.81,61.76 L81.70,58.13 L90.80,54.16 L100.00,50.00 L109.20,45.84 L118.30,41.87 L127.19,38.24 L135.79,35.14 L144.00,32.68 L151.73,30.98 L158.88,30.11 L165.40,30.11 L171.19,30.98 L176.21,32.68 L180.39,35.14 L183.69,38.24 L186.08,41.87 L187.52,45.84 L188.00,50.00 Z'
+    'M322.0,77.5L321.7,85.3L320.7,92.9L319.1,100.3L316.8,107.3L313.9,113.7L310.4,119.6L306.3,124.7L301.6,129.0L296.4,132.5L290.6,135.0L284.3,136.5L277.5,137.0L270.2,136.5L262.5,135.0L254.4,132.5L246.0,129.0L237.2,124.7L228.2,119.6L218.9,113.7L209.3,107.3L199.7,100.3L189.8,92.9L179.9,85.3L170.0,77.5L160.1,69.7L150.2,62.1L140.3,54.7L130.7,47.7L121.1,41.3L111.8,35.4L102.8,30.3L94.0,26.0L85.6,22.5L77.5,20.0L69.8,18.5L62.5,18.0L55.7,18.5L49.4,20.0L43.6,22.5L38.4,26.0L33.7,30.3L29.6,35.4L26.1,41.3L23.2,47.7L20.9,54.7L19.3,62.1L18.3,69.7L18.0,77.5L18.3,85.3L19.3,92.9L20.9,100.3L23.2,107.2L26.1,113.7L29.6,119.6L33.7,124.7L38.4,129.0L43.6,132.5L49.4,135.0L55.7,136.5L62.5,137.0L69.8,136.5L77.5,135.0L85.6,132.5L94.0,129.0L102.8,124.7L111.8,119.6L121.1,113.7L130.7,107.2L140.3,100.3L150.2,92.9L160.1,85.3L170.0,77.5L179.9,69.7L189.8,62.1L199.7,54.7L209.3,47.8L218.9,41.3L228.2,35.4L237.2,30.3L246.0,26.0L254.4,22.5L262.5,20.0L270.2,18.5L277.5,18.0L284.3,18.5L290.6,20.0L296.4,22.5L301.6,26.0L306.3,30.3L310.4,35.4L313.9,41.3L316.8,47.8L319.1,54.7L320.7,62.1L321.7,69.7L322.0,77.5Z'
   );
   /* Centres a 36px icon button ON its path point (offset-path itself anchors
    * the element's top-left corner, not its centre). */
   transform: translate(-50%, -50%);
   offset-rotate: 0deg; /* keep icons upright — they glide, they don't spin */
   offset-distance: var(--start, 0%);
-  animation: infinity-orbit 18s linear infinite;
+  animation: infinity-orbit 26s linear infinite;
 }
 
 /* Hovering ANYWHERE in the row halts every icon's motion at once, so the one
  * you're aiming for holds still long enough to actually click. */
 .infinity-loop:hover .infinity-loop-item {
   animation-play-state: paused;
+}
+
+/* `path()` coordinates are absolute pixels, so the loop can't fluidly resize —
+ * on narrow phones the 340px box would overflow the content column. Scale the
+ * whole container instead of re-authoring the path at another size. Safe to
+ * transform here: `.social-btn` uses no backdrop-filter, so this doesn't hit
+ * the transformed-ancestor trap documented at the top of this file. */
+@media (max-width: 420px) {
+  .infinity-loop {
+    transform: scale(0.8);
+    transform-origin: left center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

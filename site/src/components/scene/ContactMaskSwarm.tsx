@@ -121,25 +121,51 @@ const BLINK_DUR = 0.16
 const BLINK_MIN = 3.2
 const BLINK_MAX = 7.0
 
-// Twelve slots on a real 2-row grid, mirrored left/right (Melvin, round 3:
-// "not symmetrically fit... uneven empty space" — round 2's organic scatter
-// left visible gaps; a grid removes the ambiguity entirely). Values are
-// FRACTIONS of the current anchor rect (see the file header on what that rect
-// is). Scale list is also mirrored row-to-row so left/right mass balances.
-// Round 4 (Melvin, 2026-08-10, screenshots): only 2 rows left the BOTTOM of
-// the Contact section completely empty ("the UI is confused"). Four rows now,
-// spread across nearly the section's full height, not just its top half.
-const GRID_FX = [0.09, 0.25, 0.42, 0.58, 0.75, 0.91]
-const GRID_FY = [0.1, 0.36, 0.62, 0.88]
-const ROW_SCALES = [
-  [0.85, 1.0, 0.78, 1.05, 0.9, 0.95],
-  [0.95, 0.9, 1.05, 0.78, 1.0, 0.85],
-  [0.8, 1.05, 0.9, 0.95, 0.85, 1.0],
-  [1.0, 0.85, 0.95, 0.9, 1.05, 0.8],
+/* ---- WHERE THE FACES SIT ------------------------------------------------
+ * 18 slots as FRACTIONS of the Contact section's rect (0,0 = its top-left).
+ *
+ * History, because this has swung between two failure modes: round 2 used a
+ * freehand scatter and read as "uneven empty space"; rounds 3-4 answered that
+ * with a strict 6x4 grid, which Melvin then (fairly) called "too symmetrical
+ * ... they seem to be in rows and columns". What he actually wants is the
+ * thing neither extreme gives you: irregular to the eye, but still evenly
+ * covering the space.
+ *
+ * That is a jittered (stratified) grid — the standard answer to exactly this
+ * problem. Start from a 6x4 grid so coverage is guaranteed, push each point up
+ * to ±46% of a cell in each axis so no two ever line up, drop 6 cells so the
+ * count itself is irregular, and vary scale per slot.
+ *
+ * The values below are NOT hand-typed and NOT random-at-runtime — they were
+ * generated and then SEARCHED offline (see CONTEXT.md for the script) over
+ * seeds/jitters, scoring candidates on: no two faces overlapping, coverage
+ * reaching all four edges, and a penalty for any pair sharing a near-identical
+ * fx or fy (the thing that makes a layout read as a grid). Baked in as literals
+ * so the layout is identical on every load and any single face can be nudged by
+ * hand later. Verified for this winner: closest pair sits 1.16x their mean
+ * height apart (>1 = no overlap), spans fx 0.09-0.89 and fy 0.10-0.93, so the
+ * bottom of the section is genuinely filled (round 4's complaint).
+ * --------------------------------------------------------------------- */
+const SWARM_SLOTS: { fx: number; fy: number; scale: number }[] = [
+  { fx: 0.2519, fy: 0.1685, scale: 0.72 },
+  { fx: 0.5511, fy: 0.0972, scale: 0.76 },
+  { fx: 0.7708, fy: 0.1068, scale: 1.1 },
+  { fx: 0.8864, fy: 0.2368, scale: 0.85 },
+  { fx: 0.0937, fy: 0.4527, scale: 0.96 },
+  { fx: 0.2565, fy: 0.2868, scale: 0.65 },
+  { fx: 0.6077, fy: 0.3299, scale: 0.64 },
+  { fx: 0.6972, fy: 0.4541, scale: 0.86 },
+  { fx: 0.1262, fy: 0.6218, scale: 0.97 },
+  { fx: 0.4831, fy: 0.7052, scale: 1.0 },
+  { fx: 0.5825, fy: 0.5651, scale: 1.0 },
+  { fx: 0.744, fy: 0.6106, scale: 0.69 },
+  { fx: 0.8163, fy: 0.694, scale: 1.02 },
+  { fx: 0.1777, fy: 0.7769, scale: 1.05 },
+  { fx: 0.2949, fy: 0.7512, scale: 0.71 },
+  { fx: 0.3759, fy: 0.933, scale: 0.69 },
+  { fx: 0.6313, fy: 0.8959, scale: 1.08 },
+  { fx: 0.867, fy: 0.8917, scale: 0.72 },
 ]
-const SWARM_SLOTS: { fx: number; fy: number; scale: number }[] = GRID_FY.flatMap((fy, row) =>
-  GRID_FX.map((fx, col) => ({ fx, fy, scale: ROW_SCALES[row][col] })),
-)
 
 // Overall "shrink to small" factor applied on top of each slot's own scale
 // variation. (Round 2 note, still true: individual dot size — uParticleSize
