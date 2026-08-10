@@ -247,6 +247,15 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] X + Instagram URLs filled in (2026-08-10)
+Melvin supplied the last two pending social links: X https://x.com/MelChirag,
+Instagram https://www.instagram.com/chiragmelvin/. One-line change in
+`data/profile.ts` — both `SocialLinks.tsx` (hero) and the Contact orbit ring
+already branch on `href` being non-empty and already had brand-mark paths for
+both platforms, so they go from dimmed "link coming soon" to live automatically,
+no other file touched. Build + oxlint clean; confirmed both URLs present in the
+built JS.
+
 ### [CLAUDE] Round 8: the socials are a circle now (2026-08-10)
 Melvin: "The infinity thing is just not working, just make it circular and
 please remove the trace. Also the socials need to be aligned in the center

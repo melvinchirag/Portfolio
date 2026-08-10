@@ -5,10 +5,11 @@
  * URLs live here once and are imported wherever needed. Keeping them in one
  * file means a changed handle is a one-line edit, never a hunt across pages.
  *
- * `href: ''` marks a link Melvin hasn't supplied yet (X, Instagram). The UI
- * renders those as a dimmed, non-clickable icon rather than a broken link, so
- * the row is visually complete but nothing navigates nowhere. Fill the URL in
- * and it becomes a live link automatically.
+ * `href: ''` marks a link Melvin hasn't supplied yet. The UI renders those as
+ * a dimmed, non-clickable icon rather than a broken link, so the row is
+ * visually complete but nothing navigates nowhere. Fill the URL in and it
+ * becomes a live link automatically. (X and Instagram were the last two
+ * pending here — filled 2026-08-10.)
  * ========================================================================= */
 
 export const PROFILE = {
@@ -24,6 +25,6 @@ export type Social = { label: string; href: string }
 export const SOCIALS: Social[] = [
   { label: 'GitHub', href: 'https://github.com/melvinchirag' },
   { label: 'LinkedIn', href: 'https://linkedin.com/in/melvin-chirag-karupati-a34452380' },
-  { label: 'X', href: '' }, // TODO: real X (Twitter) profile URL pending from Melvin
-  { label: 'Instagram', href: '' }, // TODO: real Instagram profile URL pending from Melvin
+  { label: 'X', href: 'https://x.com/MelChirag' },
+  { label: 'Instagram', href: 'https://www.instagram.com/chiragmelvin/' },
 ]
