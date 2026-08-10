@@ -247,6 +247,60 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Round 7: the layout was never a randomness problem, and the ∞ was never a geometry problem (2026-08-10)
+Melvin, after round 6: masks want "a more pleasing manner, not necessarily too
+symmetrical but well placed from an aesthetic pov"; glyphs still too fast; and
+the socials *still* don't read as an infinity loop (his words: we've tried
+thrice, take the circle if you can't). Browser extension still disconnected —
+seventh unverified round, all diagnosis is measurement.
+
+- **THE ∞ — FOURTH REPORT, AND THE FIRST CORRECT DIAGNOSIS.** Re-measured the
+  shipped path in Node: 831px long, a textbook figure-eight, six icons at even
+  arc length (0/17/33/50/67/83%), closest pair 81px apart. Geometry *and* scale
+  are both correct — so rounds 1-3 fixed the curve (fine) and round 6 fixed the
+  size (fine) and none of it mattered, because **a moving dot does not draw its
+  own path.** Six identical circles gliding at constant speed over a 26-second
+  lap give the eye nothing to integrate into a shape. The ∞ only ever existed in
+  the code. His original ask was that they *look like* an infinity symbol AND
+  move along it; only the second half had ever been built.
+  Fix: stroke the lemniscate on screen (`.infinity-loop-track`, hairline accent
+  at 0.16 alpha, lifting to 0.30 on hover, which is also when the icons halt).
+  `LOOP_PATH` in Contact.tsx is now the single source of truth — it feeds both
+  the visible `<path>` and, via a `--loop-path` custom property, the icons'
+  `offset-path`, so the drawn line and the travelled line cannot diverge.
+  Kept the ∞ rather than falling back to the circle he offered: the shape was
+  never wrong, only invisible.
+- **MASK LAYOUT — round 6's method was the problem, not its randomness.** A
+  jittered/stratified grid is the textbook answer to "irregular but evenly
+  spread", and the offline search delivered exactly that (no overlaps, edge-to-
+  edge coverage, no shared rows/columns). It still looked unconsidered because
+  **even coverage IS the failure**: 18 faces spread uniformly is wallpaper — no
+  focal point, no hierarchy, no relationship to what the section is for. More
+  randomness could never have fixed that. So this round is HAND-COMPOSED, not
+  searched: 17 faces that FRAME the reading column instead of sitting behind it
+  (upper-right cluster → thinning descent down the right → anchored floor →
+  sparse single file down the left margin), deliberately uneven density
+  (x 6/1/4/6, y 5/3/3/6), and size used as depth (0.55-1.15, big low/outboard).
+  Verified offline against real world-unit footprints (a scale-1.0 face is
+  103×161px = 0.071×0.146 of the section rect): 0 overlapping pairs, tightest
+  clearance 1.15×, 0 intrusions into headline / social loop / Return button.
+- **GLYPH SPEED — the number that mattered wasn't the one being tuned.** Lit
+  duration was already 13.3s, which sounds slow; but glyphs cover ~5.7 viewport
+  heights over that life on a power curve, so nearly all of it happens at the
+  END. Measured top-of-arc speed: ~0.86 viewport heights **per second** — a
+  streak, not a drift. Fixed both terms: life 13.3s → 25s (ROVE_SPEED 0.0045 →
+  0.0024) and rise exponent 2.0 → 1.6, landing at ~0.35. Density unchanged
+  (ON_FRAC untouched, so the same share of the pool is lit at any instant).
+- **Also:** faces are sized off the camera's visible extent, which tracks
+  viewport HEIGHT — so on a phone they kept desktop size while the content
+  column collapsed around them, putting them on top of the text. Added a
+  width-driven fit factor (`FIT_REF_WIDTH`, floored at 0.5).
+- Build clean, oxlint clean; confirmed `offset-path:var(--loop-path)`, the track
+  rule and the path constant all survive Lightning CSS + the JS minifier.
+- **Known debt:** `docs/CODEBASE.md` still describes the pre-`GlobalScene`
+  structure (`SceneCanvas` / `ParticleField` / `PortraitTriptych`). Added the
+  `ContactMaskSwarm` entry and a drift warning; a full pass is still owed.
+
 ### [CLAUDE] Round 6: organic mask layout + the infinity loop was just TOO SMALL (2026-08-10)
 Melvin approved round 5's handoff ("I like this the most"). Two remaining:
 masks too grid-like, and the socials still not reading as an infinity symbol.

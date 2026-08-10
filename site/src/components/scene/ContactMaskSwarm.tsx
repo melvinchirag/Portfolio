@@ -1,7 +1,12 @@
 /* ============================================================================
- * ContactMaskSwarm.tsx — a symmetric field of small masks, fixed in place,
- * that turn AND tilt to face the cursor. Lives across the hero's Future frame
- * and the whole Contact section as one continuous presence.
+ * ContactMaskSwarm.tsx — a composed field of small masks, fixed in place, that
+ * turn AND tilt to face the cursor. Lives across the hero's Future frame and
+ * the whole Contact section as one continuous presence.
+ * ----------------------------------------------------------------------------
+ * Round 6 (Melvin, 2026-08-10) changed two things, both documented in full at
+ * their own definitions further down: the layout is now HAND-COMPOSED to frame
+ * the reading column rather than evenly cover the section (see SWARM_SLOTS),
+ * and the glyphs drift roughly half as fast (see GLYPH_ROVE_SPEED).
  * ----------------------------------------------------------------------------
  * Round 3 (Melvin, 2026-08-10, after seeing round 2 live):
  *   - Still can't make out facial features → added the hero's eye/nose
@@ -122,50 +127,75 @@ const BLINK_MIN = 3.2
 const BLINK_MAX = 7.0
 
 /* ---- WHERE THE FACES SIT ------------------------------------------------
- * 18 slots as FRACTIONS of the Contact section's rect (0,0 = its top-left).
+ * 17 slots as FRACTIONS of the Contact section's rect (0,0 = its top-left).
  *
- * History, because this has swung between two failure modes: round 2 used a
- * freehand scatter and read as "uneven empty space"; rounds 3-4 answered that
- * with a strict 6x4 grid, which Melvin then (fairly) called "too symmetrical
- * ... they seem to be in rows and columns". What he actually wants is the
- * thing neither extreme gives you: irregular to the eye, but still evenly
- * covering the space.
+ * History, because this has now failed in three different ways:
+ *   round 2 — freehand scatter        → "uneven empty space"
+ *   rounds 3-4 — strict 6x4 grid      → "too symmetrical, rows and columns"
+ *   round 5 — jittered/stratified grid → still not it: "arranged in a more
+ *             pleasing manner ... well placed from an aesthetic pov"
  *
- * That is a jittered (stratified) grid — the standard answer to exactly this
- * problem. Start from a 6x4 grid so coverage is guaranteed, push each point up
- * to ±46% of a cell in each axis so no two ever line up, drop 6 cells so the
- * count itself is irregular, and vary scale per slot.
+ * Round 5 is the interesting failure. A jittered grid is the textbook answer to
+ * "irregular but evenly spread", and it delivered exactly that — the offline
+ * search scored it on no-overlaps, edge-to-edge coverage, and no two faces
+ * sharing a row or column, and it passed all three. It still looked wrong,
+ * because EVEN COVERAGE IS THE PROBLEM, not the solution. Spreading 18 faces
+ * uniformly over the section is wallpaper: no focal point, no hierarchy, no
+ * relationship to the thing the section is actually for. That is what reads as
+ * unconsidered, and no amount of extra randomness fixes it.
  *
- * The values below are NOT hand-typed and NOT random-at-runtime — they were
- * generated and then SEARCHED offline (see CONTEXT.md for the script) over
- * seeds/jitters, scoring candidates on: no two faces overlapping, coverage
- * reaching all four edges, and a penalty for any pair sharing a near-identical
- * fx or fy (the thing that makes a layout read as a grid). Baked in as literals
- * so the layout is identical on every load and any single face can be nudged by
- * hand later. Verified for this winner: closest pair sits 1.16x their mean
- * height apart (>1 = no overlap), spans fx 0.09-0.89 and fy 0.10-0.93, so the
- * bottom of the section is genuinely filled (round 4's complaint).
+ * So this round is COMPOSED, by hand, not searched. Three rules:
+ *
+ * 1. THE FACES FRAME THE CONTENT, THEY DON'T SIT BEHIND IT. The reading column
+ *    (headline, form, the social loop) is deliberately left empty; the faces
+ *    live in the outer margins, the top-right corner, and the floor of the
+ *    section. Thematically this is also just better — these are watchers, and
+ *    watchers stand around the edge of a room.
+ * 2. DENSITY IS UNEVEN ON PURPOSE. A cluster gathers in the upper right, thins
+ *    down the right side, and re-gathers along the bottom, with a sparse
+ *    single-file descent down the left margin. Measured density by quarter:
+ *    x 6/1/4/6, y 5/3/3/6.
+ * 3. SIZE READS AS DEPTH. Bigger faces sit low and outboard (near the viewer),
+ *    smaller ones high and inboard (further away). Scale spans 0.55-1.15.
+ *
+ * Verified offline against real world-unit footprints (a scale-1.0 face is
+ * 103x161 px, i.e. 0.071 x 0.146 of the section rect): zero overlapping pairs,
+ * tightest clearance 1.15x, and zero intrusions into the headline, the social
+ * loop, or the Return-to-Start button. Hand-composed means any single face can
+ * be nudged one line at a time without re-running anything.
  * --------------------------------------------------------------------- */
 const SWARM_SLOTS: { fx: number; fy: number; scale: number }[] = [
-  { fx: 0.2519, fy: 0.1685, scale: 0.72 },
-  { fx: 0.5511, fy: 0.0972, scale: 0.76 },
-  { fx: 0.7708, fy: 0.1068, scale: 1.1 },
-  { fx: 0.8864, fy: 0.2368, scale: 0.85 },
-  { fx: 0.0937, fy: 0.4527, scale: 0.96 },
-  { fx: 0.2565, fy: 0.2868, scale: 0.65 },
-  { fx: 0.6077, fy: 0.3299, scale: 0.64 },
-  { fx: 0.6972, fy: 0.4541, scale: 0.86 },
-  { fx: 0.1262, fy: 0.6218, scale: 0.97 },
-  { fx: 0.4831, fy: 0.7052, scale: 1.0 },
-  { fx: 0.5825, fy: 0.5651, scale: 1.0 },
-  { fx: 0.744, fy: 0.6106, scale: 0.69 },
-  { fx: 0.8163, fy: 0.694, scale: 1.02 },
-  { fx: 0.1777, fy: 0.7769, scale: 1.05 },
-  { fx: 0.2949, fy: 0.7512, scale: 0.71 },
-  { fx: 0.3759, fy: 0.933, scale: 0.69 },
-  { fx: 0.6313, fy: 0.8959, scale: 1.08 },
-  { fx: 0.867, fy: 0.8917, scale: 0.72 },
+  // Upper-right cluster — the densest group, and the section's focal weight.
+  { fx: 0.735, fy: 0.055, scale: 0.62 },
+  { fx: 0.845, fy: 0.115, scale: 0.95 },
+  { fx: 0.665, fy: 0.165, scale: 0.8 },
+  { fx: 0.945, fy: 0.235, scale: 0.58 },
+  { fx: 0.795, fy: 0.27, scale: 0.9 },
+  // Left margin — a sparse single-file descent beside the form.
+  { fx: 0.055, fy: 0.145, scale: 0.7 },
+  { fx: 0.035, fy: 0.375, scale: 0.92 },
+  { fx: 0.085, fy: 0.605, scale: 0.55 },
+  { fx: 0.045, fy: 0.82, scale: 1.0 },
+  // Right side — the cluster above thinning out as it falls.
+  { fx: 0.925, fy: 0.48, scale: 0.72 },
+  { fx: 0.68, fy: 0.655, scale: 1.1 },
+  { fx: 0.88, fy: 0.705, scale: 0.85 },
+  { fx: 0.575, fy: 0.775, scale: 0.62 },
+  // Floor — the largest faces, anchoring the bottom of the section.
+  { fx: 0.245, fy: 0.905, scale: 1.15 },
+  { fx: 0.415, fy: 0.845, scale: 0.68 },
+  { fx: 0.76, fy: 0.93, scale: 1.0 },
+  { fx: 0.13, fy: 0.96, scale: 0.6 },
 ]
+
+/* A face's on-screen size is derived from the camera's visible extent, which
+ * depends on viewport HEIGHT — so on a narrow phone the faces keep their full
+ * desktop size while the content column collapses around them, and they end up
+ * sitting on top of the text instead of framing it. Shrink them with the
+ * viewport WIDTH to keep the margins readable. Floored at 0.5 so they stay
+ * legible as faces rather than dissolving into specks. */
+const FIT_REF_WIDTH = 1100
+const FIT_MIN = 0.5
 
 // Overall "shrink to small" factor applied on top of each slot's own scale
 // variation. (Round 2 note, still true: individual dot size — uParticleSize
@@ -303,9 +333,24 @@ const GLYPH_CHARS = [...BINARY, ...TELUGU]
 const BIN_START = 0
 const TEL_START = BINARY.length
 const GLYPH_POOL_FRACTION = 0.14
-// Lit duration ≈ GLYPH_ON_FRAC / GLYPH_ROVE_SPEED ≈ 0.06 / 0.0045 ≈ 13.3s.
+// Lit duration ≈ GLYPH_ON_FRAC / GLYPH_ROVE_SPEED ≈ 0.06 / 0.0024 ≈ 25s.
+//
+// Round 6 (still "too fast"): the number that actually governs perceived speed
+// isn't the lit duration, it's how fast a glyph is TRAVELLING, and that had
+// been hiding behind the rise curve. A glyph covers uDriftUp (32 local units,
+// ~8 world units after the group scale, ~5.7 viewport heights) over its whole
+// lit life, and because rise is a power curve it does most of that at the END:
+// at 13.3s the top-of-arc speed worked out to ~0.86 viewport heights per
+// second, which is a streak, not a drift. Lengthening the life to 25s AND
+// softening the exponent (see uRiseExp) brings that down to ~0.35 — slow
+// enough to actually read as floating. Density is untouched: ON_FRAC is the
+// same, so the same proportion of the pool is lit at any instant.
 const GLYPH_ON_FRAC = 0.06
-const GLYPH_ROVE_SPEED = 0.0045
+const GLYPH_ROVE_SPEED = 0.0024
+// Exponent on the rise curve. 1.0 would be dead-linear; the old 2.0 was
+// constant-acceleration (buoyancy), which is the right SHAPE but whips at the
+// top. 1.6 keeps the slow start and takes ~20% off the peak speed.
+const GLYPH_RISE_EXP = 1.6
 const GLYPH_SIZE = 13
 
 function makeGlyphAtlas() {
@@ -345,6 +390,7 @@ const glyphVertex = /* glsl */ `
   uniform float uDriftUp;
   uniform float uDriftOut;
   uniform float uDriftSide;
+  uniform float uRiseExp;
   attribute vec2 aRef;
   attribute float aSeed;
   varying float vGlyph;
@@ -361,7 +407,7 @@ const glyphVertex = /* glsl */ `
     vAlpha = clamp(fade, 0.0, 1.0);
 
     float lp = clamp(life / uOnFrac, 0.0, 1.0);
-    float rise = lp * lp;
+    float rise = pow(lp, uRiseExp);
     pos.y += uDriftUp * rise;
     pos.z += uDriftOut * rise;
     pos.x += (hash(aSeed * 17.0) - 0.5) * uDriftSide * rise;
@@ -585,6 +631,7 @@ export function ContactMaskSwarm() {
             uDriftUp: { value: 32 },
             uDriftOut: { value: 1.5 },
             uDriftSide: { value: 3 },
+            uRiseExp: { value: GLYPH_RISE_EXP },
             uAtlas: { value: atlas.texture },
             uCols: { value: atlas.cols },
             uFade: { value: 0 },
@@ -676,6 +723,10 @@ export function ContactMaskSwarm() {
     const lagT = 1 - Math.exp(-delta / LOOK_LAG)
     swarmClock.current += delta
 
+    // See FIT_REF_WIDTH — face size tracks viewport height, so narrow windows
+    // need an explicit shrink or the margin faces climb onto the text.
+    const fit = Math.max(FIT_MIN, Math.min(1, size.width / FIT_REF_WIDTH))
+
     SWARM_SLOTS.forEach((slot, i) => {
       const group = groupRefs.current[i]
       const mat = materials[i]
@@ -720,7 +771,7 @@ export function ContactMaskSwarm() {
       const py = rect.top + slot.fy * rect.height
       const w = toWorld(px, py)
       group.position.set(w.x, w.y, zIn)
-      group.scale.setScalar(BASE_SCALE * slot.scale)
+      group.scale.setScalar(BASE_SCALE * slot.scale * fit)
 
       // Target look: idle → straight ahead (0,0); otherwise turn/tilt toward
       // the cursor, proportional to how far off-centre it is from THIS mask.

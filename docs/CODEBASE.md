@@ -295,6 +295,21 @@ Also contains the reusable simplex-noise function that makes drift organic.
 *where* particles clump. This is separate from the GPU noise because it does a
 different job at a different time.
 
+**`scene/ContactMaskSwarm.tsx`** — The seventeen small faces that inhabit the
+Contact section and turn to follow your cursor. One simulation, seventeen draws:
+a single `GPUComputationRenderer` produces one live position texture per frame,
+and each face is a cheap re-draw of that same texture with its own transform and
+its own material clone (so each can blink, fade in, and float glyphs on its own
+clock). Their positions are **hand-composed, not evenly spread** — they frame
+the reading column rather than sit behind it, which is the whole difference
+between "background" and "wallpaper"; the reasoning is written out at
+`SWARM_SLOTS` in that file.
+
+> ⚠ This section still describes the earlier `SceneCanvas` / `ParticleField` /
+> `PortraitTriptych` structure. The scene has since moved to a persistent
+> `GlobalScene.tsx` with `MaskField.tsx` as the hero mask. Section 7 remains
+> accurate about the *technique*; the file names around it have drifted.
+
 ### The interface — `src/components/`
 
 **`Nav.tsx`** — The top bar. Name on the left, page links and the glass Resume

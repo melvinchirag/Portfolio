@@ -123,17 +123,44 @@ const EXTRA_ICONS: { label: string; href: string; title: string; path: string }[
  * showing the raw URL "reads very amateur") — the actual address lives in
  * href + aria-label/title, not on screen, still fully reachable.
  *
- * The path, timing and pause-on-hover all live in `.infinity-loop` /
- * `.infinity-loop-item` (index.css) — this component only has to place each
- * icon at its own evenly-spaced start point along the shared path.
+ * WHY THE CURVE IS DRAWN AND NOT JUST TRAVELLED (round 4 of this component,
+ * Melvin: "the socials are not revolving in an infinity shaped loop"): the
+ * geometry was measured and is correct — a true figure-eight, six icons spread
+ * evenly along it, closest pair 81px apart. The problem was that a moving dot
+ * does not draw its own path. Six identical circles gliding at a constant speed
+ * over a 26-second lap give the eye nothing to integrate, so the ∞ existed only
+ * in the code. Stroking it makes the shape present the instant you look, and
+ * turns the icons into things that ride it.
+ *
+ * LOOP_PATH is therefore the single source of truth for that curve: it feeds
+ * BOTH the visible <path> and (via the --loop-path custom property) the
+ * `offset-path` the icons travel. They cannot drift out of sync.
+ *
+ * Timing, pause-on-hover and the track's own styling live in `.infinity-loop*`
+ * (index.css); this component places each icon at its own start point.
  * ------------------------------------------------------------------------ */
+
+/** Lemniscate of Gerono, x(t)=170+152·cos t, y(t)=77.5+59.5·sin 2t, sampled at
+ *  96 points over one continuous 0→2π sweep, in the container's own 340x155
+ *  pixel box. One increasing parameter = one continuous direction of travel, so
+ *  there is no seam where the motion can appear to reverse. Generated with Node
+ *  (script in CONTEXT.md) — regenerate rather than editing points by hand. */
+const LOOP_PATH =
+  'M322.0,77.5L321.7,85.3L320.7,92.9L319.1,100.3L316.8,107.3L313.9,113.7L310.4,119.6L306.3,124.7L301.6,129.0L296.4,132.5L290.6,135.0L284.3,136.5L277.5,137.0L270.2,136.5L262.5,135.0L254.4,132.5L246.0,129.0L237.2,124.7L228.2,119.6L218.9,113.7L209.3,107.3L199.7,100.3L189.8,92.9L179.9,85.3L170.0,77.5L160.1,69.7L150.2,62.1L140.3,54.7L130.7,47.7L121.1,41.3L111.8,35.4L102.8,30.3L94.0,26.0L85.6,22.5L77.5,20.0L69.8,18.5L62.5,18.0L55.7,18.5L49.4,20.0L43.6,22.5L38.4,26.0L33.7,30.3L29.6,35.4L26.1,41.3L23.2,47.7L20.9,54.7L19.3,62.1L18.3,69.7L18.0,77.5L18.3,85.3L19.3,92.9L20.9,100.3L23.2,107.2L26.1,113.7L29.6,119.6L33.7,124.7L38.4,129.0L43.6,132.5L49.4,135.0L55.7,136.5L62.5,137.0L69.8,136.5L77.5,135.0L85.6,132.5L94.0,129.0L102.8,124.7L111.8,119.6L121.1,113.7L130.7,107.2L140.3,100.3L150.2,92.9L160.1,85.3L170.0,77.5L179.9,69.7L189.8,62.1L199.7,54.7L209.3,47.8L218.9,41.3L228.2,35.4L237.2,30.3L246.0,26.0L254.4,22.5L262.5,20.0L270.2,18.5L277.5,18.0L284.3,18.5L290.6,20.0L296.4,22.5L301.6,26.0L306.3,30.3L310.4,35.4L313.9,41.3L316.8,47.8L319.1,54.7L320.7,62.1L321.7,69.7L322.0,77.5Z'
+
 function FindMeHere() {
   const items = [
     ...SOCIALS.map((s) => ({ label: s.label, href: s.href, title: s.label, path: ICON_PATHS[s.label] })),
     ...EXTRA_ICONS,
   ]
   return (
-    <div className="infinity-loop mt-6">
+    <div className="infinity-loop mt-6" style={{ '--loop-path': `path('${LOOP_PATH}')` } as CSSProperties}>
+      {/* The visible track. Same string as the icons' offset-path, so the line
+          drawn here IS the line they travel. */}
+      <svg className="infinity-loop-track" viewBox="0 0 340 155" aria-hidden focusable="false">
+        <path d={LOOP_PATH} />
+      </svg>
+
       {items.map((item, i) => {
         const icon = (
           <svg viewBox="0 0 24 24" fill="currentColor" width={19} height={19} aria-hidden>
