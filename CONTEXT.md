@@ -275,6 +275,26 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Project cards: no more separate Explore Project link (2026-08-10)
+Melvin, after seeing the tag-thread pass: remove the golden hairline above the
+stack list (he only wanted the accent color + dot, not a divider), and remove
+the "Explore Project" button entirely - hovering the project's name or its
+preview image should do what that button did, and dropping it should even out
+card heights across the row.
+
+- `.tag-thread::before` (the hairline) deleted. Padding-top that used to clear
+  it cut down to match (1.05em/0.85em -> 0.5em/0.4em) so there isn't leftover
+  dead air where the line used to be.
+- Project cards: image + name are now wrapped in one `<a>` (only when `p.href`
+  exists - `tentative` projects with no target stay inert, same as before, so
+  nothing links to nowhere) using a named Tailwind group so hovering either
+  one tints the image, colors the name accent, and fades in a small arrow
+  glyph in the image's corner. That glyph is the SAME `↗` already used on the
+  Resume link elsewhere in the hero, not a new affordance.
+- Build + oxlint clean. Verified in dist: "Explore Project" string gone, the
+  `::before` rule gone, the named-group hover rules compiled correctly
+  (`group\/card`, `group-hover\/card:*`).
+
 ### [CLAUDE] Hero small-things + copy pass (2026-08-10)
 Melvin: "focus on smaller things in the hero page + text and content." Asked
 what "smaller things" meant rather than guessing across a page with this many

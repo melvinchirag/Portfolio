@@ -218,30 +218,6 @@ function PastFrame({ index }: { index: number }) {
 }
 
 /* ---------------------------------------------------------------------------
- * A single "Explore Project" link — a real link when a target exists, a dimmed
- * "coming soon" label otherwise (so no card ever links to nowhere).
- * ------------------------------------------------------------------------ */
-function ExploreLink({ href }: { href: string }) {
-  if (!href) {
-    return (
-      <span className="mt-4 inline-block text-[12px] tracking-wide text-white/35" title="Link coming soon">
-        Explore Project <span aria-hidden>→</span>
-      </span>
-    )
-  }
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="ease-out-expo text-accent/85 hover:text-accent mt-4 inline-block text-[12px] tracking-wide transition-colors duration-300"
-    >
-      Explore Project <span aria-hidden>→</span>
-    </a>
-  )
-}
-
-/* ---------------------------------------------------------------------------
  * The project rail — Present's three cards, as a horizontally scrollable strip
  * rather than a fixed 3-column grid (Melvin, 2026-08-10: "in the present slide
  * the adjustment is weird when I split screen on my laptop... same problem on
@@ -358,21 +334,57 @@ function ProjectRail() {
              look that makes a page feel templated. Only the preview well
              carries a surface. */
           <article key={p.name} data-project-card className="flex flex-col text-left">
-            <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-lg bg-white/[0.045]">
-              <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
-                {p.name.charAt(0)}
-              </span>
-              <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">
-                {p.tentative ? 'Preview coming' : 'Preview'}
-              </span>
-            </div>
+            {/* Image + name ARE the "Explore Project" action now (Melvin,
+                2026-08-10: "remove those [Explore Project buttons]... if
+                someone hovers over its name or the image it should
+                automatically do what 'explore project' is doing" — this also
+                evens out card height, since a trailing CTA line whose
+                presence/absence depended on `href` was the thing making cards
+                sit at different heights). No separate link when there's
+                nothing to link to yet (`tentative` projects) — the "Preview
+                coming" label in the image already says that, an inert hover
+                target would just be a dead end. */}
+            {p.href ? (
+              <a
+                href={p.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Explore ${p.name}`}
+                className="group/card ease-out-expo -m-1 rounded-lg p-1 transition-opacity duration-300 hover:opacity-90"
+              >
+                <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-lg bg-white/[0.045] transition-colors group-hover/card:bg-white/[0.07]">
+                  <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
+                    {p.name.charAt(0)}
+                  </span>
+                  <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">Preview</span>
+                  {/* Same arrow glyph the Resume link already uses elsewhere
+                      on the hero — reused, not a new affordance to learn. */}
+                  <span
+                    aria-hidden
+                    className="ease-out-expo text-accent absolute top-3 right-3 translate-y-1 text-sm opacity-0 transition-all duration-300 group-hover/card:translate-y-0 group-hover/card:opacity-100"
+                  >
+                    ↗
+                  </span>
+                </div>
+                <h3 className="font-display group-hover/card:text-accent text-xl text-white transition-colors duration-300">
+                  {p.name}
+                </h3>
+              </a>
+            ) : (
+              <>
+                <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-lg bg-white/[0.045]">
+                  <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
+                    {p.name.charAt(0)}
+                  </span>
+                  <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">Preview coming</span>
+                </div>
+                <h3 className="font-display text-xl text-white">{p.name}</h3>
+              </>
+            )}
 
-            <h3 className="font-display text-xl text-white">{p.name}</h3>
             <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-white/80">{p.blurb}</p>
 
             <TagThread items={p.stack} compact />
-
-            <ExploreLink href={p.href} />
           </article>
         ))}
       </div>
