@@ -293,7 +293,7 @@ card heights across the row.
   Resume link elsewhere in the hero, not a new affordance.
 - Build + oxlint clean. Verified in dist: "Explore Project" string gone, the
   `::before` rule gone, the named-group hover rules compiled correctly
-  (`group\/card`, `group-hover\/card:*`).
+  (`group/card`, `group-hover/card:*`).
 
 ### [CLAUDE] Hero small-things + copy pass (2026-08-10)
 Melvin: "focus on smaller things in the hero page + text and content." Asked
