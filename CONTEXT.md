@@ -247,6 +247,52 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Round 5: the fade window was BACKWARDS — proved by arithmetic (2026-08-10)
+Melvin: still overlapping. "Create layers perhaps. The big mask should not
+come down into the contact page and needs to stay only in the future page.
+The small masks should trigger... when i have completely reached contacts or
+at atmost 1 sec earlier."
+- **Found the real bug by TRACING THE ARITHMETIC instead of guessing.** Ran
+  the round-3 leave-fade math over a scroll sweep (node one-liner, table in
+  the transcript). Result: the big mask sat at **full opacity until Contact
+  already covered 38% of the screen**, and was still 60% visible at 63%
+  coverage. It only finished fading when Contact covered 100%. That is
+  precisely the overlap in his screenshots — the fade window was inverted.
+  The old code faded over the last 500px BEFORE the track bottom hit the
+  viewport top, which is the WRONG END of the transition entirely.
+- **Fix, and it's the "layers" idea he suggested:** one shared scalar,
+  `contactHandoff.t`, published from contactVisibility.ts and read by BOTH
+  layers, so they can't hold conflicting notions of "am I past the hero yet"
+  (that disagreement is what every previous round of this bug actually was).
+  t = heroTrack.bottom / viewportHeight, clamped: 1 = Future owns the screen,
+  0 = Contact owns it, so `1 - t` is literally "fraction of the screen
+  Contact has taken". Deliberately NOT heroScroll.progress — that clamps at 1
+  across the whole post-track span and cannot distinguish "just left Future"
+  from "deep in Contact", which is the exact distinction needed here.
+  - BIG MASK: fades across the FIRST slice — fully gone at t = 0.8, i.e.
+    once Contact covers 20%. Never mount-gated (mount-toggling is what made
+    it pop), continuous in scroll position so it reverses cleanly upward.
+  - SWARM: mount is now a LATCH, which is the part earlier rounds kept
+    missing. Triggers at t <= 0.35 (Contact ~65% covered — "completely
+    reached or at most 1 sec earlier"); STAYS mounted while frame === FUTURE
+    so already-airborne glyphs keep floating if you scroll back up; resets
+    only when frame < FUTURE (Present or earlier). A stateless threshold
+    satisfies the trigger but breaks the scroll-back-up case; mounting on
+    the Future frame (an earlier attempt) does the reverse. Only a latch
+    does both — that's why this kept oscillating between two wrong fixes.
+- **Verified by simulation, not by eye** (extension still down, 5th round):
+  ran the full scroll journey — down through Past/Present/Future, into
+  Contact, back up to Future, back to Present, forward again — against the
+  real constants. All eight checkpoints match his spec exactly: big mask
+  full through Future and zero before Contact arrives; swarm off in Future
+  initially, on at ~65%, still on when scrolled back to Future, off at
+  Present, and correctly does NOT re-appear in Future until Contact is
+  reached again.
+- MaskField.tsx touched again but the actual CODE delta is 3 lines (import,
+  one constant, one replaced expression) — verified by diffing with comments
+  filtered out. Everything else in that file is untouched.
+- Build clean, oxlint clean.
+
 ### [CLAUDE] Round 4: found the ACTUAL collision bug + empty bottom (2026-08-10)
 Melvin sent two screenshots (still couldn't check myself, extension still
 down) — real evidence this time, and it changed the diagnosis.

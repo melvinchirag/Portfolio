@@ -24,6 +24,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { heroScroll } from '../../hooks/heroScroll'
 import { heroIntro } from '../../hooks/heroIntro'
+import { contactHandoff } from '../../hooks/contactVisibility'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
@@ -153,6 +154,12 @@ function noseWeight(x: number, y: number): number {
 // second faster"). The fly-in does not START until the Loader is gone (heroIntro).
 const INTRO_SECS = 1.2
 const INTRO_Z_DEEP = -9
+
+// LEAVE FADE threshold, in `contactHandoff.t` units (see contactVisibility.ts
+// and the leave-fade block in useFrame). The mask is fully gone once t drops
+// to this, i.e. once Contact has taken over (1 - 0.8) = 20% of the screen —
+// early enough that it never overlaps the contact content.
+const LEAVE_FADE_END = 0.8
 
 // BLINK (Melvin, 2026-08-01: "slow natural blink so the mask feels alive"). The eyes
 // close + reopen over BLINK_DUR, then wait a random BLINK_MIN..BLINK_MAX before the
@@ -795,23 +802,30 @@ export function MaskParticles() {
     // Random birth offset that decays to 0 → starts somewhere new, ends at home.
     const offX = introOffset.current.x * (1 - eIntro)
     const offY = introOffset.current.y * (1 - eIntro)
-    // LEAVE FADE (Melvin, 2026-08-10): the mask is rendered on a fixed,
-    // scroll-independent canvas, so once heroScroll.progress clamps at 1
-    // (past the whole hero track) it just freezes at its final pose and sits
-    // pinned on screen indefinitely, no matter how far you scroll into
-    // Contact — "the big mask needs to stay at future slide and should not
-    // come up [into Contact]". A hard mount/unmount (tried earlier) caused an
-    // abrupt pop instead. This reads #hero-track's own bottom edge each frame
-    // (a plain DOM read, same category as the cursor raycast below) and fades
-    // smoothly over the last FADE_DISTANCE px before that edge reaches the
-    // viewport top — full strength through the whole hero including Future,
-    // gone by the time Contact is actually the thing on screen, and reverses
-    // cleanly if you scroll back up. Untouched (=1) on every other page: the
-    // element only exists on Home, so elsewhere this just resolves to 1.
-    const heroTrackEl = document.getElementById('hero-track')
-    const trackBottom = heroTrackEl ? heroTrackEl.getBoundingClientRect().bottom : Infinity
-    const FADE_DISTANCE = 500
-    const leaveFade = Math.max(0, Math.min(1, trackBottom / FADE_DISTANCE))
+    // LEAVE FADE (Melvin, 2026-08-10): this mask draws on a fixed,
+    // scroll-independent canvas, so left alone it freezes at its final pose
+    // once the hero track ends and sits pinned over Contact forever. It has to
+    // fade itself out. "The big mask should not come down into the contact
+    // page and needs to stay only in the future page."
+    //
+    // The window matters more than the fade itself, and the first attempt got
+    // it exactly backwards: fading over the last 500px BEFORE the track's
+    // bottom reached the viewport top meant the mask was still at FULL opacity
+    // once Contact already covered ~38% of the screen, and still half-visible
+    // at ~60% — i.e. sitting right on top of the contact form, which is what
+    // Melvin kept screenshotting. Verified by tracing the arithmetic rather
+    // than by eye (see CONTEXT.md).
+    //
+    // Correct window: fade across the FIRST slice of the handoff instead, so
+    // the mask is gone before Contact meaningfully arrives. `contactHandoff.t`
+    // is the shared boundary scalar (1 = Future owns the screen, 0 = Contact
+    // does — see contactVisibility.ts), so `1 - t` is how much of the screen
+    // Contact has taken. At LEAVE_FADE_END = 0.8 the mask is fully gone once
+    // Contact covers 20%, and it is continuous in scroll position, so it
+    // reverses cleanly on the way back up with no pop in either direction.
+    // On pages with no hero track `t` stays 1, so this resolves to 1 and
+    // leaves every other page untouched.
+    const leaveFade = Math.max(0, Math.min(1, (contactHandoff.t - LEAVE_FADE_END) / (1 - LEAVE_FADE_END)))
     const fade = eIntro * leaveFade
     material.uniforms.uFade.value = fade
     glyphMat.uniforms.uFade.value = fade

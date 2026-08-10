@@ -7,8 +7,7 @@ import { MaskParticles } from './MaskField'
 import { ContactMaskSwarm } from './ContactMaskSwarm'
 import { LiquidGlassField } from './LiquidGlassField'
 import { VideoPlane } from './VideoBackground'
-import { useContactInView } from '../../hooks/contactVisibility'
-import { useHeroFrame, BEAT_COUNT } from '../../hooks/heroScroll'
+import { useSwarmMounted } from '../../hooks/contactVisibility'
 
 /**
  * Creates the looping VideoTexture for the About background. Lives OUTSIDE the
@@ -141,23 +140,23 @@ function SceneContents({
     <>
       {isAbout && aboutTex && <VideoPlane texture={aboutTex} />}
 
-      {/* The hero's single mask stays mounted for the WHOLE home route, and
-          fades itself out on scroll (see the leave-fade inside MaskField.tsx)
-          rather than being mount-gated at all — that's what actually stopped
-          it popping AND stopped it lingering into Contact, see that file.
-          The swarm mounts across Future + Contact (`showSwarm` below) — round
-          3 tried this and it looked like a collision with the big mask, so a
-          later pass wrongly narrowed it to Contact-only. The REAL bug wasn't
-          the wide mount, it was that ContactMaskSwarm used to fall back to a
-          VIEWPORT-sized anchor rect while `!contactInView`, which force-
-          repositioned the faces into the visible Future frame — that's what
-          collided. Now it always anchors to `#contact`'s real rect, on-screen
-          or not, so during Future the faces sit at their true (currently
-          off-screen, below) position and stay invisible there, while their
-          upward-drifting GLYPHS travel far enough to become visible anyway —
-          which is the actual effect Melvin described wanting: faces only
-          "fly in" once you're really at Contact, but the glyphs already in
-          flight keep floating up into view if you scroll back to Future. */}
+      {/* TWO LAYERS ACROSS THE HERO → CONTACT BOUNDARY, both driven off the
+          one shared `contactHandoff.t` in contactVisibility.ts so they can't
+          disagree (every previous round of this bug was the two layers using
+          different, conflicting notions of "am I past the hero yet").
+
+          BIG MASK: never mount-gated — it stays mounted for the whole home
+          route and fades ITSELF out on the handoff (see MaskField.tsx). Hard
+          mount-toggling it is what used to make it pop in and out.
+
+          SWARM: latched mount (see useSwarmMounted). Flies in only once
+          Contact is essentially reached, then stays mounted while you're in
+          Future so its already-airborne glyphs keep floating up there, and
+          only unmounts once you scroll back to Present or earlier.
+          Its faces always anchor to `#contact`'s REAL rect, on-screen or not,
+          so while you're in Future they sit at their true position below the
+          fold and are simply not visible — no force-relocation into view,
+          which is what previously made them collide with the big mask. */}
       {isHome && <MaskParticles />}
       {isHome && showSwarm && <ContactMaskSwarm />}
 
@@ -181,11 +180,11 @@ export function GlobalScene() {
   const isHome = loc.pathname === '/'
   const isAbout = loc.pathname === '/about'
   const aboutTex = useAboutVideoTexture(isAbout)
-  const contactInView = useContactInView()
-  // FUTURE is the last hero frame. useHeroFrame() only re-renders on a frame
-  // CHANGE (see heroScroll.ts), so this is cheap.
-  const heroFrame = useHeroFrame()
-  const showSwarm = heroFrame === BEAT_COUNT - 1 || contactInView
+  // Latched: flies in on reaching Contact, stays mounted if you scroll back up
+  // to Future (so glyphs keep floating there), resets at Present or earlier.
+  // See contactVisibility.ts — that hook also publishes the shared
+  // `contactHandoff.t` the big mask fades itself out on.
+  const showSwarm = useSwarmMounted()
 
   return (
     <div className="fixed inset-0 z-0 bg-[#050609]">
