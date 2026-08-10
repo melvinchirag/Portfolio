@@ -247,6 +247,74 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Mask swarm round 3 + infinity-loop socials + Contact copy (2026-08-10)
+Melvin, after seeing round 2 live — a big list, worked through all of it:
+- **Facial features still not visible** → ported the hero's eye/nose
+  brightening AND its blink cycle back in (round 2 had dropped both for
+  scope). Blink now runs PER INSTANCE with its own random gap (not all twelve
+  in lockstep) — reads as alive rather than mechanical.
+- **Not symmetric, uneven empty space** → replaced round 2's organic scatter
+  with a real 2-row × 6-col grid, mirrored left/right (fx values sum to 1.0
+  in pairs, scale lists mirrored row-to-row). Count raised 10 → 12 per his
+  "feel free to increase if you must."
+- **Glyphs too fast, want them "more lived in"** → GLYPH_ROVE_SPEED slowed
+  further (0.007→0.0045), GLYPH_ON_FRAC raised (0.05→0.06): lit duration
+  ~7.1s → ~13.3s.
+- **Glyphs should float "all the way to the top of the site"** → uDriftUp
+  raised hugely (6.5→32 local units). At this scale that's several viewport
+  heights of upward travel during the lit lifetime, not a local wobble. Exact
+  "reaches the literal top of the document" would need each instance's real
+  distance to y=0, which changes as page height changes — used one generous
+  shared distance instead (same kind of tradeoff as round 2's border-drift).
+- **They follow the cursor but don't look up/down** → added pitch
+  (rotation.x) alongside yaw, same LOOK_LAG/idle behavior, capped tighter
+  (±20deg vs yaw's ±40deg, real heads tilt less than they turn).
+- **Masks vanishing and reappearing between Future and Contact — architecture
+  fix in GlobalScene.tsx:**
+  - The hero's single big mask now stays mounted for the ENTIRE home route
+    (was: hidden whenever contactInView, causing the disappear/reappear).
+  - The swarm now mounts starting on the FUTURE frame (`useHeroFrame() ===
+    BEAT_COUNT-1`), not just once Contact is in view, and stays mounted
+    continuously through Contact via `showSwarm = frame===3 || contactInView`
+    — one continuous span, one mount, so the sim/glyph-roving/intro state
+    never resets when crossing that boundary.
+  - `ContactMaskSwarm` now takes a `contactInView` prop and switches its
+    LAYOUT BASIS on it: full viewport rect while `!contactInView` (so it's
+    actually visible immediately on the Future frame, not off-screen waiting
+    for Contact to scroll up), `#contact`'s own rect once `contactInView`
+    (so it scrolls naturally with the section). One deliberate position jump
+    at that exact handoff instant — a truly seamless cross-fade between two
+    coordinate bases was more engineering than this pass affords; staying
+    MOUNTED across the jump (preserving sim/glyph/intro state) is what
+    actually mattered per his complaint, and that part is real.
+- **Infinity-loop social icons** on the Contact page's "Stalk me here" row
+  (see below — renamed from "Or find me here"): six icons (GitHub, LinkedIn,
+  X, Instagram, Email, Resume) orbiting a figure-eight via CSS Motion Path
+  (`offset-path` + `offset-distance`, new `.infinity-loop`/`.infinity-loop-item`
+  in index.css) rather than a hand-rolled JS/rAF loop — the browser drives it
+  off the compositor, one shared `@keyframes` with each icon just starting at
+  its own point along the path (`--start`), and "pause on hover" is a single
+  `animation-play-state` rule. The path is two same-radius circular arcs
+  sharing one crossing point, swept in OPPOSITE directions (what makes two
+  circles read as one figure-eight instead of a pretzel). Exported
+  `ICON_PATHS` from SocialLinks.tsx so this reuses the same brand marks
+  rather than redefining them.
+- **Contact page copy (his exact words, used verbatim):** removed the "Based
+  in Michigan..." paragraph; "Or find me here" → "Stalk me here"; "What is
+  this about" → "What is this about?"; REASONS dropdown gained "You have a
+  serious crush on me" and "You have immeasurable resentment for me" — his
+  own joke additions, not softened.
+- **VERIFICATION GAP, flagged honestly:** the Chrome extension was
+  disconnected for this whole round (three connection attempts, all failed) —
+  per the tool guidance on not looping against a broken tool, stopped after
+  three and shipped on build+lint cleanliness instead of a live check. Build
+  clean, oxlint clean, MaskField.tsx confirmed zero diff, but NONE of this
+  round's actual visual/behavioral results (grid symmetry, feature
+  visibility, blink, glyph pacing/distance, pitch, the Future/Contact
+  handoff, the infinity loop's direction and pause-on-hover) have been seen
+  running. This is the first round this session shipped without that check —
+  flagged clearly to Melvin rather than implied as verified.
+
 ### [CLAUDE] Mask swarm round 2: bigger, glyphs, real cursor-follow, real intro (2026-08-10)
 Melvin, after seeing v1 live: too blurry, not following the cursor at all,
 fade-in should be the hero's fly-from-the-deep not a flat fade, needs the

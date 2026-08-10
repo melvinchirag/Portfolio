@@ -28,17 +28,21 @@
  * of which exist yet either. Faking a difference now would just mean redoing it.
  * ========================================================================= */
 
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { heroScrollToTop } from '../hooks/useLenis'
-import { PROFILE } from '../data/profile'
-import { SocialLinks } from '../components/SocialLinks'
+import { PROFILE, SOCIALS } from '../data/profile'
+import { ICON_PATHS } from '../components/SocialLinks'
 
-/** What brings people to the contact form. Doubles as the email subject line. */
+/** What brings people to the contact form. Doubles as the email subject line.
+ *  The last two are Melvin's own joke additions (2026-08-10) — verbatim, not
+ *  softened, they're meant to be funny. */
 const REASONS = [
   'A job or an internship',
   'Research',
   'Grad school or a program',
   'Building something together',
+  'You have a serious crush on me',
+  'You have immeasurable resentment for me',
   'Something else',
 ]
 
@@ -94,39 +98,76 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
   )
 }
 
+/** Email + Resume, in the same brand-mark-style single-path SVG format as
+ *  SocialLinks' icons, so they slot into the same loop uniformly. */
+const EXTRA_ICONS: { label: string; href: string; title: string; path: string }[] = [
+  {
+    label: 'Email',
+    href: `mailto:${PROFILE.email}`,
+    title: PROFILE.email,
+    path: 'M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z',
+  },
+  {
+    label: 'Resume',
+    href: PROFILE.resume,
+    title: 'Download resume (PDF)',
+    path: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
+  },
+]
+
 /* ---------------------------------------------------------------------------
- * Icon-only social/contact buttons. NO visible handles or URLs (Melvin,
- * 2026-08-09: showing the raw URL "reads very amateur"). Same `.social-btn`
- * material as the hero row: neutral at rest, accent plus a warm halo on
- * hover/focus. The actual address lives in href + aria-label/title, not on
- * screen — still fully reachable, just not printed out.
+ * Icon-only social/contact buttons, orbiting a figure-eight (Melvin,
+ * 2026-08-10: "place the social buttons such that they look like an infinity
+ * symbol... move in a loop clockwise... glow when I hover... halt as I hover
+ * and continue when I stop"). NO visible handles or URLs (Melvin, 2026-08-09:
+ * showing the raw URL "reads very amateur") — the actual address lives in
+ * href + aria-label/title, not on screen, still fully reachable.
+ *
+ * The path, timing and pause-on-hover all live in `.infinity-loop` /
+ * `.infinity-loop-item` (index.css) — this component only has to place each
+ * icon at its own evenly-spaced start point along the shared path.
  * ------------------------------------------------------------------------ */
 function FindMeHere() {
+  const items = [
+    ...SOCIALS.map((s) => ({ label: s.label, href: s.href, title: s.label, path: ICON_PATHS[s.label] })),
+    ...EXTRA_ICONS,
+  ]
   return (
-    <div className="mt-6 flex flex-wrap items-center gap-2.5">
-      <SocialLinks size={19} />
-      <a
-        href={`mailto:${PROFILE.email}`}
-        aria-label="Email"
-        title={PROFILE.email}
-        className="social-btn flex h-9 w-9 items-center justify-center rounded-full border"
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" width={19} height={19} aria-hidden>
-          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z" />
-        </svg>
-      </a>
-      <a
-        href={PROFILE.resume}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Resume"
-        title="Download resume (PDF)"
-        className="social-btn flex h-9 w-9 items-center justify-center rounded-full border"
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" width={19} height={19} aria-hidden>
-          <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-        </svg>
-      </a>
+    <div className="infinity-loop mt-6">
+      {items.map((item, i) => {
+        const icon = (
+          <svg viewBox="0 0 24 24" fill="currentColor" width={19} height={19} aria-hidden>
+            <path d={item.path} />
+          </svg>
+        )
+        const shape = 'social-btn flex h-9 w-9 items-center justify-center rounded-full border'
+        // Evenly spaced around the loop: 6 items → 1/6 of the path apart.
+        const style = { '--start': `${(i / items.length) * 100}%` } as CSSProperties
+        return (
+          <div key={item.label} className="infinity-loop-item" style={style}>
+            {item.href ? (
+              <a
+                href={item.href}
+                target={item.href.startsWith('http') ? '_blank' : undefined}
+                rel={item.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                aria-label={item.label}
+                title={item.title}
+                className={shape}
+              >
+                {icon}
+              </a>
+            ) : (
+              <span
+                aria-label={`${item.label} — link coming soon`}
+                title={`${item.label} — link coming soon`}
+                className={`${shape} cursor-default border-white/8 text-white/20`}
+              >
+                {icon}
+              </span>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -218,7 +259,7 @@ function ContactView() {
 
               <div className="flex flex-col gap-2">
                 <label htmlFor="reason" className="text-[11px] tracking-[0.2em] text-white/45 uppercase">
-                  What is this about
+                  What is this about?
                 </label>
                 <select id="reason" name="reason" required defaultValue={REASONS[0]} className="field field-select">
                   {REASONS.map((r) => (
@@ -255,15 +296,10 @@ function ContactView() {
 
         <section aria-labelledby="contact-direct-heading">
           <h2 id="contact-direct-heading" className="text-[11px] tracking-[0.3em] text-white/40 uppercase">
-            Or find me here
+            Stalk me here
           </h2>
 
           <FindMeHere />
-
-          <p className="mt-8 text-[12.5px] leading-relaxed text-white/45">
-            Based in Michigan, working on computer vision and applied machine learning. Happy to talk
-            to anyone building something interesting.
-          </p>
         </section>
       </div>
     </div>

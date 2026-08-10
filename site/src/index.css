@@ -189,6 +189,67 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+ * THE INFINITY LOOP — the Contact page's "Stalk me here" icon row (Melvin,
+ * 2026-08-10): the six icons orbit a figure-eight path, evenly spaced, always
+ * moving clockwise; hovering the row pauses every icon's motion at once (so
+ * you can actually click one without it drifting away), and the specific icon
+ * under the cursor gets the usual `.social-btn` accent glow on top of that.
+ * ----------------------------------------------------------------------------
+ * Built on CSS Motion Path (`offset-path` + `offset-distance`) rather than a
+ * JS/rAF loop: the browser drives the animation off its own compositor, it's
+ * one `@keyframes` shared by all six (each just starts at a different point
+ * along the same path via `--start`), and "pause on hover" is a single
+ * `animation-play-state` rule — no manual pause/resume bookkeeping needed.
+ *
+ * The path itself is two same-radius circular arcs sharing one crossing point
+ * at their centre, swept in OPPOSITE directions — that opposite-sweep is what
+ * makes two circles read as one continuous figure-eight instead of a pretzel.
+ * Coordinates are raw CSS pixels in the container's own box (that's how
+ * `path()` in `offset-path` is specified — no separate SVG/viewBox needed).
+ * ------------------------------------------------------------------------ */
+.infinity-loop {
+  position: relative;
+  width: 200px;
+  height: 100px;
+}
+
+.infinity-loop-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  offset-path: path(
+    'M100,50 A45,45 0 1,1 10,50 A45,45 0 1,1 100,50 A45,45 0 1,0 190,50 A45,45 0 1,0 100,50 Z'
+  );
+  /* Centres a 36px icon button ON its path point (offset-path itself anchors
+   * the element's top-left corner, not its centre). */
+  transform: translate(-50%, -50%);
+  offset-rotate: 0deg; /* keep icons upright — they glide, they don't spin */
+  offset-distance: var(--start, 0%);
+  animation: infinity-orbit 18s linear infinite;
+}
+
+/* Hovering ANYWHERE in the row halts every icon's motion at once, so the one
+ * you're aiming for holds still long enough to actually click. */
+.infinity-loop:hover .infinity-loop-item {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .infinity-loop-item {
+    animation: none;
+  }
+}
+
+@keyframes infinity-orbit {
+  from {
+    offset-distance: var(--start, 0%);
+  }
+  to {
+    offset-distance: calc(var(--start, 0%) + 100%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
  * SLIDE GLASS — the frosted panel behind each story frame (Past/Present/Future)
  * ----------------------------------------------------------------------------
  * The frost is a REAL `backdrop-filter` blurring the particle mask behind it.
