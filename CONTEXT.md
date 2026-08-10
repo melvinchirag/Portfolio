@@ -247,6 +247,65 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Round 4: found the ACTUAL collision bug + empty bottom (2026-08-10)
+Melvin sent two screenshots (still couldn't check myself, extension still
+down) — real evidence this time, and it changed the diagnosis.
+- **What the screenshots show:** the big mask still fully overlapping the
+  Contact form/social row, AND the bottom third of the section completely
+  empty of masks ("the UI is confused").
+- **On the big-mask overlap: likely a stale deployment, not a live bug.**
+  Working through the geometry, the previous commit's leave-fade math checks
+  out (reasoned through the exact scroll-position math by hand). The far more
+  likely explanation: Vercel takes a minute or more to build this project
+  (draco/wasm assets), and if Melvin checked shortly after that push landed,
+  he'd have been looking at the PREVIOUS deployment — which had the wrongly-
+  reverted Contact-only swarm and no leave-fade at all. That deployment would
+  show EXACTLY these screenshots: small masks correctly confined near
+  Contact (matches), big mask not fading at all (matches, because that fix
+  didn't exist yet), bottom empty (matches, still the 2-row grid). Flagged to
+  Melvin to hard-refresh / re-check after this push actually lands, since I
+  still can't confirm the render myself.
+- **Found a REAL bug regardless, in the swarm's own logic, from working
+  through his clarification of what "should stay in one plane" actually
+  means:** "when I come to the contacts page thats when the smaller masks
+  should get triggered to fly in... if I scroll up and stay in the future
+  slide, the glyphs from below should still be floating upwards unless I go
+  to present or further back." Round 3.5 (the previous fix) narrowed the
+  swarm to mount ONLY on `contactInView`, throwing away the Future-frame
+  mounting — but that was the WRONG half to revert. The actual bug was never
+  the wide mounting condition (Future OR Contact); it was that
+  ContactMaskSwarm used to fall back to a VIEWPORT-sized anchor rect whenever
+  `!contactInView`, which force-relocated the faces into the CURRENT
+  (Future) viewport — that relocation is what put them on screen at the same
+  time as the big mask. Fixed properly this time:
+  - `showSwarm = frame===BEAT_COUNT-1 || contactInView` restored in
+    GlobalScene.tsx (mounts across Future + Contact again).
+  - The viewport-rect fallback is GONE from ContactMaskSwarm.tsx entirely —
+    it now ALWAYS anchors to `#contact`'s real live rect, on-screen or not.
+    During Future that rect is genuinely below the viewport (large positive
+    `top`), so the FACES sit at their true off-screen position and are
+    simply not visible — no force-relocation, no collision. Their GLYPHS
+    still reach the visible Future viewport because they drift a large
+    distance upward (the existing big `uDriftUp`) — far enough that some
+    cross back into view even from an off-screen origin. This is exactly the
+    effect described: faces only "fly in" once you've genuinely scrolled to
+    Contact (their real position is on-screen for the first time), glyphs
+    already in flight keep floating up if you scroll back to Future, and the
+    whole thing stops existing once you scroll further back than that
+    (component unmounts entirely below Future).
+  - `contactInView` prop removed from ContactMaskSwarm — no longer needed
+    now that layout never switches basis.
+- **The empty bottom, a real, separate, simple bug:** the grid only had 2
+  rows (fy 0.18/0.58), covering roughly the top 60% of the section. Now 4
+  rows (fy 0.1/0.36/0.62/0.88), spread across nearly the section's full
+  height. 24 slots total (was 12) — cheap, still one shared sim underneath.
+- Build clean, oxlint clean, MaskField.tsx confirmed IDENTICAL to last
+  commit (this round's fix lives entirely in GlobalScene.tsx and
+  ContactMaskSwarm.tsx, the leave-fade from last round untouched).
+- **VERIFICATION GAP, fourth round running:** extension still disconnected.
+  Reasoned through this one more carefully than the last few given real
+  screenshot evidence to work from, but still genuinely unseen by me.
+
 ### [CLAUDE] The real fix: the big mask fades on leave, doesn't just stay pinned (2026-08-10)
 Melvin, on the previous fix, still unseen (extension still down): "the big
 mask needs to stay at future slide and should not come up" — into Contact.

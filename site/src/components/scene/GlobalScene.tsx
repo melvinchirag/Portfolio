@@ -8,6 +8,7 @@ import { ContactMaskSwarm } from './ContactMaskSwarm'
 import { LiquidGlassField } from './LiquidGlassField'
 import { VideoPlane } from './VideoBackground'
 import { useContactInView } from '../../hooks/contactVisibility'
+import { useHeroFrame, BEAT_COUNT } from '../../hooks/heroScroll'
 
 /**
  * Creates the looping VideoTexture for the About background. Lives OUTSIDE the
@@ -123,12 +124,12 @@ function SceneContents({
   isHome,
   isAbout,
   aboutTex,
-  contactInView,
+  showSwarm,
 }: {
   isHome: boolean
   isAbout: boolean
   aboutTex: THREE.VideoTexture | null
-  contactInView: boolean
+  showSwarm: boolean
 }) {
   // Force the video texture to re-upload the current frame each render so both
   // the background plane and the glass see live video.
@@ -140,23 +141,25 @@ function SceneContents({
     <>
       {isAbout && aboutTex && <VideoPlane texture={aboutTex} />}
 
-      {/* The hero's single mask stays mounted for the WHOLE home route
-          (Melvin, 2026-08-10: it was disappearing and reappearing whenever he
-          crossed the Future ↔ Contact boundary, which read as a glitch, not a
-          transition). It used to hide once Contact came into view; that
-          exclusivity stays gone — this part of the fix held up.
-          The small swarm is CONTACT-ONLY (`contactInView`, not the Future
-          frame). An earlier pass also mounted it on the Future frame so its
-          glyphs would already be roving before Contact scrolled in — Melvin,
-          2026-08-10, after seeing it: that put the big mask and the swarm on
-          screen at once, "colliding" in the same spot. "Same plane" meant the
-          glyphs should read as reaching toward the big mask, not that the two
-          should physically render together. So: swarm mounts on
-          `contactInView` alone, and the glyph drift distance is what's meant
-          to imply continuity with the mask above (see the big `uDriftUp` in
-          ContactMaskSwarm.tsx) — not literal simultaneous presence. */}
+      {/* The hero's single mask stays mounted for the WHOLE home route, and
+          fades itself out on scroll (see the leave-fade inside MaskField.tsx)
+          rather than being mount-gated at all — that's what actually stopped
+          it popping AND stopped it lingering into Contact, see that file.
+          The swarm mounts across Future + Contact (`showSwarm` below) — round
+          3 tried this and it looked like a collision with the big mask, so a
+          later pass wrongly narrowed it to Contact-only. The REAL bug wasn't
+          the wide mount, it was that ContactMaskSwarm used to fall back to a
+          VIEWPORT-sized anchor rect while `!contactInView`, which force-
+          repositioned the faces into the visible Future frame — that's what
+          collided. Now it always anchors to `#contact`'s real rect, on-screen
+          or not, so during Future the faces sit at their true (currently
+          off-screen, below) position and stay invisible there, while their
+          upward-drifting GLYPHS travel far enough to become visible anyway —
+          which is the actual effect Melvin described wanting: faces only
+          "fly in" once you're really at Contact, but the glyphs already in
+          flight keep floating up into view if you scroll back to Future. */}
       {isHome && <MaskParticles />}
-      {isHome && contactInView && <ContactMaskSwarm contactInView={contactInView} />}
+      {isHome && showSwarm && <ContactMaskSwarm />}
 
       {/* On About, hand the video texture straight to the glass (it refracts THAT
           rather than capturing the scene — see LiquidGlassField). Elsewhere it
@@ -179,6 +182,10 @@ export function GlobalScene() {
   const isAbout = loc.pathname === '/about'
   const aboutTex = useAboutVideoTexture(isAbout)
   const contactInView = useContactInView()
+  // FUTURE is the last hero frame. useHeroFrame() only re-renders on a frame
+  // CHANGE (see heroScroll.ts), so this is cheap.
+  const heroFrame = useHeroFrame()
+  const showSwarm = heroFrame === BEAT_COUNT - 1 || contactInView
 
   return (
     <div className="fixed inset-0 z-0 bg-[#050609]">
@@ -190,12 +197,7 @@ export function GlobalScene() {
         }}
       >
         <color attach="background" args={['#050609']} />
-        <SceneContents
-          isHome={isHome}
-          isAbout={isAbout}
-          aboutTex={aboutTex}
-          contactInView={contactInView}
-        />
+        <SceneContents isHome={isHome} isAbout={isAbout} aboutTex={aboutTex} showSwarm={showSwarm} />
       </Canvas>
     </div>
   )

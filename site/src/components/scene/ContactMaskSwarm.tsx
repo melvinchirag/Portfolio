@@ -16,26 +16,40 @@
  *     heights of travel, not a local wobble).
  *   - The big hero mask and this swarm were vanishing and reappearing every
  *     time he crossed Future ↔ Contact — read as a glitch. Fixed in
- *     GlobalScene.tsx: the big mask now stays mounted for the whole home
- *     route, and this swarm mounts starting on the FUTURE frame (not just
- *     once Contact is in view) and stays mounted continuously through
- *     Contact — see `contactInView` prop below for how it repositions itself
- *     across that span without ever unmounting.
+ *     GlobalScene.tsx: the big mask now fades itself out on scroll instead of
+ *     hard mount-toggling (see MaskField.tsx), and this swarm mounts across
+ *     Future + Contact as one continuous span (see `showSwarm` there) so its
+ *     sim/glyph state never resets crossing that boundary. (Round 3 got the
+ *     mounting span right but broke the LAYOUT during that span — see the
+ *     round 4 note further down for the actual fix.)
  *   - "They follow me but don't look up or down properly" → added pitch
  *     (rotation.x) alongside yaw, same lag/idle behaviour.
  *
- * WHY A `contactInView` PROP: this component is mounted for a wider span than
- * just "Contact is on screen" — it also renders during the hero's Future
- * frame, before Contact has scrolled into view at all. `#contact`'s own
- * bounding rect is meaningless as a layout basis at that point (it's still
- * off-screen below). So: while `!contactInView`, slots lay out across the
- * CURRENT VIEWPORT (visible immediately when Future becomes active); once
- * `contactInView` flips true, they lay out across `#contact`'s live rect and
- * scroll naturally with it. There is one deliberate position jump exactly at
- * that handoff instant — computing a truly seamless cross-fade between two
- * different coordinate bases was more engineering than this pass affords: the
- * component staying MOUNTED across the jump (so the sim, glyph roving, and
- * intro state all carry over) is what actually mattered here, and that's real.
+ * Round 4 (Melvin, 2026-08-10, screenshots): round 3's viewport-rect fallback
+ * (below) was the actual bug behind "the big mask still overlaps" — it forced
+ * the faces into the CURRENT viewport during Future, which is exactly what
+ * put them on screen at the same time as the big mask. Removed entirely: this
+ * component now ALWAYS anchors to `#contact`'s real live rect, on-screen or
+ * not. During Future that rect is still below the viewport (large positive
+ * top), so the faces sit at their true position and are simply not visible —
+ * no collision, nothing force-relocated. Their GLYPHS still become visible
+ * during Future because they drift a large distance upward (see uDriftUp
+ * below): far enough that some of them cross back up into the visible
+ * viewport even though the face they came from is off-screen below. That is
+ * the actual effect wanted: faces only "fly in" once you've genuinely
+ * scrolled to Contact (their real position is on-screen for the first time),
+ * but glyphs already in flight keep floating up into view if you scroll back
+ * to Future — and stop existing at all once you scroll further back than that
+ * (Present or earlier), because the whole component unmounts there
+ * (`showSwarm` in GlobalScene.tsx).
+ * Also fixed the same round: the grid only had 2 rows, which left the bottom
+ * of the Contact section empty — now 4 rows (see GRID_FY below).
+ *
+ * WHY THIS USED TO TAKE A `contactInView` PROP: it doesn't anymore. The
+ * mounting condition (`showSwarm` in GlobalScene.tsx) still needs to know
+ * whether Future or Contact triggered the mount, but this component's OWN
+ * layout logic no longer needs to know — it just always reads the real DOM
+ * rect, which is correct in every case now.
  *
  * PERF — WHY THIS IS ONE SIMULATION, NOT TWELVE: see MaskField.tsx for the
  * full reasoning (unchanged from round 1) — one shared GPUComputationRenderer,
@@ -112,11 +126,16 @@ const BLINK_MAX = 7.0
 // left visible gaps; a grid removes the ambiguity entirely). Values are
 // FRACTIONS of the current anchor rect (see the file header on what that rect
 // is). Scale list is also mirrored row-to-row so left/right mass balances.
+// Round 4 (Melvin, 2026-08-10, screenshots): only 2 rows left the BOTTOM of
+// the Contact section completely empty ("the UI is confused"). Four rows now,
+// spread across nearly the section's full height, not just its top half.
 const GRID_FX = [0.09, 0.25, 0.42, 0.58, 0.75, 0.91]
-const GRID_FY = [0.18, 0.58]
+const GRID_FY = [0.1, 0.36, 0.62, 0.88]
 const ROW_SCALES = [
   [0.85, 1.0, 0.78, 1.05, 0.9, 0.95],
   [0.95, 0.9, 1.05, 0.78, 1.0, 0.85],
+  [0.8, 1.05, 0.9, 0.95, 0.85, 1.0],
+  [1.0, 0.85, 0.95, 0.9, 1.05, 0.8],
 ]
 const SWARM_SLOTS: { fx: number; fy: number; scale: number }[] = GRID_FY.flatMap((fy, row) =>
   GRID_FX.map((fx, col) => ({ fx, fy, scale: ROW_SCALES[row][col] })),
@@ -246,9 +265,9 @@ const renderFragment = /* glsl */ `
  * further (uDriftUp way up — "float up all the way to the top of the site").
  * Drift happens in LOCAL (pre-group-transform) units, so it scales with each
  * mask's own BASE_SCALE; picked generously large rather than computed exactly
- * per instance (see the file header's note on the contactInView handoff for
- * the same kind of "good approximation over precise per-instance geometry"
- * tradeoff, made for the same reason: exact would need each slot's distance
+ * per instance — this same distance is now also what makes glyphs visible
+ * during the Future frame even though their origin face is off-screen below
+ * (see the file header's round 4 note). Exact would need each slot's distance
  * to the actual top of the document, which moves as the page's total height
  * changes — a fixed generous distance gets the spirit of "way above,
  * disappearing" without that bookkeeping). ------------------------------- */
@@ -362,7 +381,7 @@ type LookState = { current: number; target: number }
 /** Per-instance blink state, same shape as MaskField.tsx's single blink clock. */
 type BlinkState = { clock: number; next: number; start: number }
 
-export function ContactMaskSwarm({ contactInView }: { contactInView: boolean }) {
+export function ContactMaskSwarm() {
   const gl = useThree((s) => s.gl)
   const camera = useThree((s) => s.camera)
   const size = useThree((s) => s.size)
@@ -608,17 +627,13 @@ export function ContactMaskSwarm({ contactInView }: { contactInView: boolean }) 
     const velTex = gpu.getCurrentRenderTarget(velVar).texture
     const t = velVar.material.uniforms.uTime.value
 
-    // The anchor rect this frame's layout is computed against — see the file
-    // header ("WHY A `contactInView` PROP") for why this switches basis.
-    let rect: { left: number; top: number; width: number; height: number }
-    if (contactInView) {
-      const el = document.getElementById('contact')
-      const r = el?.getBoundingClientRect()
-      if (!r) return
-      rect = r
-    } else {
-      rect = { left: 0, top: 0, width: size.width, height: size.height }
-    }
+    // Always the real #contact rect, on-screen or not (see the file header,
+    // round 4) — during Future this is a rect below the viewport (large
+    // positive top), which is exactly what keeps the faces genuinely
+    // off-screen there instead of force-relocated into view.
+    const el = document.getElementById('contact')
+    const rect = el?.getBoundingClientRect()
+    if (!rect) return
 
     // Screen px → world units at z=0, for THIS camera (see the hero mask's own
     // comment on visible extents — same derivation).
