@@ -795,7 +795,24 @@ export function MaskParticles() {
     // Random birth offset that decays to 0 → starts somewhere new, ends at home.
     const offX = introOffset.current.x * (1 - eIntro)
     const offY = introOffset.current.y * (1 - eIntro)
-    const fade = eIntro
+    // LEAVE FADE (Melvin, 2026-08-10): the mask is rendered on a fixed,
+    // scroll-independent canvas, so once heroScroll.progress clamps at 1
+    // (past the whole hero track) it just freezes at its final pose and sits
+    // pinned on screen indefinitely, no matter how far you scroll into
+    // Contact — "the big mask needs to stay at future slide and should not
+    // come up [into Contact]". A hard mount/unmount (tried earlier) caused an
+    // abrupt pop instead. This reads #hero-track's own bottom edge each frame
+    // (a plain DOM read, same category as the cursor raycast below) and fades
+    // smoothly over the last FADE_DISTANCE px before that edge reaches the
+    // viewport top — full strength through the whole hero including Future,
+    // gone by the time Contact is actually the thing on screen, and reverses
+    // cleanly if you scroll back up. Untouched (=1) on every other page: the
+    // element only exists on Home, so elsewhere this just resolves to 1.
+    const heroTrackEl = document.getElementById('hero-track')
+    const trackBottom = heroTrackEl ? heroTrackEl.getBoundingClientRect().bottom : Infinity
+    const FADE_DISTANCE = 500
+    const leaveFade = Math.max(0, Math.min(1, trackBottom / FADE_DISTANCE))
+    const fade = eIntro * leaveFade
     material.uniforms.uFade.value = fade
     glyphMat.uniforms.uFade.value = fade
 

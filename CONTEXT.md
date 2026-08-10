@@ -247,6 +247,42 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] The real fix: the big mask fades on leave, doesn't just stay pinned (2026-08-10)
+Melvin, on the previous fix, still unseen (extension still down): "the big
+mask needs to stay at future slide and should not come up" — into Contact.
+- **This reconciles his two seemingly-opposite complaints.** Earlier: "it
+  disappears and reappears" (a hard pop was the bug). Just now: it shouldn't
+  "come up" into Contact at all (round 3's fix of leaving it always-mounted
+  was ALSO wrong, just a different wrong). The actual bug underneath both:
+  MaskField's canvas is `position:fixed`, scroll-independent — once
+  `heroScroll.progress` clamps at 1 (past the whole hero track),
+  `MaskParticles` just freezes at its final pose and sits pinned on screen
+  FOREVER, however far you scroll into Contact. Neither "always mounted" nor
+  "hard unmount at the contactInView boundary" was ever going to fix that;
+  both are binary toggles on top of a mask that doesn't actually know where
+  the viewport is relative to the hero track.
+- **Fix: a genuine scroll-driven fade, not a mount toggle.** One small,
+  additive change to MaskField.tsx (see the diff — this is the ONLY line
+  group touched, everything else in that file is untouched, still the
+  policy): reads `#hero-track`'s own bottom edge each frame and fades the
+  mask out smoothly over the last 500px before that edge reaches the
+  viewport top. Full strength through the entire hero including Future, gone
+  by the time Contact is actually on screen, and — because it's a continuous
+  function of scroll position, not a state flag — reverses cleanly if you
+  scroll back up, with no pop in either direction. This is the first time
+  MaskField.tsx has been touched all session; the change is small, additive
+  (existing `fade = eIntro` became `fade = eIntro * leaveFade`, nothing else
+  moved), and confirmed via `git diff` before building.
+- GlobalScene.tsx's own gating (swarm mounts on `contactInView`, big mask
+  always mounted on `isHome`) is UNCHANGED — this fix lives entirely inside
+  MaskField.tsx's own per-frame fade math, not in how/when the component
+  mounts.
+- **VERIFICATION GAP, third round running:** tried the extension again,
+  still disconnected. Shipping on the same basis as the last two rounds:
+  build+lint clean, the diff itself reviewed line by line before committing
+  (given this is the file that's been protected from changes all session,
+  extra care here specifically), but genuinely unseen.
+
 ### [CLAUDE] Fixing round 3's mistakes: swarm collision, dropdown, infinity path (2026-08-10)
 Melvin, on round 3, still unseen by me at that point (extension still down):
 - **"Same plane" was misread.** Round 3 mounted the swarm starting on the
