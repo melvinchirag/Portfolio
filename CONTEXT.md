@@ -247,6 +247,73 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Mask swarm round 2: bigger, glyphs, real cursor-follow, real intro (2026-08-10)
+Melvin, after seeing v1 live: too blurry, not following the cursor at all,
+fade-in should be the hero's fly-from-the-deep not a flat fade, needs the
+glyph layer too (traveling far, lingering longer), lag should be ONE second
+(not three), and must stay contained inside the Contact section's frame.
+- **Blurry, fixed.** The real cause: `gl_PointSize` doesn't shrink with the
+  group's scale (it's driven by `-mv.z`, barely affected by x/y scale on a
+  thin shell), so shrinking the WHOLE mask via BASE_SCALE while leaving dot
+  size fixed made dots overlap and swallow the silhouette. Fixed by moving
+  BOTH ends at once: BASE_SCALE 0.15→0.27 (bigger face) and uParticleSize
+  1.1→0.65 (smaller dots), plus SIZE 56→84 (~2.25× more particles, still cheap
+  for one shared sim). Bigger shape + relatively smaller dots = reads as a
+  small SHARP face instead of a blob.
+- **Cursor-follow was a real bug, found and fixed.** v1 used
+  `useThree().pointer`, R3F's own NDC pointer — which only updates while the
+  CANVAS ELEMENT is the topmost thing under the cursor. The Contact section is
+  dense with real DOM content (form, buttons, text) sitting above the canvas
+  in stacking order, so hovering any of it never reached the canvas and the
+  pointer barely moved. Fixed with a raw `window.addEventListener('pointermove')`
+  tracking clientX/clientY directly — not gated by DOM hit-testing, and
+  already the exact approach MaskField.tsx's own drag-rotation uses. Verified
+  the listener genuinely fires in this environment (confirmed via an injected
+  counter) before trusting the fix.
+- **YAW_LAG 3.0 → 1.0** per his correction after seeing it live.
+- **Intro is now a real fly-in**, not an opacity ramp: each instance gets its
+  own z-depth (`INTRO_Z_DEEP`) that eases toward 0 over `INTRO_SECS`, same
+  easeOutCubic shape as the hero's own entrance. Staggered per instance
+  (`INTRO_STAGGER`, time-since-mount gated, not wall-clock — a real bug I hit
+  and fixed mid-build: comparing a stagger offset to `performance.now()`
+  directly is nonsense since that's browser uptime, not time-since-mount) so
+  the ten arrive one after another, reading as emerging from an abyss rather
+  than a single synchronized pop-in.
+- **Glyph layer ported over** (binary + Telugu, same mechanism as
+  MaskField.tsx, duplicated not imported). Lit duration raised from the
+  hero's ~2.2s to ~7.1s (`GLYPH_ON_FRAC`/`GLYPH_ROVE_SPEED` retuned), and drift
+  distance raised hugely (`uDriftUp` 0.16→6.5 etc, LOCAL units, scales with
+  each instance's BASE_SCALE) so a glyph travels well past its own tiny face
+  before fading — an approximation of "reaches the section's edge and
+  disappears there", not a precise per-instance distance-to-border
+  calculation (that would need each slot's exact distance to its nearest
+  edge; this uses one generous shared distance instead, tunable in one
+  place if it still reads as too short/long once he watches it live).
+- **Each instance now gets its own cloned ShaderMaterial** (both the base dot
+  layer and the glyph layer) instead of one shared material — needed so each
+  can run its own independent intro fade while all ten still read the same
+  live shared position/velocity texture (the expensive part stays shared;
+  only cheap uniform objects got cloned).
+- **Containment**: tightened SWARM_SLOTS margins (was 0.06–0.92, now roughly
+  0.1–0.86) and narrowed the per-slot scale spread (was 0.65–1.1, now
+  0.75–1.05) so the bigger masks don't clip the section's own left/right/top/
+  bottom edges. NOTE: there is a separate, minor visual overlap at the exact
+  scroll position where the hero's sticky track hands off to Contact — a
+  mask near the TOP of the Contact section's fraction can briefly coincide
+  with the tail end of hero content during that handoff frame. This is a
+  sticky-positioning quirk, not the masks spilling past the Contact section's
+  own bounds (they ARE correctly bounded to the section's live rect) —
+  flagged for Melvin rather than chased further this pass.
+- Verified in Chrome, with real patience this time (30–50s+ waits, learned
+  from round 1): sharper faces confirmed via zoom, glyphs visibly drifting
+  into open space well away from their origin face, listener-fire confirmed
+  directly. **Cursor-follow verified only as "a plausible, subtle difference"
+  between idle and turned zoomed screenshots** — pixel-diffing a sparse point
+  cloud through screenshots has real limits; the underlying bug (occlusion-
+  gated pointer) is definitively fixed and the fix code is simple and
+  correct, but the exact FEEL is best judged by Melvin's own live cursor.
+- Build + oxlint clean. MaskField.tsx confirmed zero diff again.
+
 ### [CLAUDE] The ten cursor-following masks, Contact section (2026-08-09)
 Built the last big item from Melvin's spec: shrink the mask, fit about ten
 across the Contact section, fixed positions, only ANGLE toward the cursor
