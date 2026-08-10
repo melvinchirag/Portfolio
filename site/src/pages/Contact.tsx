@@ -116,37 +116,26 @@ const EXTRA_ICONS: { label: string; href: string; title: string; path: string }[
 ]
 
 /* ---------------------------------------------------------------------------
- * Icon-only social/contact buttons, orbiting a figure-eight (Melvin,
- * 2026-08-10: "place the social buttons such that they look like an infinity
- * symbol... move in a loop clockwise... glow when I hover... halt as I hover
- * and continue when I stop"). NO visible handles or URLs (Melvin, 2026-08-09:
+ * Icon-only social/contact buttons, orbiting a circle counter-clockwise. The
+ * original ask (Melvin, 2026-08-10) was "place the social buttons such that
+ * they look like an infinity symbol... move in a loop... glow when I hover...
+ * halt as I hover and continue when I stop" — everything but the ∞ survived
+ * unchanged; see the note below for why that part didn't.
+ * NO visible handles or URLs (Melvin, 2026-08-09:
  * showing the raw URL "reads very amateur") — the actual address lives in
  * href + aria-label/title, not on screen, still fully reachable.
  *
- * WHY THE CURVE IS DRAWN AND NOT JUST TRAVELLED (round 4 of this component,
- * Melvin: "the socials are not revolving in an infinity shaped loop"): the
- * geometry was measured and is correct — a true figure-eight, six icons spread
- * evenly along it, closest pair 81px apart. The problem was that a moving dot
- * does not draw its own path. Six identical circles gliding at a constant speed
- * over a 26-second lap give the eye nothing to integrate, so the ∞ existed only
- * in the code. Stroking it makes the shape present the instant you look, and
- * turns the icons into things that ride it.
+ * A CIRCLE, NOT THE FIGURE-EIGHT (Melvin, 2026-08-10, after four attempts at
+ * the ∞ and a fifth with the curve stroked on screen: "just make it circular
+ * and please remove the trace"). The lemniscate was measurably correct every
+ * time it was reported broken; the problem is that an unmarked path can't
+ * communicate its own shape, and he doesn't want it marked. A circle is the one
+ * closed path that doesn't need marking. See index.css for the full note.
  *
- * LOOP_PATH is therefore the single source of truth for that curve: it feeds
- * BOTH the visible <path> and (via the --loop-path custom property) the
- * `offset-path` the icons travel. They cannot drift out of sync.
- *
- * Timing, pause-on-hover and the track's own styling live in `.infinity-loop*`
- * (index.css); this component places each icon at its own start point.
+ * The path, the counter-clockwise direction, timing and pause-on-hover all live
+ * in `.orbit-ring` / `.orbit-ring-item` (index.css); this component only places
+ * each icon at its own evenly-spaced entry point along the shared path.
  * ------------------------------------------------------------------------ */
-
-/** Lemniscate of Gerono, x(t)=170+152·cos t, y(t)=77.5+59.5·sin 2t, sampled at
- *  96 points over one continuous 0→2π sweep, in the container's own 340x155
- *  pixel box. One increasing parameter = one continuous direction of travel, so
- *  there is no seam where the motion can appear to reverse. Generated with Node
- *  (script in CONTEXT.md) — regenerate rather than editing points by hand. */
-const LOOP_PATH =
-  'M322.0,77.5L321.7,85.3L320.7,92.9L319.1,100.3L316.8,107.3L313.9,113.7L310.4,119.6L306.3,124.7L301.6,129.0L296.4,132.5L290.6,135.0L284.3,136.5L277.5,137.0L270.2,136.5L262.5,135.0L254.4,132.5L246.0,129.0L237.2,124.7L228.2,119.6L218.9,113.7L209.3,107.3L199.7,100.3L189.8,92.9L179.9,85.3L170.0,77.5L160.1,69.7L150.2,62.1L140.3,54.7L130.7,47.7L121.1,41.3L111.8,35.4L102.8,30.3L94.0,26.0L85.6,22.5L77.5,20.0L69.8,18.5L62.5,18.0L55.7,18.5L49.4,20.0L43.6,22.5L38.4,26.0L33.7,30.3L29.6,35.4L26.1,41.3L23.2,47.7L20.9,54.7L19.3,62.1L18.3,69.7L18.0,77.5L18.3,85.3L19.3,92.9L20.9,100.3L23.2,107.2L26.1,113.7L29.6,119.6L33.7,124.7L38.4,129.0L43.6,132.5L49.4,135.0L55.7,136.5L62.5,137.0L69.8,136.5L77.5,135.0L85.6,132.5L94.0,129.0L102.8,124.7L111.8,119.6L121.1,113.7L130.7,107.2L140.3,100.3L150.2,92.9L160.1,85.3L170.0,77.5L179.9,69.7L189.8,62.1L199.7,54.7L209.3,47.8L218.9,41.3L228.2,35.4L237.2,30.3L246.0,26.0L254.4,22.5L262.5,20.0L270.2,18.5L277.5,18.0L284.3,18.5L290.6,20.0L296.4,22.5L301.6,26.0L306.3,30.3L310.4,35.4L313.9,41.3L316.8,47.8L319.1,54.7L320.7,62.1L321.7,69.7L322.0,77.5Z'
 
 function FindMeHere() {
   const items = [
@@ -154,13 +143,7 @@ function FindMeHere() {
     ...EXTRA_ICONS,
   ]
   return (
-    <div className="infinity-loop mt-6" style={{ '--loop-path': `path('${LOOP_PATH}')` } as CSSProperties}>
-      {/* The visible track. Same string as the icons' offset-path, so the line
-          drawn here IS the line they travel. */}
-      <svg className="infinity-loop-track" viewBox="0 0 340 155" aria-hidden focusable="false">
-        <path d={LOOP_PATH} />
-      </svg>
-
+    <div className="orbit-ring mt-6">
       {items.map((item, i) => {
         const icon = (
           <svg viewBox="0 0 24 24" fill="currentColor" width={19} height={19} aria-hidden>
@@ -171,7 +154,7 @@ function FindMeHere() {
         // Evenly spaced around the loop: 6 items → 1/6 of the path apart.
         const style = { '--start': `${(i / items.length) * 100}%` } as CSSProperties
         return (
-          <div key={item.label} className="infinity-loop-item" style={style}>
+          <div key={item.label} className="orbit-ring-item" style={style}>
             {item.href ? (
               <a
                 href={item.href}
@@ -321,7 +304,17 @@ function ContactView() {
           )}
         </section>
 
-        <section aria-labelledby="contact-direct-heading">
+        {/* Centred in the right-hand column, and vertically centred against the
+            form beside it (Melvin, 2026-08-10: "the socials need to be aligned
+            in the center right"). `self-center` overrides the grid's default
+            stretch so this block sits on the form's midline instead of hanging
+            from the top; `items-center` centres the ring and its label inside
+            the column. A circular ring reads as off-balance unless its label is
+            centred over it too, so both are centred, not just the ring. */}
+        <section
+          aria-labelledby="contact-direct-heading"
+          className="flex flex-col items-center md:self-center"
+        >
           <h2 id="contact-direct-heading" className="text-[11px] tracking-[0.3em] text-white/40 uppercase">
             Stalk me here
           </h2>

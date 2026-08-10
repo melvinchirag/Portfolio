@@ -189,130 +189,80 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
- * THE INFINITY LOOP — the Contact page's "Stalk me here" icon row (Melvin,
- * 2026-08-10): the six icons orbit a figure-eight path, evenly spaced, always
- * moving clockwise; hovering the row pauses every icon's motion at once (so
- * you can actually click one without it drifting away), and the specific icon
- * under the cursor gets the usual `.social-btn` accent glow on top of that.
+ * THE ORBIT RING — the Contact page's "Stalk me here" icon row.
  * ----------------------------------------------------------------------------
+ * Six icons orbit a circle, evenly spaced, always COUNTER-CLOCKWISE. Hovering
+ * anywhere in the ring pauses every icon at once (so you can actually click one
+ * without it drifting away), and the icon under the cursor gets the usual
+ * `.social-btn` accent glow on top of that.
+ *
  * Built on CSS Motion Path (`offset-path` + `offset-distance`) rather than a
- * JS/rAF loop: the browser drives the animation off its own compositor, it's
- * one `@keyframes` shared by all six (each just starts at a different point
- * along the same path via `--start`), and "pause on hover" is a single
- * `animation-play-state` rule — no manual pause/resume bookkeeping needed.
+ * JS/rAF loop: the browser drives it off its own compositor, one `@keyframes`
+ * serves all six (each just enters at a different point via `--start`), and
+ * pause-on-hover is a single `animation-play-state` rule.
  *
- * THE PATH — and why it read as broken twice before this.
+ * WHY A CIRCLE AND NOT THE FIGURE-EIGHT (Melvin, 2026-08-10, after four
+ * attempts): the lemniscate was correct every single time it was reported
+ * broken — correct curve, correct scale, six icons spread perfectly evenly
+ * along it, closest pair 81px apart, all measured. It still never read as an
+ * infinity symbol, because a moving dot does not draw its own path; six
+ * identical circles gliding over a 26s lap give the eye nothing to integrate
+ * into a shape. Stroking the curve on screen DID make the ∞ legible, but he
+ * didn't want a visible track, and an unmarked figure-eight simply cannot
+ * communicate itself. A circle can: it is the one closed path whose shape is
+ * unambiguous from a handful of points on it, because every point sits the same
+ * distance from a centre the eye locates for free. Do not "restore" the
+ * lemniscate without also restoring the track — the two only work together.
  *
- * The curve is a Lemniscate of Gerono: x(t)=cx+ax·cos(t),
- * y(t)=cy+ay·sin(t)·cos(t), sampled over ONE continuously increasing t across
- * a full 0→2π sweep (generated with Node, see CONTEXT.md). A single continuous
- * parameter guarantees a single continuous direction of travel, so there is no
- * seam that can run backwards.
+ * THE PATH: a 72-segment polyline of x=cx+r·cos t, y=cy−r·sin t (generated with
+ * Node, see CONTEXT.md). The MINUS on y is what makes it counter-clockwise:
+ * screen y grows downward, so subtracting sin sweeps right → top → left →
+ * bottom. Increasing `offset-distance` then travels that direction, which is
+ * why the keyframes need no `animation-direction: reverse`.
  *
- * That was already true in the previous version, and it still looked wrong —
- * because the real problem was never the maths, it was SCALE. The container
- * was 200x100, which after inset made each lobe only ~88x40px, while the icons
- * riding it are 36px. The icons were ~90% of the lobe height: they physically
- * could not trace a readable figure-eight, so they just looked like a jostling
- * cluster. Measured, not guessed (see CONTEXT.md).
- *
- * Now 340x155 → lobes ~152x119, icons at ~30% of lobe height, six icons spaced
- * ~139px apart along an ~831px path. The shape has room to actually read.
- * Duration raised 18s→26s to keep the linear speed calm over the longer path.
- *
- * AND IT STILL DIDN'T READ, which is the fourth report on this one component.
- * Re-measured: the curve is a textbook figure-eight and the six icons sit on it
- * perfectly evenly, closest pair 81px apart. Both correct. The missing piece
- * was never in the geometry at all — a MOVING DOT DOES NOT DRAW ITS OWN PATH.
- * Six identical circles gliding at constant speed give the eye nothing to
- * integrate into a shape, especially at 26s per lap, so all anyone ever saw was
- * six dots wandering. The ask was that they "look like an infinity symbol" AND
- * move along it; only the second half had ever been built. Hence
- * `.infinity-loop-track` above: the lemniscate is now literally stroked on
- * screen, so the icons visibly ride a visible ∞.
- *
- * (Worth knowing for future edits: the two lobes of ANY true figure-eight curl
- * in opposite senses relative to each other — that is what makes one stroke
- * read as an "S" through the centre rather than two separate circles. That is
- * correct behaviour, not the old bug.)
- *
- * Coordinates are raw CSS pixels in the container's own box (that's how
- * `path()` in `offset-path` is specified — no separate SVG/viewBox needed),
- * which is also why the size is fixed and the small-screen case is handled by
- * scaling the whole container rather than by re-authoring the path.
+ * A polyline rather than SVG arc commands purely for risk: this is the exact
+ * mechanism that has demonstrably worked here for four rounds, and at 72
+ * segments the error against a true circle is 0.08px — invisible. Coordinates
+ * are raw CSS pixels in the container's own box (that's how `path()` in
+ * `offset-path` is specified), so the box size and the path must change
+ * together. At 220x220 it fits the content column even on a small phone, so
+ * unlike the 340px figure-eight it needs no scale-down media query.
  * ------------------------------------------------------------------------ */
-.infinity-loop {
+.orbit-ring {
   position: relative;
-  width: 340px;
-  height: 155px;
+  width: 220px;
+  height: 220px;
 }
 
-/* THE TRACK — the reason this finally works. See the Contact.tsx note: six
- * moving dots never draw their own path, so the figure-eight has to be on
- * screen as an actual line. Hairline, accent, low alpha; it brightens slightly
- * when you hover the loop (which is also when the icons halt), so the whole
- * thing reads as one object you can reach into. */
-.infinity-loop-track {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  fill: none;
-  stroke: var(--color-accent);
-  stroke-width: 1;
-  stroke-opacity: 0.16;
-  transition: stroke-opacity 500ms var(--ease-out-expo);
-  pointer-events: none;
-}
-
-.infinity-loop:hover .infinity-loop-track {
-  stroke-opacity: 0.3;
-}
-
-.infinity-loop-item {
+.orbit-ring-item {
   position: absolute;
   top: 0;
   left: 0;
-  /* The curve itself is defined ONCE, in Contact.tsx, and handed down as this
-   * custom property — the same string also feeds the visible <path>, so the
-   * track and the icons physically cannot drift apart. If the property ever
-   * goes missing this fails loudly (all six icons stack at the top-left)
-   * rather than silently mismatching. */
-  offset-path: var(--loop-path);
+  offset-path: path(
+    'M198.0,110.0L197.7,102.3L196.7,94.7L195.0,87.2L192.7,79.9L189.8,72.8L186.2,66.0L182.1,59.5L177.4,53.4L172.2,47.8L166.6,42.6L160.5,37.9L154.0,33.8L147.2,30.2L140.1,27.3L132.8,25.0L125.3,23.3L117.7,22.3L110.0,22.0L102.3,22.3L94.7,23.3L87.2,25.0L79.9,27.3L72.8,30.2L66.0,33.8L59.5,37.9L53.4,42.6L47.8,47.8L42.6,53.4L37.9,59.5L33.8,66.0L30.2,72.8L27.3,79.9L25.0,87.2L23.3,94.7L22.3,102.3L22.0,110.0L22.3,117.7L23.3,125.3L25.0,132.8L27.3,140.1L30.2,147.2L33.8,154.0L37.9,160.5L42.6,166.6L47.8,172.2L53.4,177.4L59.5,182.1L66.0,186.2L72.8,189.8L79.9,192.7L87.2,195.0L94.7,196.7L102.3,197.7L110.0,198.0L117.7,197.7L125.3,196.7L132.8,195.0L140.1,192.7L147.2,189.8L154.0,186.2L160.5,182.1L166.6,177.4L172.2,172.2L177.4,166.6L182.1,160.5L186.2,154.0L189.8,147.2L192.7,140.1L195.0,132.8L196.7,125.3L197.7,117.7L198.0,110.0Z'
+  );
   /* Centres a 36px icon button ON its path point (offset-path itself anchors
    * the element's top-left corner, not its centre). */
   transform: translate(-50%, -50%);
   offset-rotate: 0deg; /* keep icons upright — they glide, they don't spin */
   offset-distance: var(--start, 0%);
-  animation: infinity-orbit 26s linear infinite;
+  /* 553px path / 22s = 25px per second, a shade calmer than the old loop. */
+  animation: orbit-spin 22s linear infinite;
 }
 
-/* Hovering ANYWHERE in the row halts every icon's motion at once, so the one
- * you're aiming for holds still long enough to actually click. */
-.infinity-loop:hover .infinity-loop-item {
+/* Hovering ANYWHERE in the ring halts every icon at once, so the one you're
+ * aiming for holds still long enough to actually click. */
+.orbit-ring:hover .orbit-ring-item {
   animation-play-state: paused;
 }
 
-/* `path()` coordinates are absolute pixels, so the loop can't fluidly resize —
- * on narrow phones the 340px box would overflow the content column. Scale the
- * whole container instead of re-authoring the path at another size. Safe to
- * transform here: `.social-btn` uses no backdrop-filter, so this doesn't hit
- * the transformed-ancestor trap documented at the top of this file. */
-@media (max-width: 420px) {
-  .infinity-loop {
-    transform: scale(0.8);
-    transform-origin: left center;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .infinity-loop-item {
+  .orbit-ring-item {
     animation: none;
   }
 }
 
-@keyframes infinity-orbit {
+@keyframes orbit-spin {
   from {
     offset-distance: var(--start, 0%);
   }

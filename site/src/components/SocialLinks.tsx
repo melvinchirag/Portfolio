@@ -19,7 +19,7 @@ import type { CSSProperties } from 'react'
 import { SOCIALS } from '../data/profile'
 
 /** Single-path 24×24 brand marks (simple-icons). Keyed by SOCIALS label.
- *  Exported so the Contact page's infinity-loop icon row can reuse the same
+ *  Exported so the Contact page's orbit-ring icon row can reuse the same
  *  brand marks instead of redefining them. */
 export const ICON_PATHS: Record<string, string> = {
   GitHub:

@@ -247,6 +247,43 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Round 8: the socials are a circle now (2026-08-10)
+Melvin: "The infinity thing is just not working, just make it circular and
+please remove the trace. Also the socials need to be aligned in the center
+right. make sure the path is counter clockwise."
+
+- **Dropped the ∞ after five attempts.** Worth recording why, so nobody
+  "restores" it later: the lemniscate was measurably correct every single time
+  it was reported broken — right curve, right scale, six icons spread perfectly
+  evenly, closest pair 81px. The round-7 diagnosis was also right (an unmarked
+  path can't communicate its own shape, so stroking it made the ∞ legible). But
+  he doesn't want a visible track, and those two facts together mean the
+  figure-eight is simply not achievable here. A circle is: it's the one closed
+  path whose shape is unambiguous from a few points on it, because every point
+  sits the same distance from a centre the eye finds for free. **If anyone ever
+  brings the lemniscate back, the track has to come back with it.**
+- Path: 72-segment polyline, r=88 in a 220x220 box, generated with Node.
+  **Counter-clockwise comes from the minus sign** in y=cy−r·sin t — screen y
+  grows downward, so subtracting sin sweeps right → top → left → bottom.
+  Increasing `offset-distance` then travels that way, so no
+  `animation-direction: reverse` is needed. Verified: 6 icons at even arc
+  length, 88px apart (52px clear between 36px icons), everything inside the box
+  (x 4-216, y 16-204 of 220). Polyline error vs a true circle is 0.08px.
+- Renamed `.infinity-loop*` → `.orbit-ring*` and `infinity-orbit` →
+  `orbit-spin`; the old names would have been actively misleading. 22s per lap
+  = 25px/s, a shade calmer than the old 32px/s.
+- Dropped the 420px scale-down media query: 220px fits the content column even
+  on a small phone, unlike the 340px figure-eight.
+- "Center right": the right column now uses `flex flex-col items-center
+  md:self-center`, so the ring sits on the form's vertical midline and the
+  "Stalk me here" label is centred over it. A circular ring with a
+  left-aligned label reads as a mistake.
+- Build + oxlint clean. Verified in `dist`: path coordinates intact through
+  Lightning CSS, zero occurrences of `infinity`, and the reduced-motion
+  `animation:none` is still scoped inside its media query (a bare one would
+  have silently frozen every icon).
+- Still unverified in a browser — extension has been down 8 rounds.
+
 ### [CLAUDE] Round 7: the layout was never a randomness problem, and the ∞ was never a geometry problem (2026-08-10)
 Melvin, after round 6: masks want "a more pleasing manner, not necessarily too
 symmetrical but well placed from an aesthetic pov"; glyphs still too fast; and
