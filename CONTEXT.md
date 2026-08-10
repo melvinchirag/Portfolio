@@ -247,6 +247,37 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Glyphs no longer cut off on Future -> Present (2026-08-10)
+Melvin: verified round 8's ring is good. One remaining rough edge: "when we're
+transitioning from the future to the present the glyphs disappear abruptly
+instead of that I would prefer it if they disappeared gradually, the ones in
+the visibility should just go up and then it needs to disappear."
+
+- **Root cause: `useSwarmMounted` hard-unmounted `<ContactMaskSwarm>` the
+  instant `heroScroll.frame` dropped below FUTURE.** React tears the whole
+  WebGL draw down in one frame when a component unmounts — any glyph mid-arc
+  just vanishes, no matter how good its own shader-side fade math is. The
+  glyph's `vAlpha` life-cycle fade was never the problem; the component
+  disappearing out from under it was.
+- Fix: a new shared scalar, `swarmExit.fade` (contactVisibility.ts), same
+  "mutable object read inside useFrame" pattern as `contactHandoff.t`. It's
+  SNAPPED to 1 on entry (the existing staggered per-instance intro fade already
+  handles arrival well — no need to layer a second ramp on top and slow it
+  down) but RAMPED to 0 over 1.2 real seconds on exit, using clock time rather
+  than scroll distance so a fast flick up still fades gently instead of
+  snapping. `useSwarmMounted` now stays mounted for as long as this fade is
+  above ~0, and only unmounts once it's actually reached zero.
+  `ContactMaskSwarm` multiplies it into every material's `uFade` — position
+  (the rise) is completely untouched, only opacity eases out, which is exactly
+  "they go up, then disappear" rather than "they stop existing".
+- Simulated the tick loop in Node to confirm timing before touching the real
+  file: unmounts at t=1.18s against a 1.2s target, and scrolling back into
+  Future mid-fade snaps the fade back up cleanly (it was already visible,
+  just getting brighter again — not a pop-in).
+- Build (`tsc -b && vite build`) + oxlint clean.
+- Still unverified in a browser for THIS specific change — extension
+  connection was available for round 8 but is untested for this one.
+
 ### [CLAUDE] X + Instagram URLs filled in (2026-08-10)
 Melvin supplied the last two pending social links: X https://x.com/MelChirag,
 Instagram https://www.instagram.com/chiragmelvin/. One-line change in

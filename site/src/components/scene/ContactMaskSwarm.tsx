@@ -7,6 +7,13 @@
  * their own definitions further down: the layout is now HAND-COMPOSED to frame
  * the reading column rather than evenly cover the section (see SWARM_SLOTS),
  * and the glyphs drift roughly half as fast (see GLYPH_ROVE_SPEED).
+ *
+ * Round 9 (Melvin, 2026-08-10): scrolling Future → Present used to cut every
+ * glyph off mid-flight, because the whole component hard-unmounted the instant
+ * you left Future. Fixed at the SOURCE, not here — see `swarmExit` in
+ * contactVisibility.ts for the real explanation — this file just multiplies
+ * that scalar into `uFade` below so opacity eases out while position (the
+ * rise) keeps going untouched.
  * ----------------------------------------------------------------------------
  * Round 3 (Melvin, 2026-08-10, after seeing round 2 live):
  *   - Still can't make out facial features → added the hero's eye/nose
@@ -74,6 +81,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
+import { swarmExit } from '../../hooks/contactVisibility'
 
 // A field of small faces, not the hero focal point, but bigger/denser than
 // round 1 (which read as "too blurry"). 84*84 = 7056 particles per face.
@@ -764,8 +772,15 @@ export function ContactMaskSwarm() {
       }
       const eIntro = 1 - Math.pow(1 - introT[i], 3) // easeOutCubic
       const zIn = INTRO_Z_DEEP * (1 - eIntro)
-      mat.uniforms.uFade.value = eIntro
-      gmat.uniforms.uFade.value = eIntro
+      // `swarmExit.fade` (contactVisibility.ts) is 1 while we're in Future/
+      // Contact and ramps to 0 over real time once you scroll back out — see
+      // that file for why. Multiplying it in here, rather than just hard-
+      // unmounting on the way out, is what lets glyphs already in flight keep
+      // rising and fade out instead of snapping off. Position is untouched by
+      // this — only opacity.
+      const fade = eIntro * swarmExit.fade
+      mat.uniforms.uFade.value = fade
+      gmat.uniforms.uFade.value = fade
 
       const px = rect.left + slot.fx * rect.width
       const py = rect.top + slot.fy * rect.height
