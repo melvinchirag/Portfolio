@@ -275,6 +275,89 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Real project content + the tag-alignment fix + a responsive algorithm (2026-08-11)
+Melvin came back with the hero layout editor artifact used for real: three
+JSON exports (desktop 1440 / split-screen 860 / phone 390) with edited copy,
+real project data, and per-width spacing values, plus prose notes on top. He
+explicitly said to stop and ask if anything needed clarifying — three things
+did (a stray-looking stack tag, a total project rewrite, a content/alignment
+tradeoff), asked before writing any code, got clear answers, then built.
+
+- **THE ALIGNMENT BUG, actually diagnosed.** His note: "the starting point of
+  all bullet points needs to be the same in terms of the co-ordinates." The
+  existing card used `flex-1` on the blurb to push the tag row down, but that
+  only pins the BOTTOM of the card (via the rail's equal-height stretch), not
+  the top of the tag row. Three cards forced to equal total height, with a
+  flex-1 blurb absorbing "whatever's left after the tags": a card whose tags
+  wrap to 3 lines and a card whose tags wrap to 1 line end up with DIFFERENT
+  blurb heights (to compensate), so their tag rows start at DIFFERENT Y
+  coordinates even though the cards themselves are the same height. Fixed by
+  giving the blurb a fixed `min-height` instead (16.5em, ~10 lines) — the
+  blurb's own size stops depending on tag count entirely, so every card's
+  tags start at the same coordinate. Also added a smaller min-height guard on
+  the project name for the same reason (one long name wrapping to 2 lines
+  while others stay on 1 would offset everything below it on just that card).
+- **RESPONSIVE ALGORITHM, not 3 breakpoints** (Melvin: "people wont split
+  screen to perfectly 1/2 the screen... we need an algorithm that adjusts").
+  Fit `clamp(min, A*vw + B, max)` formulas by ordinary two-point linear
+  regression through his two REAL multi-card samples (1440px and 860px) for
+  both card gap and card width:
+  - gap: fit through (1440, 29) and (860, 8) -> `clamp(8px, 3.62vw - 23px, 30px)`
+  - width: fit through (1440, 285) and (860, 225) -> `clamp(230px, 10.35vw + 136px, 320px)`
+  Deliberately did NOT try to hit his 390px (phone) sample with the same
+  curve: at that width the rail switches to one full-width card (his own
+  separate ask: "make sure only one project card is showing"), where the
+  exact gap/width barely matters since there's never a second card on screen
+  to compare against. That's a real RULE change (100% width, no peek), not a
+  point on the same curve, so it's an explicit `@media (max-width: 560px)`
+  override, not folded into the formula. The blurb's min-height was sized off
+  the same math: Manas's ~306-character blurb needs an estimated ~9 wrapped
+  lines at the card-width formula's 230px floor (~6.5px/char at 12.5px body
+  text), so 16.5em (10 lines) leaves a line of headroom — an ESTIMATE, not a
+  browser measurement, worth a visual check once possible.
+- **Arrows**: audited the existing logic rather than assuming it needed a
+  fix. Found one real bug: `scrollByCard`'s scroll distance used a hardcoded
+  `const gap = 20`, which is now WRONG since gap is a responsive clamp, not a
+  fixed 20px. Fixed to read the live computed `column-gap` off the rail
+  element instead. Everything else (canLeft/canRight via live scroll
+  position, ResizeObserver for the box shrinking, keyboard handler) was
+  already viewport-agnostic and needed no change.
+- **Real content, per his three answers:**
+  - Manas: full rewrite shipped as given (desktop cosmic simulation console,
+    built for the IIT-M hackathon) — confirmed real, not exploratory typing.
+    Dropped `tentative` accordingly. Kept "New" in its stack list — confirmed
+    real, not a stray click.
+  - "This Portfolio" -> "Portfolio (Melvin Chirag)" (added the missing space
+    from his typed version — flagged to him, easy to revert if he'd rather
+    keep the original name).
+  - "Hackathon Project / TBD" placeholder replaced outright with Lingo, a
+    real, won hackathon project. Blurb tightened per his instruction ("keep
+    the winning parts remove others if needed"): kept what Lingo does and the
+    SpartaHack 11 win, cut the "first hackathon" framing and the built-with
+    sentence (redundant with the stack tags already shown right below it).
+    Dropped `tentative`.
+  - Present's intro paragraph: his new copy, with two typos fixed (Vl-JEPA ->
+    V-JEPA, PAlM-E -> PaLM-E — both real published model names, not
+    stylistic choices) and the exclamation mark removed (melvin-voice hard
+    rule, no exceptions). Content and structure otherwise untouched.
+  - Present's box max-width left at 1060, NOT nudged toward his ~1000
+    sample — his three exports gave 1000/1060/900 for desktop/split/phone,
+    which isn't a coherent trend (split-screen higher than desktop makes no
+    sense as an intentional edit), and he never called box-width out as
+    broken in his prose notes. Weak, inconsistent signal isn't enough to
+    justify a change on its own.
+- **Deferred, correctly:** "we can perhaps use these specs for all other
+  pages too if permitted by code" and "this formatting needs to be cleanly
+  applied to all other slides" — noted, not acted on yet. He himself
+  sequenced hero first, other pages after; the alignment PRINCIPLE (fixed
+  block heights, not flex-grow, wherever cards sit side by side) is the thing
+  to carry forward when we get there, not a mechanical copy-paste of these
+  exact numbers.
+- Build (`tsc -b && vite build`) + oxlint clean. Verified in dist: both
+  clamp() formulas intact, the 560px override intact, both min-heights
+  intact, Lingo's/Manas's/V-JEPA's real text present, the old "Hackathon
+  Project"/"TBD" placeholder text gone entirely.
+
 ### [CLAUDE] Project cards: no more separate Explore Project link (2026-08-10)
 Melvin, after seeing the tag-thread pass: remove the golden hairline above the
 stack list (he only wanted the accent color + dot, not a divider), and remove

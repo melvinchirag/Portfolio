@@ -375,9 +375,26 @@ body {
  * Snap, don't just scroll: without `scroll-snap-type` a drag or an arrow click
  * can leave a card sitting half-visible, which reads as broken rather than "in
  * between". `start` alignment matches reading direction — the card you land on
- * sits flush at the strip's leading edge, same as the arrow buttons' own logic. */
+ * sits flush at the strip's leading edge, same as the arrow buttons' own logic.
+ * ----------------------------------------------------------------------------
+ * GAP AND CARD WIDTH ARE FORMULAS, NOT BREAKPOINTS (Melvin, 2026-08-11, after
+ * trying the layout editor at three widths: "make sure that split screen is
+ * not fixed to only these values because people wont split screen to
+ * perfectly 1/2 of the screen... we need an algorithm that adjusts to that
+ * change"). Both are `clamp(min, A·vw + B, max)`, fit by ordinary two-point
+ * linear regression through his two "multiple cards visible, gap actually
+ * matters" samples — desktop (1440px -> 29px gap / 285px card) and
+ * split-screen (860px -> 8px gap / 225px card). Phone (390px) was excluded
+ * from the fit on purpose: at that width the rail switches to one full-width
+ * card (below), where the exact gap/card-width barely matters since there's
+ * never a second card sharing the screen to compare against. Solved:
+ *   gap   = clamp(8px,   3.62vw - 23px,  30px)
+ *   width = clamp(230px, 10.35vw + 136px, 320px)
+ * Re-derive with real numbers (script kept in CONTEXT.md) rather than
+ * eyeballing new constants if his target values ever change. */
 .project-rail {
   display: flex;
+  gap: clamp(8px, 3.62vw - 23px, 30px);
   overflow-x: auto;
   scroll-snap-type: x proximity;
   /* Hide the scrollbar without hiding the ability to scroll — this already has
@@ -392,10 +409,24 @@ body {
 }
 
 .project-rail > [data-project-card] {
-  /* Sized so 3 fit a wide box (matches the old grid look there exactly), and
-     so a landscape phone still shows most of one card rather than a sliver. */
-  flex: 0 0 clamp(230px, 30vw, 320px);
+  flex: 0 0 clamp(230px, 10.35vw + 136px, 320px);
   scroll-snap-align: start;
+}
+
+/* PHONE: exactly one full-width card, no peek of the next one (Melvin,
+ * 2026-08-11: "make sure that only one project card is showing it keeps it
+ * clean that way"). This OVERRIDES the formula above rather than extending
+ * it, because "fill the available width completely" isn't a point on a
+ * smooth curve — it's a different rule that only makes sense once there's no
+ * room for a neighboring card to justify a gap at all. 560px comfortably
+ * covers real phones in portrait (tested at 390px). */
+@media (max-width: 560px) {
+  .project-rail {
+    gap: 20px;
+  }
+  .project-rail > [data-project-card] {
+    flex-basis: 100%;
+  }
 }
 
 /* Deliberately positioned at 0/0, NOT a negative inset that would hang the
@@ -443,6 +474,37 @@ body {
   .project-rail {
     scroll-behavior: auto;
   }
+}
+
+/* THE ALIGNMENT FIX (Melvin, 2026-08-11): a fixed min-height on the blurb, not
+ * `flex-1`. flex-1 only pins the BOTTOM of a card — with three cards forced to
+ * equal total height, a blurb still grows to fill "whatever's left after the
+ * tags", so a card whose tags wrap to 3 lines and a card whose tags wrap to 1
+ * line end up with DIFFERENT blurb heights and therefore different tag-row
+ * START positions, even though their bottoms line up. A fixed min-height
+ * forces the blurb itself to be the same size everywhere, so the tags below
+ * it always start at the same coordinate regardless of blurb length or tag
+ * count — his own words: "even if one card has more space it needs to abide
+ * by the formatting rules... the starting point of all bullet points needs to
+ * be the same in terms of the co-ordinates."
+ *
+ * 16.5em = 10 lines at this element's own 1.65 line-height. Sized off the
+ * longest current blurb (Manas, ~306 characters) at the TIGHTEST width the
+ * card-width formula above allows (its 230px floor) — estimated at ~9 wrapped
+ * lines there (see the script in CONTEXT.md), so 10 lines leaves a line of
+ * headroom. This is a text-metrics ESTIMATE, not a browser measurement — if a
+ * future blurb runs meaningfully longer than Manas's, or this reads visibly
+ * off once actually seen, bump the line count rather than assume it's exact. */
+.card-blurb {
+  min-height: 16.5em;
+}
+
+/* Same reasoning, smaller stakes: guards against ONE project's name wrapping
+ * to two lines while its neighbors stay on one (e.g. "Portfolio (Melvin
+ * Chirag)" is the longest of the three) — without this, that alone would
+ * offset every row below it on that one card. */
+.card-name {
+  min-height: 2.4em;
 }
 
 /* ---------------------------------------------------------------------------

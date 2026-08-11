@@ -282,7 +282,11 @@ function ProjectRail() {
     const el = railRef.current
     if (!el) return
     const card = el.querySelector<HTMLElement>('[data-project-card]')
-    const gap = 20 // matches the `gap-5` on .project-rail below
+    // Read the LIVE computed gap rather than a hardcoded constant — the gap
+    // is now a responsive clamp() (see .project-rail in index.css), not a
+    // fixed Tailwind `gap-5`, so a constant here would drift out of sync with
+    // whatever the current viewport actually renders.
+    const gap = el ? parseFloat(getComputedStyle(el).columnGap || '0') : 0
     const amount = card ? card.getBoundingClientRect().width + gap : el.clientWidth * 0.8
     el.scrollBy({ left: dir * amount, behavior: 'smooth' })
   }
@@ -326,7 +330,7 @@ function ProjectRail() {
         aria-label="Featured projects — use the left and right arrow keys to scroll"
         tabIndex={0}
         onKeyDown={onKeyDown}
-        className="project-rail gap-5"
+        className="project-rail"
       >
         {PROJECTS.map((p) => (
           /* No card chrome: a translucent bordered box INSIDE a translucent
@@ -366,7 +370,7 @@ function ProjectRail() {
                     ↗
                   </span>
                 </div>
-                <h3 className="font-display group-hover/card:text-accent text-xl text-white transition-colors duration-300">
+                <h3 className="card-name font-display group-hover/card:text-accent text-xl text-white transition-colors duration-300">
                   {p.name}
                 </h3>
               </a>
@@ -378,11 +382,19 @@ function ProjectRail() {
                   </span>
                   <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">Preview coming</span>
                 </div>
-                <h3 className="font-display text-xl text-white">{p.name}</h3>
+                <h3 className="card-name font-display text-xl text-white">{p.name}</h3>
               </>
             )}
 
-            <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-white/80">{p.blurb}</p>
+            {/* NOT `flex-1` anymore — see .card-blurb in index.css for why:
+                a flex-grow blurb only pins the BOTTOM of the tags to a common
+                line, not the TOP, so cards whose tags wrap to a different
+                number of lines still started their tag row at different
+                heights (Melvin, 2026-08-11, via the hero layout editor: "the
+                starting point of all bullet points needs to be the same in
+                terms of the co-ordinates"). A fixed min-height on the blurb
+                itself is what actually guarantees that. */}
+            <p className="card-blurb mt-2 text-[12.5px] leading-relaxed text-white/80">{p.blurb}</p>
 
             <TagThread items={p.stack} compact />
           </article>
@@ -402,8 +414,11 @@ function PresentFrame({ index }: { index: number }) {
           The Present
         </h2>
         <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-white/85">
-          Right now I'm building at the intersection of computer vision, machine learning,
-          interactive software, and a lot of scientific curiosity.
+          I am currently exploring topics in computer science like computer vision, V-JEPA, neural
+          architecture, PaLM-E models, and much more. My vision is to ensure that AI interacts with
+          real-world information, which may ultimately lead us to the genesis of AGI. I love merging AI
+          and computer science with different fields of study to create projects that have the
+          potential for domain expansion.
         </p>
 
         <ProjectRail />
