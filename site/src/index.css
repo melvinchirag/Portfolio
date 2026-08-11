@@ -476,36 +476,15 @@ body {
   }
 }
 
-/* THE ALIGNMENT FIX (Melvin, 2026-08-11): a fixed min-height on the blurb, not
- * `flex-1`. flex-1 only pins the BOTTOM of a card — with three cards forced to
- * equal total height, a blurb still grows to fill "whatever's left after the
- * tags", so a card whose tags wrap to 3 lines and a card whose tags wrap to 1
- * line end up with DIFFERENT blurb heights and therefore different tag-row
- * START positions, even though their bottoms line up. A fixed min-height
- * forces the blurb itself to be the same size everywhere, so the tags below
- * it always start at the same coordinate regardless of blurb length or tag
- * count — his own words: "even if one card has more space it needs to abide
- * by the formatting rules... the starting point of all bullet points needs to
- * be the same in terms of the co-ordinates."
- *
- * 16.5em = 10 lines at this element's own 1.65 line-height. Sized off the
- * longest current blurb (Manas, ~306 characters) at the TIGHTEST width the
- * card-width formula above allows (its 230px floor) — estimated at ~9 wrapped
- * lines there (see the script in CONTEXT.md), so 10 lines leaves a line of
- * headroom. This is a text-metrics ESTIMATE, not a browser measurement — if a
- * future blurb runs meaningfully longer than Manas's, or this reads visibly
- * off once actually seen, bump the line count rather than assume it's exact. */
-.card-blurb {
-  min-height: 16.5em;
-}
-
-/* Same reasoning, smaller stakes: guards against ONE project's name wrapping
- * to two lines while its neighbors stay on one (e.g. "Portfolio (Melvin
- * Chirag)" is the longest of the three) — without this, that alone would
- * offset every row below it on that one card. */
-.card-name {
-  min-height: 2.4em;
-}
+/* ROW ALIGNMENT (every card's tag row starting at the same Y) is NOT set here
+ * anymore. It used to be a fixed `min-height: 16.5em` on .card-blurb, but that
+ * number was an estimate of the worst-case wrap, and measured against the real
+ * page it was ~64px taller than the tallest blurb actually needed — dead space
+ * that pushed the whole Present box past the viewport and clipped the tech
+ * stack off the bottom. No single constant can be correct here, because the
+ * line count depends on card width and card width is itself responsive. It is
+ * now measured and applied at runtime in HeroBeats.tsx (`equalizeRows`); these
+ * two classes are the hooks it queries, so keep the names in sync with it. */
 
 /* ---------------------------------------------------------------------------
  * FORM FIELDS

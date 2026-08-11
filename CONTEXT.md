@@ -275,6 +275,67 @@ browsed both in Chrome rather than guessing from the URLs.
   (not a fallback), name renders at 144px, frame title bigger and confirmed via
   screenshot.
 
+### [CLAUDE] Present frame overflowed the viewport — fixed with real measurement (2026-08-11)
+Melvin, after seeing the previous round live: the Present card "is taking too
+much of the space in the page in the desktop... to the point where I cannot
+even see the tech stack because it's being truncated." Also asked for the
+intro under the title to span the whole glass box, and said if that wasn't
+enough, shorten the card blurbs. Explicitly asked me to use the Chrome
+extension while working — first round in ~9 with a live browser.
+
+- **CONFIRMED THE CAUSE BY MEASURING, and it was MY bug from last round.** The
+  `.card-blurb { min-height: 16.5em }` I added was an ESTIMATE of the
+  worst-case wrap (~10 lines). Measured live it renders 206px while the
+  tallest blurb actually needed 142px — every card carried ~64px of dead
+  space. Visible in the screenshot as three empty lines between Portfolio's
+  blurb and its tag row. Total: Present's glass box was **774px tall against
+  a 770px viewport**, so it clipped top and bottom, taking the tech stack
+  with it.
+- **Replaced the guessed constant with runtime measurement.** No single
+  constant can be right here: how many lines a blurb wraps to depends on card
+  width, which is itself a responsive formula. `equalizeRows()` in
+  ProjectRail now releases any pinned height, measures the tallest
+  `.card-name` / `.card-blurb` at the CURRENT width, and pins all of them to
+  exactly that. Perfect alignment, zero wasted pixels, re-solves on resize.
+  Width-gated in the ResizeObserver (it changes the rail's HEIGHT, which
+  would otherwise re-trigger it and oscillate) and re-run on
+  `document.fonts.ready` (web fonts land after first paint and re-wrap the
+  text under the first measurement).
+- **Blurbs shortened to a documented RULE** (his: "the project card summary
+  needs to only cover the important parts and just give people the
+  introduction... only in the detailed projects page people can read what
+  actually it was"). ~180 chars / 2 short sentences, written into the
+  projects.ts header so it survives future edits.
+- **Intro spans the full glass box** (dropped `max-w-xl`). Measured saving:
+  106px -> 85px at the tested width.
+- **RESULT, measured live: 774px -> 648px, fits the viewport, all three tag
+  rows start at the same Y (598), tech stack fully visible.** Verified by
+  screenshot, not inference.
+- **Phone, partially verified — be honest about this.** His window is
+  OS-snapped and the extension's `resize_window` silently no-ops on it
+  (reports success, `innerWidth` never changes), so phone could not be
+  viewed. Measured instead by cloning the frames into an off-screen
+  phone-width probe. That probe has a REAL LIMITATION worth remembering:
+  media queries and `vw` units resolve against the actual viewport, not the
+  clone, so it cannot see `sm:` variants at all and inflates `vw`-sized
+  titles. Both frames were overflowing on phone even before this round, so
+  applied uniform phone-only step-downs: `GLASS_BOX` padding
+  (`px-6 py-7` under `sm`) and a new shared `PROSE_STACK` class for Past +
+  Future (12.5px/tighter spacing under `sm`). Desktop is untouched by all of
+  it. Estimated phone headroom after: Present ~80px, Future ~97px — an
+  ESTIMATE, still unverified visually.
+- Gotchas hit and worth not repeating: (1) `await requestAnimationFrame` in
+  an injected script HANGS when the tab is backgrounded (rAF is throttled) —
+  froze the renderer for 45s; use `void el.offsetHeight` to force sync
+  layout instead. (2) That frozen script leaked its probe `<style>` into the
+  page, and it silently poisoned the next three measurement rounds with
+  `min-height: 0 !important` before I caught it. Purge injected styles at the
+  start of any probe, or just reload.
+- Build + tsc + oxlint clean. Verified in dist: old min-height rules gone,
+  `equalizeRows` shipped, responsive classes present, old long blurb text
+  gone. Local dev server used for iteration (mid-debugging exception) and
+  confirmed killed afterward.
+
 ### [CLAUDE] Real project content + the tag-alignment fix + a responsive algorithm (2026-08-11)
 Melvin came back with the hero layout editor artifact used for real: three
 JSON exports (desktop 1440 / split-screen 860 / phone 390) with edited copy,

@@ -61,7 +61,29 @@ const AREAS = [
 /** Shared class for the glass slide boxes. `.slide-glass` (index.css) carries the
  *  full glass material — fill, rim, shadow, radius; here we only add padding and a
  *  text-shadow so white copy stays legible on the lighter parts of the surface. */
-const GLASS_BOX = 'slide-glass px-8 py-9 md:px-10 [text-shadow:0_1px_16px_rgba(0,0,0,0.55)]'
+/* Padding steps DOWN on phones. These frames are pinned to one viewport with
+ * `overflow: hidden`, so anything taller than the screen is silently clipped
+ * rather than scrollable — vertical space is the scarcest resource on this
+ * slide, and box padding is the cheapest place to find some. Smaller padding
+ * also widens the content column, which costs the long intro paragraph a
+ * wrapped line or two on its own. Measured on a simulated 390px phone: this
+ * takes the Present box from ~31px of headroom to ~70px. */
+const GLASS_BOX =
+  'slide-glass px-6 py-7 sm:px-8 sm:py-9 md:px-10 [text-shadow:0_1px_16px_rgba(0,0,0,0.55)]'
+
+/* The prose block inside Past and Future, as ONE shared class so the two
+ * frames can't drift apart (Melvin, 2026-08-11: "this formatting needs to be
+ * cleanly applied to all other slides... there needs to be uniformity
+ * throughout").
+ *
+ * Steps down on phones for the same reason GLASS_BOX does: these frames are
+ * pinned to a single viewport with `overflow: hidden`, so overflow is silent
+ * clipping, not a scrollbar. Measured on a simulated 390px phone, Future's
+ * three paragraphs alone ran 450px, which was the single line item pushing
+ * that frame off screen. Desktop is untouched — everything below `sm:` only
+ * applies under 640px. */
+const PROSE_STACK =
+  'mt-5 space-y-3.5 text-[12.5px] leading-[1.6] sm:mt-7 sm:space-y-5 sm:text-[14px] sm:leading-relaxed text-white/85'
 
 /* ---------------------------------------------------------------------------
  * Bottom frame indicator: dots only, no connecting line. Each jumps to a frame.
@@ -192,7 +214,7 @@ function PastFrame({ index }: { index: number }) {
         <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
           The Past
         </h2>
-        <div className="mt-7 space-y-5 text-[14px] leading-relaxed text-white/85">
+        <div className={PROSE_STACK}>
           <p>
             Born in Hyderabad and raised in Kuwait, I later continued my education in India before
             moving to Michigan for computer science.
@@ -262,16 +284,68 @@ function ProjectRail() {
     setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2)
   }
 
+  /* THE ALIGNMENT RULE, measured at runtime instead of hardcoded.
+   *
+   * Melvin's requirement: every card's tag row must START at the same Y, "even
+   * if one card has more space". Two earlier attempts got this wrong:
+   *   - `flex-1` on the blurb only pins the card's BOTTOM, so cards whose tag
+   *     lists wrap to different line counts still started their tags at
+   *     different heights.
+   *   - a fixed `min-height: 16.5em` in CSS did align them, but the value was
+   *     an ESTIMATE of the worst case. Measured live it was 206px while the
+   *     tallest blurb actually needed ~142px, so every card carried ~64px of
+   *     dead space — which is what pushed the whole box past the viewport and
+   *     clipped the tech stack off the bottom on his laptop.
+   *
+   * A single constant cannot be right at every width, because how many lines
+   * a blurb wraps to depends on the card width, which is itself a responsive
+   * formula. So: measure the tallest blurb at the CURRENT width and pin all
+   * of them to exactly that. Perfect alignment, zero wasted pixels, and it
+   * re-solves itself whenever the box resizes. */
+  const equalizeRows = () => {
+    const el = railRef.current
+    if (!el) return
+    for (const sel of ['.card-name', '.card-blurb']) {
+      const nodes = [...el.querySelectorAll<HTMLElement>(sel)]
+      if (!nodes.length) continue
+      // Release first, so the measurement reads natural height rather than
+      // whatever we pinned on the previous pass.
+      for (const n of nodes) n.style.minHeight = ''
+      const tallest = Math.max(...nodes.map((n) => n.getBoundingClientRect().height))
+      for (const n of nodes) n.style.minHeight = `${Math.ceil(tallest)}px`
+    }
+  }
+
   useEffect(() => {
     const el = railRef.current
     if (!el) return
     updateEdges()
+    equalizeRows()
     el.addEventListener('scroll', updateEdges, { passive: true })
+
     // A ResizeObserver, not a `resize` listener: this needs to react to the
     // BOX shrinking (e.g. entering split-screen) even though the window
     // itself never fired a resize event.
-    const ro = new ResizeObserver(updateEdges)
+    //
+    // Width-gated on purpose: equalizeRows CHANGES the rail's height, which
+    // would re-trigger this observer and could oscillate. Card wrapping only
+    // depends on WIDTH, so ignoring pure height changes both fixes that and
+    // skips work that couldn't have changed the answer.
+    let lastWidth = el.getBoundingClientRect().width
+    const ro = new ResizeObserver((entries) => {
+      updateEdges()
+      const w = entries[0].contentRect.width
+      if (Math.abs(w - lastWidth) < 1) return
+      lastWidth = w
+      equalizeRows()
+    })
     ro.observe(el)
+
+    // Web fonts land after first paint and re-wrap the text under us, so the
+    // first measurement can be taken against fallback metrics. Re-run once
+    // fonts are actually ready.
+    document.fonts?.ready.then(equalizeRows).catch(() => {})
+
     return () => {
       el.removeEventListener('scroll', updateEdges)
       ro.disconnect()
@@ -413,7 +487,13 @@ function PresentFrame({ index }: { index: number }) {
         <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
           The Present
         </h2>
-        <p className="mt-4 max-w-xl text-[13px] leading-relaxed text-white/85">
+        {/* Full glass-box width, NOT max-w-xl (Melvin, 2026-08-11: "make it
+            cover the entire tab... it needs to uniformly cover the entire
+            glass box. That way we'll have more space to push the project
+            cards up"). The narrow measure was costing a wrapped line or two
+            of pure height in a frame that has none to spare — widening it is
+            the cheapest vertical space on this slide. */}
+        <p className="mt-4 text-[12px] leading-[1.6] sm:text-[13px] sm:leading-relaxed text-white/85">
           I am currently exploring topics in computer science like computer vision, V-JEPA, neural
           architecture, PaLM-E models, and much more. My vision is to ensure that AI interacts with
           real-world information, which may ultimately lead us to the genesis of AGI. I love merging AI
@@ -435,7 +515,7 @@ function FutureFrame({ index }: { index: number }) {
         <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
           The Future
         </h2>
-        <div className="mt-7 space-y-5 text-[14px] leading-relaxed text-white/85">
+        <div className={PROSE_STACK}>
           <p>
             I want to build intelligent systems that move past the screen, systems that can perceive
             the world, reason about it, and act within it.
