@@ -344,8 +344,54 @@ the bio in as it dissipates. Mounts `PortraitTriptych` behind the text.
 images (composite and film), feathered to transparency at the edges so the face
 sits within the particle dust. Produced offline; the raw photo never ships.
 
-**`Chapter.tsx`** — A shared placeholder used by About, Work, Vision, and Contact
-until each gets its own real design.
+**`Work.tsx`** — "The Present": the recruiter-critical page, and the most
+structured one. It is **data-driven**, **tag-indexed**, and deeply collapsible
+so it scales as projects pile up toward graduation. Five sections — **Flagship**
+(Osiris), **Hackathons** (Lingo, EventsOS), **Personal** (Manas + future
+for-fun / skill-building / domain-expansion builds), **Foundations** (core CS by
+domain), and **Leadership** — every one built on a single expand/collapse
+primitive. Collapsed, the whole page is five headings; you open only what you
+want. A search bar on top finds any project by tag or name.
+
+The page **owns the open state** (two sets: open sections, open projects) and
+passes it down as controlled props, because that is what lets a clicked search
+result force the right section + project open and scroll to it.
+
+Its building blocks:
+
+- **`components/Collapsible.tsx`** — the one expand/collapse primitive, reused
+  at all three depths (section → project → skill). Animates height with the CSS
+  grid `0fr → 1fr` trick (real height is not animatable), exposes a `trigger`
+  render-prop so each level supplies its own look, wraps the button in an
+  `h2`/`h3` when asked for a valid document outline, supports both uncontrolled
+  and controlled (parent-owned) open state, and honours reduced motion.
+- **`components/work/WorkSection.tsx`** — a top-level collapsible section
+  (title + count), open state controlled by the page.
+- **`components/work/ProjectRow.tsx`** — one expandable project: name + tags
+  collapsed; blurb, write-up, meta, links and media expanded. Keeps the
+  `sync-glass-rect` hook for the later glass pass, and an `id` anchor for
+  search reveal.
+- **`components/work/ProjectMedia.tsx`** — the images/video block, degrading to
+  a "coming" placeholder when a project has no media yet.
+- **`components/work/SkillDisclosure.tsx`** — a Foundations skill token that
+  opens to a per-skill write-up + repo links.
+- **`components/work/ProjectSearch.tsx`** — the search bar. Substring-matches a
+  query against each project's resolved tag LABELS + name (and Foundations skill
+  names), shows a result count grouped by section with a "where used" note, and
+  on click asks the page to reveal that project.
+- **`data/tags.ts`** — THE canonical tag registry: every tag a project can carry,
+  on three axes (discipline / tech / purpose). Projects reference tags by id, so
+  the type system forbids an unregistered tag — that closed vocabulary is what
+  makes search reliable. Groundwork for the future on-site AI bot.
+- **`data/work.ts`** — the Work projects (separate from `data/projects.ts`,
+  which the hero owns and renders as exactly three cards). Rich shape: category
+  (= section), tag ids, write-up, links, media, hackathon metadata. Placeholder
+  copy is flagged `tentative` so unfinished rows still render cleanly.
+- **`data/skills.ts`** — the Foundations content: domains → skills → write-up +
+  repos, most awaiting Melvin's real per-skill detail.
+
+**`Chapter.tsx`** — A shared placeholder still used by pages that haven't got
+their own real design yet.
 
 ### The reusable logic — `src/hooks/`
 

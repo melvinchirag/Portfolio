@@ -165,6 +165,36 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Work page rebuilt: sections + 3-axis tags + search (2026-08-11)
+Structure + content pass on the Work page (recruiter-critical). Aesthetics
+(glass, background, motion) deliberately left for a later pass.
+- **Fixed wrong content.** The old page called Manas an "AGI simulation engine";
+  it is a physics-accurate space simulator. Manas is also NOT a flagship — it is
+  a domain-expansion personal project (CS + Engineering + Astronomy). **Osiris**
+  (computer vision, V-JEPA, model training/fine-tuning) added as the real
+  flagship, currently placeholder copy pending Melvin's write-up.
+- **New shape:** five collapsible sections — Flagship, Hackathons, **Personal**
+  (new), Foundations, Leadership — all on one `Collapsible` primitive
+  (`components/Collapsible.tsx`, the grid `0fr→1fr` height trick, now supports
+  controlled open state). Projects are expandable rows; Foundations skills are
+  individually expandable (empty until Melvin adds per-skill write-ups — an
+  empty skill renders as a plain token, not a hollow panel).
+- **Canonical tag registry** (`data/tags.ts`): one closed vocabulary across
+  three axes (discipline / tech / purpose). Projects reference tags by id, so an
+  off-registry tag is a type error. This is what makes search reliable, and is
+  the groundwork for the future on-site AI bot.
+- **Search** (`components/work/ProjectSearch.tsx`): matches tag labels + names,
+  shows a count grouped by section with a "where used" note; clicking a result
+  opens that section + project and scrolls to it (page owns the open state).
+- **Data split kept clean:** `data/work.ts` is the Work page's rich project
+  model, separate from `data/projects.ts` (the hero's exactly-three cards), so
+  the hero coupling is untouched.
+- Placeholders flagged in data (`tentative`, empty `href`) so unfinished rows
+  render cleanly. Still needed from Melvin: Osiris/Manas/other real write-ups +
+  media, per-skill Foundations content, real Devpost/repo links.
+- Deferred on record (PAGE-PLAN.md): testimonials slide, second mask, live CV
+  demo, and the on-site AI bot. `npm run build` clean.
+
 ### [CLAUDE] Contact + Testimonials toggle, socials fixed (2026-08-09)
 Melvin: move fast, stop being pedantic, make changes. Built the next two items
 off his list without asking further clarifying questions.

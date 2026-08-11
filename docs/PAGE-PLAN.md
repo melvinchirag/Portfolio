@@ -33,6 +33,23 @@ These are the "pizzazz" surfaces — leave them for a focused Claude session:
 
 ---
 
+## ⏸️ DEFERRED — later implementations (noted 2026-08-11, do NOT build now)
+Confirmed by Melvin as intentional "later" items. Parked here so they aren't
+lost between sessions. None of these are in scope for the current Work-page pass.
+- **Testimonials slide** — a testimonials/quotes surface. Placement TBD (likely
+  Home or Work). Not designed yet.
+- **The second mask** — a second particle-mask instance (`MaskField.tsx`) beyond
+  the first. High-fidelity/Claude work; hold until the first is locked.
+- **Computer-vision integration** — a live in-browser CV demo (webcam), the
+  natural tie-in to Osiris on the Work page. Deferred; ships as a plain case
+  study first, live demo later.
+- **On-site AI bot** — a small model trained only on Melvin's data, hosted on
+  the site, so visitors can search and "talk about him". Deferred. The Work
+  page's canonical tag registry (`src/data/tags.ts`) + search are the
+  groundwork it will stand on.
+
+---
+
 ## HOME — the hero (the ONLY scrollytelling page; must shock & awe)
 **Direction (decided 2026-07-28):** a real **three.js/R3F procedural deep-space
 engine** (starfield + drifting nebula clouds + planets + depth + a scroll-driven
@@ -76,6 +93,16 @@ Content from NOTES.md (keep project lineages straight):
 - **Structure:** flagship case study (Osiris) + project cards + a skills area.
 - **Foundations:** write each project card (name, one-liner, stack, his role,
   links to GitHub `melvinchirag`/Devpost `mkarupat`), build the card grid UI.
+- **BUILT 2026-08-11 (structure + content + tag/search):** the page is now a
+  data-driven, deeply-collapsible layout — sections **Flagship** (Osiris),
+  **Hackathons** (Lingo, EventsOS), **Personal** (Manas, as a domain-expansion
+  project — it is NOT a flagship), **Foundations** (skills by domain, each skill
+  expandable, a scaffold Melvin fills as he builds), **Leadership**. A canonical
+  three-axis tag registry (discipline / tech / purpose, `src/data/tags.ts`) tags
+  every project, and a search bar finds projects by tag/name grouped by section.
+  Aesthetics (glass, background, motion) are a later pass. Still needed from
+  Melvin: real Osiris write-up + media, per-skill Foundations write-ups, real
+  Devpost/repo links.
 
 ## VISION — "The Future"
 The fields he intends to expand into (astrophysics, neurotech, interstellar/
