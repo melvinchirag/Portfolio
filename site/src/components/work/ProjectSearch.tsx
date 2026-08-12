@@ -76,7 +76,7 @@ export function ProjectSearch({
 
   // Group project hits by their section, preserving section order.
   const grouped = useMemo(() => {
-    const order: WorkProject['category'][] = ['flagship', 'personal', 'hackathon']
+    const order: WorkProject['category'][] = ['personal', 'flagship', 'hackathon']
     return order
       .map((cat) => ({ cat, hits: projectHits.filter((h) => h.project.category === cat) }))
       .filter((g) => g.hits.length > 0)

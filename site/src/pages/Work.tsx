@@ -52,7 +52,7 @@ export function Work() {
   }, [])
 
   // Which sections/projects are open. Flagship starts open; the rest closed.
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(['Flagship']))
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(['Personal']))
   const [openProjects, setOpenProjects] = useState<Set<string>>(new Set())
 
   const toggleSection = (title: string) => setOpenSections((s) => toggleIn(s, title))
@@ -126,16 +126,6 @@ export function Work() {
 
       <div className="flex flex-col">
         <WorkSection
-          id="section-flagship"
-          title="Flagship"
-          count={flagship.length}
-          open={openSections.has('Flagship')}
-          onToggle={() => toggleSection('Flagship')}
-        >
-          {renderRows(flagship)}
-        </WorkSection>
-
-        <WorkSection
           id="section-personal"
           title="Personal"
           count={personal.length}
@@ -153,6 +143,16 @@ export function Work() {
             ))}
             {personalUngrouped.length > 0 && renderRows(personalUngrouped)}
           </div>
+        </WorkSection>
+
+        <WorkSection
+          id="section-flagship"
+          title="Flagship"
+          count={flagship.length}
+          open={openSections.has('Flagship')}
+          onToggle={() => toggleSection('Flagship')}
+        >
+          {renderRows(flagship)}
         </WorkSection>
 
         <WorkSection

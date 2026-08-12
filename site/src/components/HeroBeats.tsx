@@ -411,26 +411,31 @@ function ProjectRail() {
 
   return (
     <div className="relative mt-8">
-      {canLeft && (
-        <button
-          type="button"
-          onClick={() => scrollByCard(-1)}
-          aria-label="Scroll to the previous project"
-          className="project-rail-arrow project-rail-arrow-left"
-        >
-          <span aria-hidden>‹</span>
-        </button>
-      )}
-      {canRight && (
-        <button
-          type="button"
-          onClick={() => scrollByCard(1)}
-          aria-label="Scroll to the next project"
-          className="project-rail-arrow project-rail-arrow-right"
-        >
-          <span aria-hidden>›</span>
-        </button>
-      )}
+      {/* Both arrows are ALWAYS rendered so the carousel affordance is visible
+          from the start (Melvin, 2026-08-12: "I dont see the left and right
+          arrows... it simply does not exist"). They were previously mounted only
+          when scrollable, so on wide screens where the cards fit they never
+          appeared at all. Now they dim + disable at each end instead of
+          vanishing. The cards are sized to overflow (see .project-rail in
+          index.css) so there is always something to scroll to. */}
+      <button
+        type="button"
+        onClick={() => scrollByCard(-1)}
+        disabled={!canLeft}
+        aria-label="Scroll to the previous project"
+        className="project-rail-arrow project-rail-arrow-left"
+      >
+        <span aria-hidden>‹</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => scrollByCard(1)}
+        disabled={!canRight}
+        aria-label="Scroll to the next project"
+        className="project-rail-arrow project-rail-arrow-right"
+      >
+        <span aria-hidden>›</span>
+      </button>
 
       <div
         ref={railRef}

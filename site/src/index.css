@@ -409,7 +409,12 @@ body {
 }
 
 .project-rail > [data-project-card] {
-  flex: 0 0 clamp(230px, 10.35vw + 136px, 320px);
+  /* Sized to reliably OVERFLOW the rail (three cards + gaps always exceed the
+     box) so the Present carousel always has somewhere to scroll and its arrows
+     stay meaningful. Previously the three cards fit exactly at common desktop
+     widths, so the rail never overflowed and the arrows never appeared at all
+     (Melvin, 2026-08-12). Larger cards also read as more prominent previews. */
+  flex: 0 0 clamp(260px, 16vw + 130px, 380px);
   scroll-snap-align: start;
 }
 
@@ -455,11 +460,20 @@ body {
     box-shadow 300ms var(--ease-out-expo);
 }
 
-.project-rail-arrow:hover,
+.project-rail-arrow:hover:not(:disabled),
 .project-rail-arrow:focus-visible {
   background: rgba(243, 198, 127, 0.16);
   box-shadow: inset 0 0 0 1px rgba(243, 198, 127, 0.6);
   outline: none;
+}
+
+/* At the start/end of the rail the corresponding arrow can't scroll further, so
+   it dims and goes inert rather than disappearing — the affordance stays visible
+   the whole time. */
+.project-rail-arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+  box-shadow: inset 0 0 0 1px rgba(243, 198, 127, 0.18);
 }
 
 .project-rail-arrow-left {
