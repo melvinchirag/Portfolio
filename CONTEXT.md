@@ -165,6 +165,20 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Present arrows recentred + OttoSys added + Work reorder (2026-08-12)
+- **Arrows repositioned.** They were centred on the rail wrapper, so they sat low
+  in the glass box and overlapped the cards. Now the glass box itself is
+  `relative` and the rail wrapper is not, so the arrows position against the
+  whole panel: vertically centred, out in the side gutters, clear of the cards.
+- **Carousel made real (earlier this session):** both arrows always render (dim
+  at the ends), and cards are sized to overflow the rail so there is always
+  something to scroll. Note: on very wide screens the 3 cards used to fit exactly,
+  which is why no arrows showed before.
+- **OttoSys** added to Personal / For Fun (Melvin's call) with his full write-up,
+  kept in his voice, no tech-stack section (he says it has none per se). It is a
+  big system; flagged to Melvin it may deserve more prominence than "For Fun".
+- **Work order:** Personal is now 1st, Flagship 2nd, Personal opens by default.
+
 ### [CLAUDE] Fixed: hero Present arrows did nothing (Lenis ate smooth scroll) (2026-08-12)
 Reproduced live via browser automation on the deploy. Root cause: the project
 rail's arrows call `el.scrollBy({ behavior: 'smooth' })`, but Lenis is active on
