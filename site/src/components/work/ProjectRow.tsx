@@ -97,6 +97,20 @@ export function ProjectRow({
         </div>
       )}
 
+      {project.stack && project.stack.length > 0 && (
+        <div className="mt-5 max-w-2xl">
+          <h4 className="mb-2 text-[11px] tracking-[0.18em] text-accent/70 uppercase">Tech Stack</h4>
+          <p className="flex flex-wrap items-center gap-y-1 text-sm leading-relaxed">
+            {project.stack.map((t, i) => (
+              <span key={t}>
+                <strong className="font-semibold text-white/85">{t}</strong>
+                {i < project.stack!.length - 1 && <span className="text-white/25"> · </span>}
+              </span>
+            ))}
+          </p>
+        </div>
+      )}
+
       {(project.role || project.event || project.team) && (
         <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-2 text-xs text-white/40">
           {project.role && (

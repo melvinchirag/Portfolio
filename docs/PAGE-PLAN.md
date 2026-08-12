@@ -48,6 +48,18 @@ lost between sessions. None of these are in scope for the current Work-page pass
   page's canonical tag registry (`src/data/tags.ts`) + search are the
   groundwork it will stand on.
 
+## 🎨 FUTURE PHASES (Melvin, 2026-08-12) — this is only phase 1
+Melvin is explicit: the current build is phase 1 of at least five. Big visual
+work is coming and should NOT be attempted piecemeal now.
+- **Work page UI makeover.** The whole page needs an aesthetics pass (look, feel,
+  motion). The collapse/expand format is NOT final: a likely direction is each
+  section opening into a **horizontal parallax gallery** navigated with arrows.
+- **Insane three.js backgrounds from public repos.** Objective is explicitly a
+  learning exercise: study how strong public three.js scenes are built, then
+  rebuild "100x" as our own. Never ship someone else's repo as-is.
+- Sequence these into the phased plan; keep phase 1 (structure, content, tags,
+  search) stable underneath.
+
 ---
 
 ## HOME — the hero (the ONLY scrollytelling page; must shock & awe)

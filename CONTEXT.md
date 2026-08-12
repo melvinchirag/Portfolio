@@ -165,6 +165,28 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Work page: Spidey, Osiris kept private, tech stack, reorder (2026-08-12)
+Follow-up changes from Melvin after reviewing the deploy.
+- **Osiris stays confidential.** No public write-up: it is a possible startup, so
+  the page gives only that it works with computer vision, V-JEPA family models,
+  and world models across domains, and says the rest waits for an NDA + patent.
+  Status chip is now "Confidential".
+- **Spidey** added as a Personal / For Fun project (placeholder, tentative).
+- **Personal is now the 2nd section** (Flagship, Personal, Hackathons,
+  Foundations, Leadership); search result grouping reordered to match.
+- **Tech Stack is its own bolded section** in every project's detail (new
+  `stack` field on WorkProject, rendered with each item bold). Tags alone were
+  not enough (Melvin). Removed the old prose "Tech" blocks.
+- EventOS spelling confirmed by Melvin; Portfolio confirmed under Skill Building.
+- **Noted for later (PAGE-PLAN.md future phases):** full Work UI makeover, the
+  expand format possibly becoming a horizontal parallax gallery with arrows, and
+  insane three.js backgrounds rebuilt from public repos as a learning exercise.
+  This is phase 1 of at least five.
+- **Open bug (NOT yet fixed):** the project-rail arrows in the hero Present frame
+  reportedly don't work. The ProjectRail code in HeroBeats.tsx reads correct on
+  inspection (scrollByCard + canLeft/canRight edges), so the cause is likely
+  runtime/environmental. Needs a real repro before touching hero pizzazz.
+
 ### [CLAUDE] Work page: real project content + Personal sub-sections (2026-08-11)
 Melvin supplied real write-ups for Manas, EventOS, Lingo, and the Portfolio.
 Rewrote all of it in his voice (melvin-voice skill: short, concrete, no

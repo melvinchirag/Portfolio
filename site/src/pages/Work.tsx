@@ -136,16 +136,6 @@ export function Work() {
         </WorkSection>
 
         <WorkSection
-          id="section-hackathons"
-          title="Hackathons"
-          count={hackathon.length}
-          open={openSections.has('Hackathons')}
-          onToggle={() => toggleSection('Hackathons')}
-        >
-          {renderRows(hackathon)}
-        </WorkSection>
-
-        <WorkSection
           id="section-personal"
           title="Personal"
           count={personal.length}
@@ -163,6 +153,16 @@ export function Work() {
             ))}
             {personalUngrouped.length > 0 && renderRows(personalUngrouped)}
           </div>
+        </WorkSection>
+
+        <WorkSection
+          id="section-hackathons"
+          title="Hackathons"
+          count={hackathon.length}
+          open={openSections.has('Hackathons')}
+          onToggle={() => toggleSection('Hackathons')}
+        >
+          {renderRows(hackathon)}
         </WorkSection>
 
         <WorkSection

@@ -50,6 +50,9 @@ export type WorkProject = {
   role?: string
   /** Structured write-up. */
   detail?: DetailBlock[]
+  /** The tech stack, shown as its own bolded section (Melvin's rule: tags alone
+   *  don't convey the real stack, so every project gets an explicit list). */
+  stack?: string[]
   // Hackathon-specific metadata.
   event?: string
   award?: string
@@ -68,26 +71,22 @@ export const WORK_PROJECTS: WorkProject[] = [
     id: 'osiris',
     name: 'Osiris',
     category: 'flagship',
-    status: 'In Progress',
-    // PLACEHOLDER — real Osiris write-up still to come from Melvin. Kept honest
-    // and non-committal so it can be replaced wholesale.
+    status: 'Confidential',
+    // Deliberately minimal, NOT a placeholder. Osiris is a possible startup, so
+    // the details stay private until there is an NDA and a patent. Do not expand
+    // this with confidential specifics.
     blurb:
-      'A computer vision system exploring touchless control, built on the V-JEPA family of self supervised video models.',
-    tags: ['cs', 'aiml', 'computerVision', 'vjepa', 'modelTraining', 'fineTuning', 'flagship'],
+      'A computer vision system built on V-JEPA family models and world models, aimed across different domains.',
+    tags: ['cs', 'aiml', 'computerVision', 'vjepa', 'flagship'],
     role: 'Creator & Lead Developer',
     detail: [
       {
         body: [
-          'Osiris is the flagship. It works in the V-JEPA space of self supervised video representation learning, with model training and fine tuning at its core.',
-          'Full write-up, architecture, and results still to be added.',
+          'Osiris is my flagship, and the one project I keep under wraps. It works with computer vision, the V-JEPA family of models, and world models aimed at different domains.',
+          'It is early and has startup potential, so the details stay private for now, until there is an NDA and a patent in place. Happy to talk about it directly under the right terms.',
         ],
       },
     ],
-    links: [
-      { label: 'GitHub', href: '' }, // TODO: repo
-      { label: 'Demo', href: '' }, // TODO: demo / video
-    ],
-    tentative: true,
   },
 
   // ── HACKATHONS ───────────────────────────────────────────────────────────────
@@ -162,13 +161,8 @@ export const WORK_PROJECTS: WorkProject[] = [
           'My first hackathon and my first win. We took the Roots and Renewal track, a social impact category with a cash prize.',
         ],
       },
-      {
-        heading: 'Tech',
-        body: [
-          'React on Vite and Node.js, Tailwind, Framer Motion for the iOS style animations, Gemini through OpenRouter as the core, FastAPI as the middleware, and v0 for fast UI prototyping.',
-        ],
-      },
     ],
+    stack: ['React', 'Vite', 'Node.js', 'Tailwind CSS', 'Framer Motion', 'Gemini', 'OpenRouter', 'FastAPI', 'v0'],
     links: [
       { label: 'Devpost', href: '' }, // TODO: real Devpost link
       { label: 'GitHub', href: '' }, // TODO: repo
@@ -233,12 +227,22 @@ export const WORK_PROJECTS: WorkProject[] = [
           'A Gemini master brain routes your intent into a structured dispatch map. An asyncio orchestrator fires the matched agents in true parallel, each with a shared queue for streaming logs. Those logs stream to the terminal over SSE and persist to MongoDB, so history survives a refresh. A separate GPU gateway runs Stable Diffusion and CogVideoX on a Vultr A40 behind retry logic. Everything renders across five dashboards: Command Center, The Vault, Sponsor Hub, Logistics, and Finance.',
         ],
       },
-      {
-        heading: 'Tech',
-        body: [
-          'React and TypeScript on the front end (Vite, Tailwind, shadcn/ui, Framer Motion, Recharts, React Query). A Python FastAPI backend as the whole orchestration engine, using asyncio for parallel agents and SSE for live logs. Gemini for routing and media, with Stable Diffusion and CogVideoX on a Vultr GPU. Data in MongoDB Atlas. Google OAuth with the Gmail API, Custom Search, and Discord webhooks.',
-        ],
-      },
+    ],
+    stack: [
+      'React',
+      'TypeScript',
+      'Vite',
+      'Tailwind CSS',
+      'shadcn/ui',
+      'Framer Motion',
+      'Recharts',
+      'FastAPI',
+      'Python',
+      'MongoDB Atlas',
+      'Gemini',
+      'Stable Diffusion',
+      'CogVideoX',
+      'Google OAuth',
     ],
     links: [
       { label: 'Devpost', href: '' }, // TODO: real Devpost link
@@ -299,16 +303,11 @@ export const WORK_PROJECTS: WorkProject[] = [
       {
         heading: 'Rendering rule',
         body: [
-          'Every color on a physical object comes from physics. Temperature maps to blackbody radiation, velocity to Doppler brightness. Most of every frame sits in near darkness, so the bright parts are earned. Hot spots blow to white through bloom, never painted.',
-        ],
-      },
-      {
-        heading: 'Tech',
-        body: [
-          'Vite, TypeScript, and WebGL2 for the engine, with GLSL fragment shaders for every visual (each one a single fullscreen raymarched or raytraced shader, never meshes or sprites). An HDR pipeline with mip bloom, ACES tonemapping, and animated film grain. The desktop shell is Tauri 2, so it ships as a Windows app and a web build.',
+          'Every color on a physical object comes from physics. Temperature maps to blackbody radiation, velocity to Doppler brightness. Most of every frame sits in near darkness, so the bright parts are earned. Hot spots blow to white through bloom, never painted. Every visual is a single fullscreen raymarched or raytraced shader, never meshes or sprites, run through an HDR pipeline with mip bloom, ACES tonemapping, and film grain.',
         ],
       },
     ],
+    stack: ['TypeScript', 'Vite', 'WebGL2', 'GLSL', 'Tauri 2', 'vitest'],
     links: [
       { label: 'GitHub', href: '' }, // TODO: repo
     ],
@@ -352,7 +351,7 @@ export const WORK_PROJECTS: WorkProject[] = [
       {
         heading: 'How it is built',
         body: [
-          'React 19 and TypeScript on Vite, Tailwind v4, routed with react-router. All 3D runs on Three.js through React Three Fiber, with drei and postprocessing for the filmic finish. The signature scenes use hand written GLSL, and the particle sim runs on the GPU with GPUComputationRenderer sampling onto a face mesh. GSAP for scroll, Lenis for smooth scrolling, deployed on Vercel.',
+          'The particle face runs entirely on the GPU. GPUComputationRenderer holds each particle’s state, and a surface sampler with a BVH scatters them onto a real 3D face mesh. One shared scroll store owns all scroll state, and the 3D scenes only ever read from it, so a change to the scroll timeline can never break a scene. Quality tiers adapt the load to the device, and reduced motion is respected.',
         ],
       },
       {
@@ -362,9 +361,32 @@ export const WORK_PROJECTS: WorkProject[] = [
         ],
       },
     ],
+    stack: [
+      'React 19',
+      'TypeScript',
+      'Vite',
+      'Tailwind CSS v4',
+      'Three.js',
+      'React Three Fiber',
+      'GLSL',
+      'GSAP',
+      'Lenis',
+      'Vercel',
+    ],
     links: [
       { label: 'GitHub', href: '' }, // TODO: public repo (if source is shared)
     ],
+  },
+
+  {
+    id: 'spidey',
+    name: 'Spidey',
+    category: 'personal',
+    status: 'In Progress',
+    // Placeholder — Melvin will supply the write-up. A "for fun" personal build.
+    blurb: 'A project I’m building for fun. More on it soon.',
+    tags: ['cs', 'forFun'],
+    tentative: true,
   },
 ]
 
