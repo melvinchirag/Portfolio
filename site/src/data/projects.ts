@@ -43,8 +43,8 @@ export const PROJECTS: Project[] = [
     // dropped accordingly.
     name: 'Manas',
     blurb:
-      'A desktop console for physically accurate space simulation, driven from a terminal. Every visual is computed from real physics, not animation. Built for the IIT-M hackathon.',
-    stack: ['Tauri 2', 'WebGL2', 'React Vite', 'New', 'TypeScript'],
+      'A desktop console that runs four real space simulations in one window, driven from a terminal. Every visual is computed from physics, not animated.',
+    stack: ['TypeScript', 'WebGL2', 'GLSL', 'Tauri 2'],
     href: '', // TODO: repo / demo link
   },
   {

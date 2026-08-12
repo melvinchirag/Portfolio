@@ -69,9 +69,30 @@ export function ProjectRow({
       <p className="max-w-2xl text-sm leading-relaxed text-white/70">{project.blurb}</p>
 
       {hasDetail && (
-        <div className="mt-4 flex max-w-2xl flex-col gap-3 text-sm leading-relaxed text-white/50">
-          {project.detail!.map((para, i) => (
-            <p key={i}>{para}</p>
+        <div className="mt-5 flex max-w-2xl flex-col gap-5">
+          {project.detail!.map((block, i) => (
+            <div key={i}>
+              {block.heading && (
+                <h4 className="mb-2 text-[11px] tracking-[0.18em] text-accent/70 uppercase">
+                  {block.heading}
+                </h4>
+              )}
+              {block.body?.map((para, j) => (
+                <p key={j} className="mb-2 text-sm leading-relaxed text-white/55 last:mb-0">
+                  {para}
+                </p>
+              ))}
+              {block.points && (
+                <ul className="mt-1 flex flex-col gap-2">
+                  {block.points.map((pt, k) => (
+                    <li key={k} className="text-sm leading-relaxed text-white/55">
+                      {pt.label && <span className="text-white/85">{pt.label}. </span>}
+                      {pt.text}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           ))}
         </div>
       )}

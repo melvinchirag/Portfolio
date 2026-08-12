@@ -165,6 +165,29 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Work page: real project content + Personal sub-sections (2026-08-11)
+Melvin supplied real write-ups for Manas, EventOS, Lingo, and the Portfolio.
+Rewrote all of it in his voice (melvin-voice skill: short, concrete, no
+em-dashes) rather than shipping the Perplexity draft.
+- **Structured write-ups.** Added a `DetailBlock` model to `data/work.ts`
+  (optional heading + paragraphs + labelled points) so a case study has real
+  structure, not one wall of text. `ProjectRow` renders it.
+- **Content in:** Manas (four physics sims, the geometry-decides-the-signal
+  principle, manifest architecture), EventOS (multi-agent platform, per-agent
+  breakdown, asyncio/SSE orchestration), Lingo (how it works + engineering +
+  result), and the Portfolio itself as a Personal project.
+- **Personal sub-sections** (Melvin's ask): Personal now groups by PURPOSE tag —
+  Manas under Domain Expansion, the Portfolio under Skill Building. Empty
+  purposes don't render.
+- **Fixes:** hero Manas card had a stray `'New'` tag + `React Vite`; corrected
+  to TypeScript / WebGL2 / GLSL / Tauri 2 and a tighter blurb. Manas hackathon
+  is Simathon (not IIT-M). New registry tags: GLSL, MongoDB.
+- **Two things to confirm with Melvin:** the project is spelled "EventOS"
+  throughout his write-up (records had "EventsOS") — used EventOS, flag it; and
+  whether the Portfolio belongs under Skill Building or elsewhere.
+- Still needed: Osiris write-up + media, all repo/Devpost links, project images/
+  video. `npm run build` clean.
+
 ### [CLAUDE] Work page rebuilt: sections + 3-axis tags + search (2026-08-11)
 Structure + content pass on the Work page (recruiter-critical). Aesthetics
 (glass, background, motion) deliberately left for a later pass.

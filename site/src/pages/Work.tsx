@@ -24,6 +24,7 @@
 
 import { useEffect, useState } from 'react'
 import { WORK_PROJECTS, CATEGORY_LABEL, type WorkProject } from '../data/work'
+import { TAGS, type TagId } from '../data/tags'
 import { DOMAINS } from '../data/skills'
 import { WorkSection } from '../components/work/WorkSection'
 import { ProjectRow } from '../components/work/ProjectRow'
@@ -85,6 +86,20 @@ export function Work() {
   const hackathon = WORK_PROJECTS.filter((p) => p.category === 'hackathon')
   const personal = WORK_PROJECTS.filter((p) => p.category === 'personal')
 
+  // Personal projects are grouped by their purpose tag into sub-sections
+  // (Manas → Domain Expansion, the site → Skill Building, etc.). Only purposes
+  // with at least one project show; anything without a purpose tag falls to an
+  // unlabelled group at the end so it can never vanish.
+  const PERSONAL_PURPOSES: TagId[] = ['domainExpansion', 'skillBuilding', 'forFun']
+  const personalGroups = PERSONAL_PURPOSES.map((pid) => ({
+    pid,
+    label: TAGS[pid].label,
+    projects: personal.filter((p) => p.tags.includes(pid)),
+  })).filter((g) => g.projects.length > 0)
+  const personalUngrouped = personal.filter(
+    (p) => !PERSONAL_PURPOSES.some((pid) => p.tags.includes(pid)),
+  )
+
   const renderRows = (projects: WorkProject[]) => (
     <div className="flex flex-col gap-3">
       {projects.map((p) => (
@@ -137,7 +152,17 @@ export function Work() {
           open={openSections.has('Personal')}
           onToggle={() => toggleSection('Personal')}
         >
-          {renderRows(personal)}
+          <div className="flex flex-col gap-8">
+            {personalGroups.map((g) => (
+              <div key={g.pid}>
+                <h3 className="mb-3 text-[11px] tracking-[0.2em] text-white/40 uppercase">
+                  {g.label}
+                </h3>
+                {renderRows(g.projects)}
+              </div>
+            ))}
+            {personalUngrouped.length > 0 && renderRows(personalUngrouped)}
+          </div>
         </WorkSection>
 
         <WorkSection
