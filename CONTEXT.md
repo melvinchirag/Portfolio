@@ -165,6 +165,20 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] Fixed: hero Present arrows did nothing (Lenis ate smooth scroll) (2026-08-12)
+Reproduced live via browser automation on the deploy. Root cause: the project
+rail's arrows call `el.scrollBy({ behavior: 'smooth' })`, but Lenis is active on
+the page and swallows native smooth scrolls, so the call resolved to ZERO
+movement. Proven in-page: `behavior:'instant'` scrolled 0→325px, `behavior:
+'smooth'` stayed at 0, with `html.lenis` present and reduced-motion off. The
+arrow buttons and keyboard both route through `scrollByCard`, so both were dead
+whenever the rail overflowed. (At wide widths the 3 cards fit exactly, so no
+arrows render at all — that is correct, nothing to scroll.)
+Fix (HeroBeats.tsx `scrollByCard`): animate `scrollLeft` ourselves with a rAF
+easeOutCubic tween, which Lenis does not touch (it only owns the root scroller).
+Reduced motion gets an instant jump; a cancel-ref stops overlapping tweens; the
+frame is cancelled on unmount. `npm run build` clean.
+
 ### [CLAUDE] Work page: Spidey, Osiris kept private, tech stack, reorder (2026-08-12)
 Follow-up changes from Melvin after reviewing the deploy.
 - **Osiris stays confidential.** No public write-up: it is a possible startup, so

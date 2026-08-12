@@ -273,6 +273,9 @@ function PastFrame({ index }: { index: number }) {
  * ------------------------------------------------------------------------ */
 function ProjectRail() {
   const railRef = useRef<HTMLDivElement>(null)
+  // Holds the in-flight scroll animation frame so a new click cancels the old
+  // one instead of two tweens fighting over scrollLeft.
+  const scrollAnimRef = useRef<number | null>(null)
   const [canLeft, setCanLeft] = useState(false)
   const [canRight, setCanRight] = useState(false)
 
@@ -349,6 +352,7 @@ function ProjectRail() {
     return () => {
       el.removeEventListener('scroll', updateEdges)
       ro.disconnect()
+      if (scrollAnimRef.current !== null) cancelAnimationFrame(scrollAnimRef.current)
     }
   }, [])
 
@@ -362,7 +366,37 @@ function ProjectRail() {
     // whatever the current viewport actually renders.
     const gap = el ? parseFloat(getComputedStyle(el).columnGap || '0') : 0
     const amount = card ? card.getBoundingClientRect().width + gap : el.clientWidth * 0.8
-    el.scrollBy({ left: dir * amount, behavior: 'smooth' })
+
+    // WHY NOT `el.scrollBy({ behavior: 'smooth' })`: Lenis (our smooth-scroll
+    // library) is active on the page, and it swallows native smooth scrolls —
+    // a `behavior: 'smooth'` call resolves to ZERO movement here, which is why
+    // the arrows silently did nothing. `behavior: 'instant'` works, but a hard
+    // jump is off-brand. So we animate scrollLeft ourselves with rAF, which
+    // Lenis does not touch (it only manages the root scroller, not this inner
+    // element). Reduced motion gets the instant jump.
+    const maxLeft = el.scrollWidth - el.clientWidth
+    const target = Math.max(0, Math.min(maxLeft, el.scrollLeft + dir * amount))
+
+    if (scrollAnimRef.current !== null) cancelAnimationFrame(scrollAnimRef.current)
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.scrollLeft = target
+      return
+    }
+
+    const start = el.scrollLeft
+    const startTime = performance.now()
+    const duration = 500
+    // easeOutCubic — fast out, gentle settle, in the spirit of the site's
+    // ease-out-expo without pulling in a dependency.
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3)
+    const step = (now: number) => {
+      const p = Math.min(1, (now - startTime) / duration)
+      el.scrollLeft = start + (target - start) * ease(p)
+      if (p < 1) scrollAnimRef.current = requestAnimationFrame(step)
+      else scrollAnimRef.current = null
+    }
+    scrollAnimRef.current = requestAnimationFrame(step)
   }
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
