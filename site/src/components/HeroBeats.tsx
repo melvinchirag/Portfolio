@@ -410,7 +410,10 @@ function ProjectRail() {
   }
 
   return (
-    <div className="relative mt-8">
+    // NOT `relative`: the arrows below are positioned against the glass box
+    // (the nearest positioned ancestor), so they centre on the panel and sit in
+    // its side gutters instead of over the cards.
+    <div className="mt-8">
       {/* Both arrows are ALWAYS rendered so the carousel affordance is visible
           from the start (Melvin, 2026-08-12: "I dont see the left and right
           arrows... it simply does not exist"). They were previously mounted only
@@ -521,8 +524,11 @@ function ProjectRail() {
  * Frame 2 — The Present. Three featured project cards inside the glass box.
  * ------------------------------------------------------------------------ */
 function PresentFrame({ index }: { index: number }) {
+  // `relative` so the rail arrows can position against the WHOLE glass box
+  // (centred vertically on the panel, out in its side gutters) rather than
+  // against the rail alone, which sat them low and over the cards.
   return (
-      <div data-pan={index} className={`${GLASS_BOX} w-[min(94vw,1060px)]`}>
+      <div data-pan={index} className={`${GLASS_BOX} relative w-[min(94vw,1060px)]`}>
         <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
           The Present
         </h2>
