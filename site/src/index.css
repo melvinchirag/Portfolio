@@ -353,18 +353,27 @@ body {
  * The blur is deliberately LOW. Enough to knock the mask back so text sits on a
  * calm ground, not so much that the face dissolves — you should still clearly
  * read the mask through the pane, like looking through a window. */
+/* REWRITTEN 2026-08-12. This used to BE the hero's glass: a flat dark tint plus
+ * a CSS backdrop blur, deliberately styled with "no sheen, no gradient rim".
+ * That is the opposite of liquid glass, and because the hero carried no
+ * `.sync-glass-rect`, the real WebGL shader skipped the page entirely — so the
+ * panels Melvin was judging were never the glass at all.
+ *
+ * Now the WebGL shader (LiquidGlassField) draws the actual material underneath,
+ * and this class only holds the geometry the shader syncs to. Two rules matter:
+ *   - NO backdrop-filter. The WebGL canvas is part of this element's backdrop,
+ *     so a CSS blur here would smear the refraction, rim and specular we just
+ *     rendered.
+ *   - Keep the fill nearly clear. Anything opaque sits ON TOP of the shader's
+ *     output and mutes it. The small tint that remains is a safety net for
+ *     no-WebGL browsers, where it plus the text-shadow keeps copy readable. */
 .slide-glass {
   position: relative;
   border-radius: 26px;
-  /* One flat, near-neutral tint. No gradient — a gradient here reads as painted
-   * light. This is what makes the text legible; the blur only softens. */
-  background: rgba(10, 11, 16, 0.34);
-  --glass-frost: blur(9px) saturate(112%);
-  /* A uniform hairline edge (the pane's boundary) plus a soft ambient shadow.
-   * No inset white highlight — that was more of the fake specular light. */
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.075),
-    0 24px 60px -34px rgba(0, 0, 0, 0.85);
+  background: rgba(10, 11, 16, 0.1);
+  --glass-frost: none;
+  /* Ambient contact shadow only — the rim/highlight now come from the shader. */
+  box-shadow: 0 24px 60px -34px rgba(0, 0, 0, 0.85);
   overflow: hidden;
 }
 

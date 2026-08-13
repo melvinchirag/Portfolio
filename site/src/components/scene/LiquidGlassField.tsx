@@ -88,6 +88,31 @@ uniform int u_numRects;
 uniform vec4 u_rects[10]; // x, y, width, height (in CSS pixels, from center of screen)
 uniform float u_radii[10]; // corner radii
 
+// --- iOS-26-style additions (2026-08-12) ---------------------------------
+// Corner shape exponent. 2.0 = an ordinary rounded rectangle (a circular arc
+// that meets the straight edge with a visible curvature jump). Higher values
+// give a SUPERELLIPSE / squircle, where curvature blends continuously into the
+// edge. This is a large part of why Apple's glass reads as premium, and the
+// reference (iyinchao/liquid-glass-studio) uses superellipses too.
+uniform float u_squircle;
+// The backdrop behind this site is near-black, so a purely refractive glass has
+// almost nothing to show and reads as a flat dark panel. Real glass also LIFTS
+// what is behind it: it scatters light forward. These three do that — raise the
+// backdrop's luminance, push its saturation, and lay a faint white sheet over
+// it (the "material" in Apple's glass) so the pane is visibly lighter than the
+// scene around it even over black.
+uniform float u_brightness;
+uniform float u_saturation;
+uniform float u_whiteFill;
+// Cursor as a moving LIGHT SOURCE. The edge nearest the pointer catches a
+// specular highlight and the interior picks up a soft glow, so light appears to
+// enter the glass and travel through it as you move. This is what makes it feel
+// fluid and alive rather than a static frosted rectangle.
+uniform vec2 u_mouse;
+uniform float u_mouseActive;
+uniform float u_specular;
+uniform float u_time;
+
 varying vec2 v_uv;
 
 const float PI = 3.14159265359;
@@ -96,11 +121,25 @@ uniform float u_refDispersionVal;
 #define N_G 1.0
 #define N_B (1.0 + u_refDispersionVal * 0.01)
 
-// SDF functions
+// Superellipse (squircle) rounded-rect SDF. With u_squircle = 2.0 the p-norm
+// below collapses to length() and this is exactly the classic rounded box; as it
+// rises the corners take on continuous curvature. The small epsilon keeps pow()
+// away from a 0 base, which can produce NaN on some GPUs.
 float roundedRectSDF(vec2 p, vec2 center, float width, float height, float cornerRadius) {
   p -= center;
   vec2 d = abs(p) - vec2(width, height) * 0.5 + vec2(cornerRadius);
-  return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - cornerRadius;
+  vec2 m = max(d, 0.0) + 1e-4;
+  float outside = pow(pow(m.x, u_squircle) + pow(m.y, u_squircle), 1.0 / u_squircle);
+  return min(max(d.x, d.y), 0.0) + outside - cornerRadius;
+}
+
+// Lift the backdrop the way real glass does: brighten, saturate, then veil it
+// with a little white. Without this the pane is invisible over a black scene.
+vec3 glassLift(vec3 c) {
+  float luma = dot(c, vec3(0.299, 0.587, 0.114));
+  c = mix(vec3(luma), c, u_saturation);
+  c *= u_brightness;
+  return mix(c, vec3(1.0), u_whiteFill);
 }
 
 float smin(float a, float b, float k) {
@@ -202,12 +241,24 @@ void main() {
     // the single tuning knob for how hard the lens bends.
     vec2 offset = (normal * edgeFactor * u_refThickness * u_refScale) / u_resolution;
 
+    // LIQUID: a slow ripple travelling out from the pointer, fading with
+    // distance, added to the refraction offset. Tiny in amplitude — enough that
+    // the glass looks like it is *flowing* near your cursor rather than sitting
+    // still, without the content behind it visibly wobbling.
+    vec2 pxPos = v_uv * u_resolution;
+    float mDist = length(u_mouse - pxPos);
+    float ripple = sin(mDist * 0.045 - u_time * 2.6) * exp(-mDist / (320.0 * u_dpr));
+    offset += normal * ripple * 0.0016 * u_mouseActive;
+
     // blurEdge (JSON): the centre samples the SHARP background (clear), and only
     // the refracting rim blends toward the blurred copy — a frosted rim, clear
     // core. u_frost raises the FLOOR of that blend so the whole interior frosts
     // uniformly when requested. Chromatic dispersion splits R/G/B along offset.
     float edgeBlur = max(clamp(edgeFactor * 5.0, 0.0, 1.0), u_frost);
     outColor = getTextureDispersion(u_bg, u_blurredBg, edgeBlur, offset, u_refDispersion);
+
+    // Make the pane read as a real material over a near-black scene.
+    outColor.rgb = glassLift(outColor.rgb);
 
     // Optional glass tint (alpha is 0 in the JSON → this is a no-op, kept for spec parity).
     outColor = mix(outColor, vec4(u_tint.rgb, 1.0), u_tint.a);
@@ -233,6 +284,18 @@ void main() {
     float glareIntensity = pow(glareAngle, u_glareConvergence);
     float finalGlare = glareGeoFactor * glareIntensity * mix(u_glareFactor * 0.01, u_glareOppositeFactor * 0.01, glareFarside);
     outColor.rgb += vec3(clamp(finalGlare, 0.0, 1.0));
+
+    // ---- The pointer as a light source -----------------------------------
+    // Edge specular: the rim facing the cursor catches a bright highlight, so
+    // light appears to enter the glass exactly where your hand is. Plus a soft
+    // interior glow, which is that light scattering through the body of it.
+    vec2 toMouse = u_mouse - pxPos;
+    vec2 lightDir = normalize(toMouse + vec2(1e-5));
+    float facing = max(dot(normal, lightDir), 0.0);
+    float nearLight = exp(-length(toMouse) / (420.0 * u_dpr));
+    float specular = glareGeoFactor * pow(facing, 3.0) * nearLight * u_specular * u_mouseActive;
+    float innerGlow = exp(-length(toMouse) / (260.0 * u_dpr)) * 0.05 * u_mouseActive;
+    outColor.rgb += vec3(clamp(specular + innerGlow, 0.0, 1.0));
   } else {
     // Outside the glass - drop shadow
     outColor = texture2D(u_bg, v_uv);
@@ -283,14 +346,25 @@ export function LiquidGlassField({
   const hBlurFBO = useFBO(w, h)
 
   // Materials
+  /* BLUR STRENGTH. The taps below are spaced BLUR_STEP css-pixels apart, and the
+   * H/V pair is run BLUR_ITERATIONS times (ping-ponging between two targets), so
+   * the effective radius is roughly BLUR_STEP * 4 * iterations.
+   *
+   * This used to be a 1px spacing with a single pass — about a 4px blur, which
+   * is not frost, it is a slightly soft edge. That weak blur is a big part of
+   * why the glass never read as glass: real frosted glass diffuses the backdrop
+   * heavily. ~24px effective is in the range Apple's material sits at. */
+  const BLUR_STEP = 3.0
+  const BLUR_ITERATIONS = 2
+
   const vBlurMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { tDiffuse: { value: null }, v: { value: 1.0 / size.height } },
+    uniforms: { tDiffuse: { value: null }, v: { value: BLUR_STEP / size.height } },
     vertexShader, fragmentShader: vBlurShader,
     depthWrite: false, depthTest: false
   }), [size.height])
 
   const hBlurMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { tDiffuse: { value: null }, h: { value: 1.0 / size.width } },
+    uniforms: { tDiffuse: { value: null }, h: { value: BLUR_STEP / size.width } },
     vertexShader, fragmentShader: hBlurShader,
     depthWrite: false, depthTest: false
   }), [size.width])
@@ -329,6 +403,18 @@ export function LiquidGlassField({
       u_tint: { value: new THREE.Vector4(8 / 255, 102 / 255, 165 / 255, 0.0) },
       u_glassOnly: { value: 0.0 },
       u_frost: { value: 0.0 },
+      // Squircle corners (2 = plain rounded rect). 4.2 is close to Apple's
+      // continuous-curvature corner without looking like a lozenge.
+      u_squircle: { value: 4.2 },
+      // The "material" over a near-black scene — see glassLift() in the shader.
+      u_brightness: { value: 1.5 },
+      u_saturation: { value: 1.35 },
+      u_whiteFill: { value: 0.07 },
+      // Pointer-as-light.
+      u_mouse: { value: new THREE.Vector2(-9999, -9999) },
+      u_mouseActive: { value: 0.0 },
+      u_specular: { value: 0.55 },
+      u_time: { value: 0.0 },
       // DOM rects tracking
       u_numRects: { value: 0 },
       u_rects: { value: Array(10).fill(new THREE.Vector4()) },
@@ -341,8 +427,8 @@ export function LiquidGlassField({
 
   // Update sizes on resize
   useEffect(() => {
-    vBlurMat.uniforms.v.value = 1.0 / Math.max(1, size.height)
-    hBlurMat.uniforms.h.value = 1.0 / Math.max(1, size.width)
+    vBlurMat.uniforms.v.value = BLUR_STEP / Math.max(1, size.height)
+    hBlurMat.uniforms.h.value = BLUR_STEP / Math.max(1, size.width)
     glassMat.uniforms.u_resolution.value.set(
       Math.max(1, size.width * window.devicePixelRatio),
       Math.max(1, size.height * window.devicePixelRatio)
@@ -354,6 +440,29 @@ export function LiquidGlassField({
   useEffect(() => {
     glassMat.uniforms.u_frost.value = frost
   }, [frost, glassMat])
+
+  /* POINTER AS A LIGHT SOURCE. Tracked on the window (not the canvas) so it
+   * still works while the cursor is over DOM content sitting above the scene,
+   * which is most of the page. Stored in PHYSICAL pixels with a bottom-left
+   * origin, because that is the space the shader's rects and SDF work in.
+   * Touch devices never set it active, so they simply get the static glass. */
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return
+      const d = window.devicePixelRatio
+      glassMat.uniforms.u_mouse.value.set(e.clientX * d, (window.innerHeight - e.clientY) * d)
+      glassMat.uniforms.u_mouseActive.value = 1.0
+    }
+    const onLeave = () => {
+      glassMat.uniforms.u_mouseActive.value = 0.0
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    document.addEventListener('pointerleave', onLeave)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerleave', onLeave)
+    }
+  }, [glassMat])
 
   // Setup offscreen scenes for blur passes
   const blurCamera = useMemo(() => new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), [])
@@ -372,6 +481,28 @@ export function LiquidGlassField({
 
   useFrame((state) => {
     if (!meshRef.current) return
+
+    glassMat.uniforms.u_time.value = state.clock.elapsedTime
+
+    /* Run the separable Gaussian BLUR_ITERATIONS times, ping-ponging between the
+     * two blur targets. Each round widens the kernel, which is how we get a real
+     * frost out of a cheap 9-tap shader instead of one narrow pass. Returns the
+     * texture holding the final blurred image. */
+    const runBlur = (source: THREE.Texture): THREE.Texture => {
+      let src = source
+      for (let i = 0; i < BLUR_ITERATIONS; i++) {
+        vBlurMat.uniforms.tDiffuse.value = src
+        state.gl.setRenderTarget(vBlurFBO)
+        state.gl.render(vBlurScene, blurCamera)
+
+        hBlurMat.uniforms.tDiffuse.value = vBlurFBO.texture
+        state.gl.setRenderTarget(hBlurFBO)
+        state.gl.render(hBlurScene, blurCamera)
+
+        src = hBlurFBO.texture
+      }
+      return src
+    }
 
     // Sync DOM elements to uniforms
     const els = document.querySelectorAll('.sync-glass-rect')
@@ -436,17 +567,11 @@ export function LiquidGlassField({
       // background plane shows through. The blur is run on the source texture.
       glassMat.uniforms.u_glassOnly.value = 1.0
 
-      vBlurMat.uniforms.tDiffuse.value = bgTexture
-      state.gl.setRenderTarget(vBlurFBO)
-      state.gl.render(vBlurScene, blurCamera)
-
-      hBlurMat.uniforms.tDiffuse.value = vBlurFBO.texture
-      state.gl.setRenderTarget(hBlurFBO)
-      state.gl.render(hBlurScene, blurCamera)
+      const blurred = runBlur(bgTexture)
 
       state.gl.setRenderTarget(null)
       glassMat.uniforms.u_bg.value = bgTexture
-      glassMat.uniforms.u_blurredBg.value = hBlurFBO.texture
+      glassMat.uniforms.u_blurredBg.value = blurred
       return
     }
 
@@ -460,21 +585,14 @@ export function LiquidGlassField({
     state.gl.setRenderTarget(sceneFBO)
     state.gl.render(state.scene, state.camera)
 
-    // 2. Vertical Blur
-    vBlurMat.uniforms.tDiffuse.value = sceneFBO.texture
-    state.gl.setRenderTarget(vBlurFBO)
-    state.gl.render(vBlurScene, blurCamera)
-
-    // 3. Horizontal Blur
-    hBlurMat.uniforms.tDiffuse.value = vBlurFBO.texture
-    state.gl.setRenderTarget(hBlurFBO)
-    state.gl.render(hBlurScene, blurCamera)
+    // 2. Blur it (multi-pass — see runBlur)
+    const blurredScene = runBlur(sceneFBO.texture)
 
     // Restore render target and bind textures to glass
     state.gl.setRenderTarget(null)
     meshRef.current.visible = true
     glassMat.uniforms.u_bg.value = sceneFBO.texture
-    glassMat.uniforms.u_blurredBg.value = hBlurFBO.texture
+    glassMat.uniforms.u_blurredBg.value = blurredScene
   })
 
   // Render a full-screen quad over the camera

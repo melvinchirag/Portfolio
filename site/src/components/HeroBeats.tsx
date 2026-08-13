@@ -68,8 +68,13 @@ const AREAS = [
  * also widens the content column, which costs the long intro paragraph a
  * wrapped line or two on its own. Measured on a simulated 390px phone: this
  * takes the Present box from ~31px of headroom to ~70px. */
+// `sync-glass-rect` is what hands this box to the REAL WebGL glass shader
+// (LiquidGlassField). Before 2026-08-12 the hero's panels were CSS-blur only
+// (.slide-glass) and the shader skipped the hero entirely, which is why the
+// glass never looked like glass here — see the note on .slide-glass in
+// index.css.
 const GLASS_BOX =
-  'slide-glass px-6 py-7 sm:px-8 sm:py-9 md:px-10 [text-shadow:0_1px_16px_rgba(0,0,0,0.55)]'
+  'slide-glass sync-glass-rect px-6 py-7 sm:px-8 sm:py-9 md:px-10 [text-shadow:0_1px_16px_rgba(0,0,0,0.55)]'
 
 /* The prose block inside Past and Future, as ONE shared class so the two
  * frames can't drift apart (Melvin, 2026-08-11: "this formatting needs to be
@@ -178,14 +183,14 @@ function IdentityFrame({ index }: { index: number }) {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/work"
-            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide"
+            className="glass-cta sync-glass-rect rounded-full px-6 py-2.5 text-sm tracking-wide"
           >
             Projects
           </Link>
           <button
             type="button"
             onClick={() => heroScrollTo('contact')}
-            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide"
+            className="glass-cta sync-glass-rect rounded-full px-6 py-2.5 text-sm tracking-wide"
           >
             Contact
           </button>
@@ -193,7 +198,7 @@ function IdentityFrame({ index }: { index: number }) {
             href="/resume.pdf"
             target="_blank"
             rel="noopener noreferrer"
-            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide"
+            className="glass-cta sync-glass-rect rounded-full px-6 py-2.5 text-sm tracking-wide"
           >
             Resume <span aria-hidden>↗</span>
           </a>
