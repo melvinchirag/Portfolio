@@ -165,6 +165,49 @@ Deferred polish/tasks. Add here instead of doing mid-flow; clear when done.
   re-key MaskField poses to 4 only if the drift reads wrong (untouched for now).
 - **Present cards:** density/layout polish once real project art + links exist.
 
+### [CLAUDE] THE LIQUID GLASS WAS NEVER RUNNING ON THE HERO (2026-08-12)
+Melvin, repeatedly: the liquid glass "is not how I wanted it to be… I don't see
+a fluidity and a liquidity… it should literally look like there's liquid glass
+on the page," referencing iOS 26.
+
+**Root cause, and it explains why every previous tuning attempt failed:** the
+hero never ran the glass shader at all. Its panels were `.slide-glass`, a plain
+CSS `backdrop-filter` rectangle whose own comment said "no sheen, no gradient
+rim… just an even, barely tinted pane" — i.e. deliberately styled to be the
+opposite of glass. And because nothing on Home carried `.sync-glass-rect`,
+`LiquidGlassField` skipped the entire page (see the old GlobalScene comment:
+"over the near-black mask a refraction has nothing to blur"). So retuning the
+shader's uniforms changed literally nothing visible, which is exactly what
+Melvin reported.
+
+The premise behind switching it off was also wrong. Glass over a dark scene is
+not hopeless; it just needs what real glass has: it LIFTS what is behind it, and
+it carries light of its own.
+
+Fixed:
+- Hero panels + CTA buttons now carry `.sync-glass-rect`, so the WebGL shader
+  actually renders there. `.slide-glass` rewritten to drop its backdrop-filter
+  and heavy tint (both sat ON TOP of the shader's output and muted it); it now
+  only carries geometry plus a faint no-WebGL safety tint.
+- `glassLift()` added: luminance + saturation lift and a faint white material
+  veil, so the pane is visibly a material even over near-black.
+- Superellipse (squircle) corners via a p-norm SDF (`u_squircle`), matching the
+  reference and Apple's continuous-curvature corners.
+- Frost blur went from ~4px (a single 1px-spaced pass — not frost, just a soft
+  edge) to ~24px via wider taps + 2 ping-pong iterations, at half resolution.
+- **The pointer is now a light source:** the rim facing the cursor catches a
+  specular highlight, the interior picks up a glow, and a ripple travels out
+  from it — the "fluid, light entering and leaving" quality Melvin asked for.
+- Scene-capture mode now draws ONLY the glass shapes (was a full-screen opaque
+  quad, which with Home's new shapes would have painted over the particle mask).
+
+**Verification caveat, important:** this could NOT be visually verified from
+here. Browser automation runs the tab hidden, which pauses rAF, so the GPGPU
+particle mask never renders in a screenshot (proved by A/B: the mask is absent
+even with the glass pipeline disabled). Melvin has to be the eyes on this one.
+Tuning knobs live in the `glassMat` uniforms; the reference
+(liquid-glass-studio.vercel.app) can export a preset JSON to paste in.
+
 ### [CLAUDE] Present arrows recentred + OttoSys added + Work reorder (2026-08-12)
 - **Arrows repositioned.** They were centred on the rail wrapper, so they sat low
   in the glass box and overlapped the cards. Now the glass box itself is
