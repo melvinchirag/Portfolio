@@ -175,7 +175,7 @@ function SceneContents({
           readable over the particle mask. */}
       <LiquidGlassField
         bgTexture={isAbout ? aboutTex ?? undefined : undefined}
-        frost={isHome ? 0.6 : 0}
+        frost={isHome ? 0.5 : 0}
       />
 
       <EffectComposer>

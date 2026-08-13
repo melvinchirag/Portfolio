@@ -390,19 +390,34 @@ export function LiquidGlassField({
       // what actually makes the edge read as glass when there is little behind it
       // to refract. Tune further by dialling the studio demo and exporting a
       // preset; these are just the grounded baseline.
-      u_refThickness: { value: 20.0 },
+      /* RETUNED FOR OUR SHAPE SIZES (2026-08-12), verified by rendering this
+       * exact shader math over a mock hero background in the browser.
+       *
+       * THE BUG THIS FIXES: the reference's defaults are tuned for a ~200px
+       * demo circle. Both the glare and the fresnel terms produce a highlight
+       * band whose THICKNESS IN PIXELS is roughly
+       *     hardness * range^2 * 0.006
+       * so the shipped hardness of 20 at range 30 gave a **108px** band. On a
+       * 200px circle that is a rim; on our 1060px-wide panels it is a giant
+       * white slab across the top and bottom, and it blew out to pure white.
+       * Solving that expression for a thin rim gives the values below:
+       *   glare hardness 1.48 -> an 8px rim, fresnel hardness 0.93 -> 5px.
+       * Refraction likewise: thickness 20 x scale 4 bent the backdrop by up to
+       * 78px inside a 20px edge, which smeared into visible wedges. A wider,
+       * gentler lens (58 x 1.15) reads as glass instead of as a defect. */
+      u_refThickness: { value: 58.0 },
       u_refFactor: { value: 1.4 },
-      u_refScale: { value: 4.0 },
-      u_refDispersion: { value: 7.0 },
+      u_refScale: { value: 1.15 },
+      u_refDispersion: { value: 8.0 },
       u_refFresnelRange: { value: 30.0 },
-      u_refFresnelHardness: { value: 20.0 },
-      u_refFresnelFactor: { value: 20.0 },
-      u_refDispersionVal: { value: 7.0 },
+      u_refFresnelHardness: { value: 0.93 },
+      u_refFresnelFactor: { value: 30.0 },
+      u_refDispersionVal: { value: 8.0 },
       u_glareRange: { value: 30.0 },
-      u_glareHardness: { value: 20.0 },
-      u_glareFactor: { value: 90.0 },
-      u_glareConvergence: { value: 50.0 },
-      u_glareOppositeFactor: { value: 80.0 },
+      u_glareHardness: { value: 1.48 },
+      u_glareFactor: { value: 58.0 },
+      u_glareConvergence: { value: 9.0 },
+      u_glareOppositeFactor: { value: 14.0 },
       u_glareAngle: { value: -45.0 * (Math.PI / 180.0) },
       u_shadowExpand: { value: 25.0 },
       u_shadowFactor: { value: 15.0 },
@@ -414,9 +429,9 @@ export function LiquidGlassField({
       // continuous-curvature corner without looking like a lozenge.
       u_squircle: { value: 4.2 },
       // The "material" over a near-black scene — see glassLift() in the shader.
-      u_brightness: { value: 1.5 },
-      u_saturation: { value: 1.35 },
-      u_whiteFill: { value: 0.07 },
+      u_brightness: { value: 1.3 },
+      u_saturation: { value: 1.22 },
+      u_whiteFill: { value: 0.055 },
       // Pointer-as-light.
       u_mouse: { value: new THREE.Vector2(-9999, -9999) },
       u_mouseActive: { value: 0.0 },
