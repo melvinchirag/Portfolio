@@ -301,22 +301,29 @@ export function LiquidGlassField({
       u_blurredBg: { value: null },
       u_resolution: { value: new THREE.Vector2(size.width * window.devicePixelRatio, size.height * window.devicePixelRatio) },
       u_dpr: { value: window.devicePixelRatio },
-      // Glass properties based on provided JSON
-      u_refThickness: { value: 50.66 },
-      u_refFactor: { value: 1.83 },
+      // Glass properties. Retuned 2026-08-12 to iyinchao/liquid-glass-studio's
+      // own DEFAULT preset (read straight off its Leva panel), because our old
+      // values had the glare (the bright glassy rim) turned right down, so over
+      // this site's near-black scenes the glass read as a flat dark panel. The
+      // big change is Glare Intensity 30.6 -> 90 and angle -18 -> -45, which is
+      // what actually makes the edge read as glass when there is little behind it
+      // to refract. Tune further by dialling the studio demo and exporting a
+      // preset; these are just the grounded baseline.
+      u_refThickness: { value: 20.0 },
+      u_refFactor: { value: 1.4 },
       u_refScale: { value: 4.0 },
-      u_refDispersion: { value: 5.49 },
-      u_refFresnelRange: { value: 34.79 },
-      u_refFresnelHardness: { value: 21.48 },
+      u_refDispersion: { value: 7.0 },
+      u_refFresnelRange: { value: 30.0 },
+      u_refFresnelHardness: { value: 20.0 },
       u_refFresnelFactor: { value: 20.0 },
-      u_refDispersionVal: { value: 5.49 },
-      u_glareRange: { value: 24.0 },
-      u_glareHardness: { value: 15.48 },
-      u_glareFactor: { value: 30.6 },
+      u_refDispersionVal: { value: 7.0 },
+      u_glareRange: { value: 30.0 },
+      u_glareHardness: { value: 20.0 },
+      u_glareFactor: { value: 90.0 },
       u_glareConvergence: { value: 50.0 },
-      u_glareOppositeFactor: { value: 56.0 },
-      u_glareAngle: { value: -18.0 * (Math.PI / 180.0) },
-      u_shadowExpand: { value: 15.3 },
+      u_glareOppositeFactor: { value: 80.0 },
+      u_glareAngle: { value: -45.0 * (Math.PI / 180.0) },
+      u_shadowExpand: { value: 25.0 },
       u_shadowFactor: { value: 15.0 },
       u_shadowPosition: { value: new THREE.Vector2(0, -10) },
       u_tint: { value: new THREE.Vector4(8 / 255, 102 / 255, 165 / 255, 0.0) },
