@@ -575,8 +575,16 @@ export function LiquidGlassField({
       return
     }
 
-    // SCENE-CAPTURE MODE (generic). Opaque quad reproduces the whole scene.
-    glassMat.uniforms.u_glassOnly.value = 0.0
+    // SCENE-CAPTURE MODE (generic). The quad draws ONLY the glass shapes and is
+    // transparent everywhere else.
+    //
+    // This used to run opaque, reproducing the whole captured scene across the
+    // full screen. That was safe while the hero had no glass shapes (the quad
+    // stayed hidden), but now that Home has them, a full-screen opaque quad
+    // would paint over the particle mask with a one-frame-stale copy of it —
+    // and blank the hero outright on any frame where the capture hasn't run.
+    // Drawing only the shapes leaves the real scene to render itself.
+    glassMat.uniforms.u_glassOnly.value = 1.0
 
     // Hide glass to capture background
     meshRef.current.visible = false
