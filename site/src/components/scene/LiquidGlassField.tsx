@@ -340,10 +340,17 @@ export function LiquidGlassField({
   const w = Math.max(1, size.width * dpr)
   const h = Math.max(1, size.height * dpr)
 
-  // Render targets
+  // Render targets. The scene capture is full resolution (the glass samples it
+  // sharply through the clear centre), but the BLUR targets are half res: the
+  // blurred copy is only ever seen heavily defocused, so half the pixels is
+  // invisible in the result and a quarter of the work. That matters now that
+  // the hero runs this pipeline on top of a million-particle GPU simulation —
+  // it keeps the added cost of the glass off the frame budget.
   const sceneFBO = useFBO(w, h)
-  const vBlurFBO = useFBO(w, h)
-  const hBlurFBO = useFBO(w, h)
+  const halfW = Math.max(1, Math.round(w / 2))
+  const halfH = Math.max(1, Math.round(h / 2))
+  const vBlurFBO = useFBO(halfW, halfH)
+  const hBlurFBO = useFBO(halfW, halfH)
 
   // Materials
   /* BLUR STRENGTH. The taps below are spaced BLUR_STEP css-pixels apart, and the
