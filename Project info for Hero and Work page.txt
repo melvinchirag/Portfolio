@@ -1,0 +1,274 @@
+Project info for Hero and Work page 
+
+Manas:- 
+
+Hero :-
+
+Manas is a desktop cosmic simulation console that runs four physically accurate space simulations in one window and can be controlled from a built in terminal. Every visual is computed from real physics equations, not animations. Built with TypeScript, WebGL2, and GLSL shaders. Created for the Simathon hackathon.
+
+Work-
+
+Manas is a desktop cosmic simulation console. One window holds a full 3D canvas, a command terminal, an instrument panel with live editable physics values, and a real-time signal chart. It loads four pre-authored simulations: a black hole lab, a pulsar signal lab, an eclipsing binary observatory, and an exoplanet transit lab. Other entries at the hackathon were single simulations. Manas is the platform that holds several.
+
+The four simulations
+
+Black Hole Lab. A Schwarzschild black hole with a physically computed accretion disk. Photons are backward-traced per pixel through curved spacetime using a geodesic integrator written in GLSL. The photon ring, gravitational lensing, and Doppler-shifted brightness asymmetry all emerge from the math. Nothing is painted.
+
+Pulsar Signal Lab. A neutron star with a tilted magnetic axis sweeping radiation beams past an observer. The chart shows the same computed intensity the observer would detect. Includes a "silent pulsar" preset where the geometry analytically proves no pulse can ever reach the observer.
+
+Eclipsing Binary Observatory. Two stars orbiting a shared barycenter with closed-form Keplerian positions (no integrator, zero drift). The chart shows a real computed light curve. When one star slides behind the other on screen, the flux dips in sync because the visual and the model share the same geometry.
+
+Exoplanet Transit Lab (stretch). A planet crossing its host star, dimming it by a computable amount. The 1% dip of a hot Jupiter and the 0.12% dip of a super-Earth are both visible because the chart auto-zooms to the predicted depth.
+
+The core principle: geometry decides the signal
+
+Every module follows the same idea. Pulsar beams sweeping an observer, eclipses hiding a star, transits dimming one. The chart always shows a real computed observable, not a scripted animation.
+
+Tech stack
+
+Vite + TypeScript + WebGL2 for the engine. Physics in pure TypeScript modules with zero rendering imports, covered by vitest unit tests. GLSL fragment shaders for all visuals (every hero visual is one fullscreen raymarched or raytraced shader, never meshes or sprites). HDR pipeline: RGBA16F render target, 5-level mip bloom, ACES tonemapping, animated film grain. Desktop shell in Tauri 2 (ships as a Windows .exe and a deployed web app).
+
+Rendering doctrine
+
+Every color on a physical object comes from physics: temperature maps to blackbody radiation, velocity maps to Doppler brightness modulation. No hand-picked colors.
+
+At least 80% of every frame sits below 5% luminance. Brightness is scarce and earned. Hot spots blow to white through bloom, never painted white.
+
+Soft volumetric edges everywhere. No geometric silhouettes.
+
+Architecture
+
+One manifest per simulation drives everything: the terminal commands, the instrument panel sliders, the telemetry readouts, and the shader uniforms. Changing a value in the terminal moves the slider. Dragging the slider updates the terminal state. They can never disagree because they share one store. Physics modules have no rendering imports and are unit-tested before any visual work begins.
+
+EventsOS:-
+
+Hero-
+
+EventOS is a multi-agent AI platform for running large-scale events. You type one command, and specialized agents handle sponsors, marketing, timelines, and compliance in parallel. Built with React, FastAPI, and Gemini. Won 1st Place CTF and Best Use of Gemini API at GrizzHacks 8.
+
+Work-
+
+EventOS is a multi-agent event management platform. You type a single natural-language command, and multiple specialized AI agents execute in parallel. It solves the coordination problem of organizing large-scale tech events: sponsors, marketing, venue contracts, timelines, budgets, and outreach all live in different tools. EventOS brings them under one roof.
+
+How it works
+
+Command Center. A live terminal UI where you issue directives like "Find 10 tech sponsors, build a timeline for our hackathon, and generate a hype video." The Master Brain parses your intent and dispatches the relevant agents.
+
+Marketing Factory. Two sub-agents: a Creative Designer (Gemini Flash Image) for images and flyers, and a Cinematic Creator (Veo 3.1) for promotional videos.
+
+Sponsor Scout. A Web Scraper discovers companies, then a Tier Matcher evaluates each lead, assigns sponsorship tiers, estimates dollar values, and exports to Excel.
+
+Project Manager. Converts goals into a structured timeline with milestones, cross-referencing venue constraints to prevent scheduling conflicts.
+
+Compliance Shield. Uploads venue PDFs, extracts constraints (noise limits, load-in windows, fire codes), and flags them before you book anything.
+
+Communications. A Discord Sub-agent creates servers and pushes updates, and an Email Sub-agent drafts personalized outreach and sends from your Gmail via OAuth.
+
+Finance. A Budget Planner generates category-level budgets with Excel export, and an Expense Tracker logs spending and flags overruns in real time.
+
+Context Agent. A web researcher that searches and summarizes relevant context to enrich the other agents' outputs.
+
+All outputs flow into MongoDB, and the frontend renders them across five dashboard views: Command Center, The Vault, Sponsor Hub, Logistics, and Finance.
+
+Tech stack
+
+The frontend is a React and TypeScript single-page app scaffolded with Vite, styled with TailwindCSS using a custom "Gilded Noir" dark theme. Components come from shadcn/ui and Radix UI, with Framer Motion for animations, Recharts for data visualization, and React Query for server-state management. The backend is a Python FastAPI server that acts as the entire orchestration engine, using asyncio for parallel agent execution and sse-starlette for real-time log streaming. The intelligence layer runs on Gemini 3.1 Pro for intent routing, with Gemini Flash and Veo 3.1 for media generation, plus Stable Diffusion and CogVideoX on a Vultr A40 GPU instance. Data lives in MongoDB Atlas, accessed asynchronously through motor, across nine collections. Authentication is Google OAuth 2.0 with JWT token management, and the platform integrates the Gmail API, Google Custom Search, and Discord webhooks.
+
+Architecture
+
+Master Brain. A Gemini 3.1 Pro prompt with response_mime_type: "application/json" that routes user intent into a structured dispatch map across 12 distinct intents.
+
+Orchestrator. asyncio.gather() fires matched agents in true parallel. Each agent receives a shared asyncio.Queue for log streaming.
+
+Real-time terminal. SSE streams agent logs line by line with heartbeat keep-alives. Every agent log persists to MongoDB, so terminal history survives page refreshes and project switches.
+
+GPU Gateway. An inference client that talks to a Vultr A40 instance running Stable Diffusion and CogVideoX behind a FastAPI endpoint, with exponential-backoff retry logic.
+
+EventBusContext. A custom React Context that maps agent names to UI panels, tracks active sub-agents, manages tab notifications, and handles the SSE stream lifecycle.
+
+Portfolio website-
+
+hero:-
+
+My personal portfolio, built as an interactive WebGL experience. A 1.4 million particle face simulation, real glass shaders with physical refraction, and scroll-driven storytelling structured around a life in three tenses. Built with React, Three.js, GLSL, and GSAP.
+
+work-
+
+My personal portfolio, designed to read as wide-ranging craft rather than any single field. The concept spine is "a life in three tenses": past, present, and future. Instead of a template site with a project grid, it is a custom WebGL experience where every major visual is built by hand, from the shaders to the scroll physics.
+
+Signature features
+
+Loading sequence. A neuron ignition built in raw WebGL and Three.js. Cell bodies light up, dendrites grow and connect as a volumetric point cloud with multi-pass bloom, and the camera pushes through the network. It plays once per tab session and is skippable.
+
+Hero particle mask. A 1.4 million particle GPGPU simulation scattered across a real 3D face mesh. Each particle is spring-held to its home position and repelled by the cursor, and its brightness equals its velocity, so motion is what makes the face visible. You can drag to rotate it 360 degrees. A subset of particles render as glyphs (binary, Telugu, and hex, cycling) in roving hotspot patches. Built as a clean-room rebuild of a studied technique.
+
+Liquid glass info tabs. Real glass, not a CSS blur. A full-screen WebGL2 shader captures the 3D scene, Gaussian-blurs it in two passes, then renders SDF rounded rectangles merged with a metaball blend across up to ten shapes, with true Snell's law refraction, RGB chromatic dispersion, Fresnel, and angular glare. The shapes track real DOM elements via getBoundingClientRect() every frame, so the WebGL glass sits exactly under the interface text.
+
+Scrollytelling hero. A five-beat sticky scroll track driven by GSAP ScrollTrigger. One shared scroll store is the only thing scroll writes to, and the 3D scenes never read scroll state directly, so scroll changes cannot break the visuals.
+
+Liquid glass UI system. A reusable CSS recipe (blur, inset highlight, gradient-mask border) applied across the interface, with inertial smooth scrolling from Lenis on desktop.
+
+Tech stack
+
+The site is a React 19 and TypeScript single-page app built with Vite, styled with Tailwind CSS v4, and routed with react-router. All 3D rendering runs on Three.js through React Three Fiber, with drei for helpers and postprocessing for the filmic finish (bloom, vignette, chromatic aberration). The signature scenes use hand-written GLSL shaders, and the particle simulation runs on the GPU through GPUComputationRenderer with MeshSurfaceSampler and three-mesh-bvh for surface sampling. Scroll animation is GSAP ScrollTrigger, smooth scrolling is Lenis, and the code is linted with oxlint and deployed on Vercel.
+
+Architecture
+
+Separation of planning and code. Everything outside site/ is a knowledge base (decision logs, reference teardowns, concept docs). Everything inside site/ is the real application. The README is written as a master key: detailed enough to rebuild the site from an empty folder.
+
+Scroll isolation. A single heroScroll store owns all scroll state. Scenes subscribe to it but never write to it, which keeps the particle sim and glass shader stable no matter how the scroll timeline evolves.
+
+Performance as a feature. Quality tiers adapt the rendering load to the device, and a prefers-reduced-motion hook respects accessibility settings.
+
+What I learned building it
+
+Why CGI reads as CGI: volumetric mass, real multi-pass bloom, a moving camera, atmosphere, and a filmic finish. Never wireframe.
+
+Representational art needs real geometry. Two failed attempts (a face made of pure particles, then a 2D photo stretched into 3D) proved that procedural noise cannot fake a real subject. The fix was sampling particles onto an actual 3D face mesh.
+
+Motion is what sells liquid. A static distortion reads as a textured surface. The glass only started feeling like glass once the distortion and highlights moved.
+
+What's next
+
+Computer-vision integration. A live in-browser CV demo running on the visitor's webcam, tying the site directly to Osiris on the Work page. It ships as a plain case study first, with the live demo coming after.
+
+On-site AI bot. A small model trained only on my own data, hosted on the site, so visitors can search and "talk to" the portfolio about me. The groundwork is already in place: the Work page's canonical tag registry (src/data/tags.ts) and search are what the bot will stand on.
+
+Lingo :-
+
+work-
+
+Lingo is an AI pipeline that sits between two people texting and makes sure nothing gets lost in translation. It breaks down complex grammatical devices, idioms, and cultural references, then explains them in plain terms so miscommunication never happens. The idea came from a real texting miscommunication. Most translation tools handle words fine but fail at meaning. Lingo translates culture, not just language.
+
+How it works
+
+On the sender's side, Lingo detects that the person you're messaging is not a native English speaker or is less experienced with English. It notifies you and suggests a simpler version of your message before you send it.
+
+If you send it anyway, the receiver sees certain phrases underlined. Tapping one opens a small card that explains what it means and the context behind it. The underline itself signals that there's more to the sentence than the words alone.
+
+It works across languages, not just English. A Telugu speaker messaging someone Japanese gets the same support. Even within English, someone from Bengaluru writes differently than someone from France. That gap is exactly where Lingo works.
+
+Tech stack
+
+React (Vite) and Node.js for the frontend, Tailwind CSS for styling, Framer Motion for the iOS-style animations, Google Gemini via OpenRouter as the core intelligence, FastAPI as the middleware layer, and v0 by Vercel for rapid UI prototyping.
+
+Engineering highlights
+
+Latency vs accuracy. Running the LLM on every keystroke was too slow, so I built a debounce strategy that only analyzes the message on send.
+
+Highlighting multiple idioms in one sentence. I rewrote the backend to return an array of matches and built a dynamic regex engine to highlight all of them at once.
+
+Unreliable AI output. I engineered a strict "Sociolinguistic Expert" system prompt that returns a precise JSON schema (phrase, definition, context, suggestion), which stopped the model from returning broken or hallucinated responses.
+
+False positives. The AI had to learn that "break a leg" is an idiom in a theater but a medical emergency in a hospital.
+
+Demo experience. I simulated a dual-phone sender and receiver view inside a single browser window so judges could see both sides live.
+
+The bigger vision
+
+Linguistic profiles. As people communicate more, each user builds a profile that updates after every successful conversation. In settings you can see how effectively you've been communicating, and the profile changes the suggestions and linguistic cues you get over time.
+
+EQ highlighting. Beyond grammar and vocabulary, Lingo is designed to surface emotional intelligence cues, flagging when a message might land as aggressive or cold in the other person's cultural context.
+
+Result
+
+My first hackathon and my first win. We took the Roots and Renewal track, a headline social impact category with a cash prize.
+
+OttoSys:-
+
+Hero-
+
+One system can't automate a whole life. Too much latency, too much redundancy, too much compute burned on tasks that never needed it. So OttoSys is a network instead. A separate automation for each facet of my life, each carrying its own skills for judgment and its own connectors for reach, all answering to one orchestrator that decides which system takes a task and which model runs it. Admin is live now. The rest is the build: an intelligence network that runs the machinery of my life so I can spend mine building.
+
+Work-
+
+OttoSys
+
+Personal automation system I'm building on Claude, one skill at a time. Right now it runs my admin life: LinkedIn, email, calendar, club. Long term, it's one node in a network of automations, each bounded to its own part of life, coordinated by a single intelligent layer above them.
+
+What's Built: The Skills
+
+- LinkedIn post drafting: writes posts from real project data pulled from Devpost and GitHub, not memory. Tone shifts by content type. Credits teammates by name, every time.
+- LinkedIn outreach DMs: short, one ask, always tied to something specific about the person. Never invents a hook.
+- Google Calendar: books events by relationship and time of day rules. Surfaces conflicts instead of resolving them on its own. Confirms before inviting anyone.
+- Email drafting: tone climbs as the relationship gets more established. Drafts only. Never sends.
+- Skill creator: a meta skill. Scaffolds every new skill to the same standard so nothing drifts from day one.
+
+MCP Connections: The Hands
+
+- Gmail and Google Calendar: Anthropic's own connectors. Credentials stay server side, off any single device.
+- GitHub REST API and Devpost: fetched live for real project facts. No standing connector, just a direct fetch each time.
+- LinkedIn: no connector at all. There's no API access to actually post or send. Everything is draft only, copied out by hand. That's a safety rail, not a gap I'm rushing to close.
+
+Architecture: A Network of Domains, Not One Brain
+
+The tempting move is one system that automates everything. I'm avoiding that on purpose. One system covering a whole life adds latency, adds redundancy, and burns compute on tasks that never needed that much reasoning.
+
+Instead:
+- Each part of life becomes its own domain: bounded, independent, replaceable. OttoSys is the admin domain (LinkedIn, email, calendar, club organization, soon GitHub hygiene). A future domain would oversee my actual builds, like Osiris.
+- Every domain runs the same three layers: MCP (hands, the connectors), skills (judgment, the rules), context (memory, a vault of facts and people).
+- Above all domains: a thin orchestrator, the harness. It does two jobs only. Decide which domain owns a task, and decide which model runs it.
+
+Model Agnosticism
+
+The core bet: judgment lives in the skill, not in whichever model happens to be running it.
+
+- Every skill has to pass one test. Could a cheap, weak model execute it correctly, start to finish, with no hidden judgment left unstated.
+- If a skill only works on a strong model, that's a bug in the skill, not a limit of the model.
+- Strong models write and improve skills. Cheap models run them day to day. That split is what makes the whole system affordable to run for real, not just as a demo.
+
+Harness Engineering
+
+The harness gets built from what two real domains actually need, not from imagining one in advance. It handles:
+- Domain routing: which system owns this task.
+- Model routing, the gearbox: cheap model for deterministic work, strong model for anything novel or for authoring a new skill.
+
+Next to it, a diagnostics layer, so the system stays honest about its own drift:
+- Compliance auditor (in progress): checks every skill against the standard in two passes, a cheap mechanical lint first, then a real judgment audit from a strong model.
+- Scout (planned): a deliberate scan of how the field is moving, triggered by me, not a background crawler. High signal only.
+- Every skill carries a version stamp, so what's out of date is a quick check, not a guess.
+
+Command Center: Controlling It From My Phone
+
+One place to talk to the whole system, not a different app per domain.
+
+- Terminal first: the harness gets built and proven here. Fastest to iterate on, and it's where the domain router and model router get tested against real tasks.
+- Telegram bot next: a phone based pipeline into that same orchestrator. Not a separate brain, just another door into the same harness, so a task started from my phone and a task started in the terminal get handled the exact same way.
+- Same rules travel with it: draft don't send, confirm before anything irreversible, verify after write. Texting a bot doesn't loosen the human gate.
+- Built after the harness, on purpose. A phone bot pointed at an orchestrator that isn't solid yet is just a button that looks like control.
+
+SEAS: Assisted Evolution, Always Human Approved
+
+The goal is a system that keeps getting better on its own initiative. Notices its own mistakes, proposes fixes, improves over time. I call the loop SEAS.
+
+- Observe a correction or a repeated failure.
+- Propose a concrete diff to the skill, with a reason attached.
+- Present it to me. Never applied silently.
+- Approve or reject. My call, every time.
+- Commit to git, so every change is tracked and reversible.
+
+It's deliberately not autonomous. A system that drafts my emails and books my time doesn't get to rewrite its own judgment while I'm not looking. The improvement is real, the loop just always closes through me.
+
+The Context Vault: Toward a Second Brain
+
+Right now the vault is plain markdown with YAML frontmatter. People, rules, and facts, one file each, linked together. Written to be Obsidian compatible on purpose.
+
+The plan is to bring it into Obsidian and use the graph view to actually see the system think. Relationships, rules, and past decisions as one connected map instead of scattered files. A second brain the automation reads from, not just a place I take notes.
+
+Hosting: Local and VPS
+
+Everything currently runs through hosted connectors, which keeps credentials off any single machine.
+
+- The plan is to eventually host parts of this myself. A local instance for anything sensitive, a VPS for the pieces that need to stay reachable from my phone.
+- If it goes on a VPS, the rule is already set. Localhost bound, reached only through an SSH tunnel, never a public MCP port. No exceptions for convenience.
+- Later phase, once the rest of the system is proven out.
+
+Roadmap
+
+- Finish the admin domain: compliance auditor, then scout.
+- Put the club organization side to real use helping run Hack the Nest, EMU's first ever hackathon, led by our Google Developer Group. First real test outside my own tasks.
+- Stand up a second domain and let two real systems, not one imagined one, tell me what the harness actually needs.
+- Build the harness: domain router plus model router.
+- Bring the context vault into Obsidian for the second brain view.
+- Move hosting onto local and VPS instances.
+- Interfaces last: a command center in the terminal first, then a Telegram bot, both talking to the same harness.
