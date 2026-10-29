@@ -34,25 +34,35 @@ import { contactHandoff } from '../hooks/contactVisibility'
 import FACTS from '../data/facts.json'
 
 const FONT = '500 11px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace'
-const SAND = '205, 183, 138'
-/** CSS px per second. Slow: a sentence takes ~40s to cross a laptop screen. */
-const SPEED_MIN = 11
-const SPEED_MAX = 17
-/** The arcade trail: square size (CSS px), how many, and their spacing. */
+/** THE SITE'S ONE COOL COLOUR (Melvin, 2026-10-29: "if the mask and text,
+ *  everything is the same colour, it's boring"). A muted slate, deliberately
+ *  grey rather than teal, so the snakes read as the machine layer against
+ *  the warm sand of everything human. Same warm/cool split the loader uses
+ *  (blue dendrites, gold cell bodies). Kept dim; it must never compete with
+ *  reading text. */
+const SLATE = '139, 155, 180'
+/** CSS px per second. A sentence crosses a laptop screen in ~15s. */
+const SPEED_MIN = 30
+const SPEED_MAX = 44
+/** The arcade trail: square size (CSS px), how many, and their spacing.
+ *  Short and quiet (Melvin: "a little less emphasis ... should not be
+ *  distracting"). */
 const PX = 3
-const TRAIL_N = 16
-const TRAIL_GAP = 7
+const TRAIL_N = 9
+const TRAIL_GAP = 6
 /** Seconds for the land-fade, and the stagger between columns. */
 const FADE_SECS = 1.8
 const STAGGER_SECS = 0.22
 /** The clock rail (HeroClockRail) owns the right 76px on md+; keep clear. */
 const RAIL_PX = 90
+/** Keep the outer columns off the nav brand and the page gutter. */
+const EDGE_PX = 64
 const MD = 768
 
 type Snake = {
   text: string
   x: number
-  /** Position of the tail end along the travel axis (CSS px, screen y). */
+  /** Screen y of the TOP of the sentence (text always reads top-to-bottom). */
   y: number
   /** +1 travels down the screen, -1 up. */
   dir: 1 | -1
@@ -97,9 +107,11 @@ export function FactSnakes() {
       canvas.height = Math.floor(H * dpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-      const usable = W - (W >= MD ? RAIL_PX : 0)
-      // One column per ~170px, at least two, never more than there are facts.
-      const n = Math.max(2, Math.min(FACTS.length, Math.floor(usable / 170)))
+      const left = W < MD ? 28 : EDGE_PX
+      const right = W - (W >= MD ? RAIL_PX : 0) - left
+      const usable = right - left
+      // One column per ~190px, at least two, never more than there are facts.
+      const n = Math.max(2, Math.min(FACTS.length, Math.floor(usable / 190)))
       const keep = snakes.length === n
       snakes = Array.from({ length: n }, (_, i) => {
         const text = FACTS[i]
@@ -108,7 +120,9 @@ export function FactSnakes() {
         const prev = keep ? snakes[i] : null
         return {
           text,
-          x: (usable * (i + 0.5)) / n,
+          // Even slots, each nudged by a fixed fraction so the columns don't
+          // sit on a perfect grid (a grid reads as a table, not as drift).
+          x: left + (usable * (i + 0.5 + (((i * 0.618) % 1) - 0.5) * 0.4)) / n,
           // Spread the start positions so the screen is populated on arrival
           // rather than every sentence entering from the edge at once.
           y: prev ? prev.y : (H * ((i * 0.618) % 1)),
@@ -140,17 +154,19 @@ export function FactSnakes() {
         if (!reduced) {
           s.y += s.dir * s.speed * dt
           // Off the far edge (sentence AND trail): re-enter from the other side.
-          const over = s.len + TRAIL_N * TRAIL_GAP
-          if (s.dir === 1 && s.y > H + over) s.y = -over
-          if (s.dir === -1 && s.y < -over) s.y = H + over
+          const trail = TRAIL_N * TRAIL_GAP
+          if (s.dir === 1 && s.y > H + trail) s.y = -(s.len + trail)
+          if (s.dir === -1 && s.y + s.len < -trail) s.y = H + trail
         }
 
-        // The sentence. Rotated to read along its travel: a down-snake reads
-        // top-to-bottom with its tail at `y`; an up-snake reads bottom-to-top.
+        // The sentence always reads top-to-bottom (an upside-down sentence is
+        // not readable at a glance); only the MOTION alternates. So a
+        // down-snake's tail is its top end and an up-snake's tail is its
+        // bottom end, and the trail hangs off whichever end is behind.
         ctx.save()
         ctx.translate(s.x, s.y)
-        ctx.rotate(s.dir === 1 ? Math.PI / 2 : -Math.PI / 2)
-        ctx.fillStyle = `rgba(${SAND}, ${0.3 * a})`
+        ctx.rotate(Math.PI / 2)
+        ctx.fillStyle = `rgba(${SLATE}, ${0.4 * a})`
         ctx.fillText(s.text.toUpperCase(), 0, 0)
         ctx.restore()
 
@@ -160,13 +176,14 @@ export function FactSnakes() {
         // thinning out and swaying with a slow wave so the whole thing
         // reads as a snake rather than a dotted line.
         const t = now / 1000
+        const tailEnd = s.dir === 1 ? s.y : s.y + s.len
         for (let i = 0; i < TRAIL_N; i++) {
           const k = i / TRAIL_N
-          const along = s.y - s.dir * (i + 1) * TRAIL_GAP
-          const sway = Math.sin(t * 1.6 + s.seed + i * 0.55) * (2 + k * 4)
+          const along = tailEnd - s.dir * (i + 1) * TRAIL_GAP
+          const sway = Math.sin(t * 2.2 + s.seed + i * 0.6) * (1 + k * 2.5)
           const px = snap(s.x + sway) - PX / 2
           const py = snap(along) - PX / 2
-          ctx.fillStyle = `rgba(${SAND}, ${(1 - k) * (1 - k) * 0.45 * a})`
+          ctx.fillStyle = `rgba(${SLATE}, ${(1 - k) * (1 - k) * 0.3 * a})`
           ctx.fillRect(px, py, PX, PX)
         }
       }

@@ -107,6 +107,12 @@ running locally, logged here, committed.
   Contact. Reduced motion: one still frame, no trails. His words: "take one
   fact, make it go from up to down, and then from down to up ... pixels
   dragging at the tail ... almost looks like a snake ... arcade style".
+  TUNED same day on his second note: faster (30-44 px/s), a shorter and
+  quieter tail, text always reads top-to-bottom (only the motion alternates),
+  columns kept off the nav brand and the gutters, and the snakes are now the
+  site's ONE COOL COLOUR, slate `rgb(139,155,180)` dim, against the warm
+  sand of everything else (his point: one colour for everything is boring).
+  Same warm/cool split the loader uses. The palette is otherwise unchanged.
   PARKED from the same note: "we could probably use ASCII libraries, like
   ASCII elements, in some parts of the website". Candidate spots: the Vision
   centrepiece, the 404, the loader's no-WebGL fallback. Needs a pick-board.
