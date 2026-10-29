@@ -26,14 +26,18 @@
  * ========================================================================= */
 
 import { useEffect, useRef, type RefObject } from 'react'
-import { heroIntro } from '../hooks/heroIntro'
+import { expectName, heroIntro, markNameDone } from '../hooks/heroIntro'
 
-const DOT_COLOR = '217, 201, 169' // sand, as an rgb triple for rgba()
+const DOT_COLOR = '205, 183, 138' // sand, as an rgb triple for rgba()
 const MAX_DOTS = 5200
-const FLY_SECS = 1.25 // one dot's journey
-const STAGGER_SECS = 0.55 // spread of start times across dots
-const HOLD_SECS = 0.35 // fully formed, before the handoff
-const FADE_SECS = 0.6 // dots out, text in
+const FLY_SECS = 1.4 // one dot's journey
+const STAGGER_SECS = 0.6 // spread of start times across dots
+const HOLD_SECS = 0.4 // fully formed, before the handoff begins
+/** Dust → solid is a SLOW crossfade (Melvin, 2026-10-29: "it should be a fade,
+ *  it should look real"). The DOM text's own transition in HeroBeats must
+ *  match this number. */
+export const SOLIDIFY_SECS = 2.6
+const FADE_SECS = SOLIDIFY_SECS
 
 type Dot = { x0: number; y0: number; x1: number; y1: number; d: number; r: number }
 
@@ -56,14 +60,22 @@ export function NameAssembly({
     const target = targetRef.current
     if (!canvas || !root || !target) return
 
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Tell the mask there is a name to wait for. Every early exit below must
+    // also release it (markNameDone), or the mask would never fly in.
+    expectName()
+    const finish = () => {
       onDone()
+      markNameDone()
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      finish()
       return
     }
 
     const ctx = canvas.getContext('2d')
     if (!ctx) {
-      onDone()
+      finish()
       return
     }
 
@@ -139,13 +151,19 @@ export function NameAssembly({
       const t = (now - startedAt) / 1000
       const formedAt = FLY_SECS + STAGGER_SECS
       const fadeStart = formedAt + HOLD_SECS
-      const fade = t < fadeStart ? 1 : 1 - Math.min(1, (t - fadeStart) / FADE_SECS)
+      // Eased, slow fade: the dots thin out gradually, the text comes up
+      // underneath at the same pace, and for most of it both are visible.
+      const fp = t < fadeStart ? 0 : Math.min(1, (t - fadeStart) / FADE_SECS)
+      const fade = 1 - fp * fp * (3 - 2 * fp) // smoothstep
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       for (const p of dots) {
         const k = easeOutExpo(Math.max(0, Math.min(1, (t - p.d) / FLY_SECS)))
-        const x = p.x0 + (p.x1 - p.x0) * k
-        const y = p.y0 + (p.y1 - p.y0) * k
+        // A tiny residual tremor that dies as the word solidifies, so the
+        // dust never looks frozen before it fades.
+        const tremor = (1 - k) * 0 + (1 - fp) * 0.6 * dpr
+        const x = p.x0 + (p.x1 - p.x0) * k + (Math.random() - 0.5) * tremor
+        const y = p.y0 + (p.y1 - p.y0) * k + (Math.random() - 0.5) * tremor
         // Dim while travelling, full once landed; this is what makes the
         // settle read as the word "switching on".
         const a = (0.35 + 0.65 * k) * fade
@@ -158,7 +176,11 @@ export function NameAssembly({
         onDone()
       }
       if (t < fadeStart + FADE_SECS) raf = requestAnimationFrame(draw)
-      else ctx.clearRect(0, 0, canvas.width, canvas.height)
+      else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        // The name is solid now; release the mask.
+        markNameDone()
+      }
     }
     let doneFired = false
 
@@ -171,7 +193,7 @@ export function NameAssembly({
       }
       build()
       if (!dots.length) {
-        onDone()
+        finish()
         return
       }
       startedAt = performance.now()

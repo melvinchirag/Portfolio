@@ -634,7 +634,7 @@ export function MaskParticles() {
           uVelocityTexture: { value: null },
           uParticleSize: { value: 1.7 },
           // Sand (2026-10-29), the site's one light colour. Was teal '#80fff0'.
-          uColor: { value: new THREE.Color('#d9c9a9') },
+          uColor: { value: new THREE.Color('#c4a56c') },
           uMinAlpha: { value: 0.04 },
           uMaxAlpha: { value: 0.85 },
           // Shared with the glyph layer so a dot converts into its glyph in sync.
@@ -696,7 +696,7 @@ export function MaskParticles() {
           // shared Bloom intensity (which would also brighten the base dot layer,
           // not just the glyphs Melvin asked about). Same hue, 1.7x intensity
           // (1.5→1.7, 2026-08-01: "a bit more prominent").
-          uColor: { value: new THREE.Color('#f0e4cc').multiplyScalar(1.7) },
+          uColor: { value: new THREE.Color('#e6d2a4').multiplyScalar(1.7) },
         },
         vertexShader: glyphVertex,
         fragmentShader: glyphFragment,
@@ -794,7 +794,12 @@ export function MaskParticles() {
     // it completes, zIn=0 and fade=1, so this leaves the resting pose untouched.
     // GATED on heroIntro.ready — the Loader flips it once the neurons are gone, so
     // the mask stays invisible+deep until then and only THEN begins its entrance.
-    if (heroIntro.ready && introT.current < 1) {
+    // Since 2026-10-29 ALSO gated on the hero name: when NameAssembly is on the
+    // page it sets `nameExpected`, and the mask waits for `nameDone` (the name
+    // has fully solidified) before flying in. Melvin: "the mask should come in
+    // from far, after the name has solidified." Off the Home page nothing sets
+    // nameExpected, so the mask behaves as before.
+    if (heroIntro.ready && (heroIntro.nameDone || !heroIntro.nameExpected) && introT.current < 1) {
       introT.current = Math.min(1, introT.current + delta / INTRO_SECS)
     }
     const te = introT.current

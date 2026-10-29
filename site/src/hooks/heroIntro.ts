@@ -18,9 +18,27 @@ export const heroIntro = {
   /** True once the Loader has fully left the screen. The mask waits for this
    *  before beginning its fly-in, so the neurons finish first, then the mask. */
   ready: false,
+  /** True while a NameAssembly is mounted on the page (the Home hero). Tells
+   *  the mask there IS a name to wait for. Off Home it stays false. */
+  nameExpected: false,
+  /** True once the hero name has fully solidified (dots gone, text in). The
+   *  mask's fly-in starts only after this, so the order is always: neurons →
+   *  name → mask from far. (Melvin, 2026-10-29.) */
+  nameDone: false,
 }
 
 /** Called by the Loader when its sequence is completely gone. Idempotent. */
 export function markIntroReady() {
   heroIntro.ready = true
+}
+
+/** Called by NameAssembly on mount (so the mask knows to wait). */
+export function expectName() {
+  heroIntro.nameExpected = true
+  heroIntro.nameDone = false
+}
+
+/** Called by NameAssembly once the name is solid. Idempotent. */
+export function markNameDone() {
+  heroIntro.nameDone = true
 }

@@ -34,7 +34,7 @@ import { BEAT_COUNT, heroScroll, useHeroFrame } from '../hooks/heroScroll'
 import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
 import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
-import { NameAssembly } from './NameAssembly'
+import { NameAssembly, SOLIDIFY_SECS } from './NameAssembly'
 import { TagThread } from './TagThread'
 
 const FRAMES = [
@@ -190,7 +190,10 @@ function IdentityFrame({ index }: { index: number }) {
         <h1 className="flex flex-col">
           <span
             ref={firstNameRef}
-            className={`name-gold display-wide ease-out-expo font-display text-[clamp(4rem,15vw,9rem)] leading-[0.86] font-extrabold tracking-[-0.03em] uppercase transition-opacity duration-700 md:text-[clamp(5rem,9.4vw,12rem)] ${
+            // Opacity transition length = NameAssembly's SOLIDIFY_SECS, so the
+            // text comes up at exactly the pace the dust thins out.
+            style={{ transitionDuration: `${SOLIDIFY_SECS}s`, transitionTimingFunction: 'ease-in-out' }}
+            className={`name-gold display-wide font-display text-[clamp(4rem,15vw,9rem)] leading-[0.86] font-extrabold tracking-[-0.03em] uppercase transition-opacity md:text-[clamp(5rem,9.4vw,12rem)] ${
               nameShown ? 'opacity-100' : 'opacity-0'
             }`}
           >

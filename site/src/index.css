@@ -52,23 +52,23 @@
   /* THE LIGHT. Sand, chosen 2026-10-29 from four tints (bone / sand / stone /
    * clay). Everything that is light on this site is sand: the name, headings,
    * reading text (at reduced opacity), the particles, the cursor. */
-  --color-sand: #d9c9a9;
+  --color-sand: #cdb78a;
   /* Dimmer sand for secondary text and inactive controls. */
-  --color-sand-dim: #a79a7f;
+  --color-sand-dim: #9d8b67;
   /* Deepest sand, for borders that should read warm rather than grey. */
-  --color-sand-deep: #5f584b;
+  --color-sand-deep: #5c5140;
 
   /* `accent` is kept as a NAME because `text-accent` / `border-accent` are
    * used across every page. It now points at sand: there is no separate
    * accent colour any more, on purpose (one light, used everywhere, no glow). */
-  --color-accent: #d9c9a9;
+  --color-accent: #cdb78a;
 
   /* THERE IS NO WHITE ON THIS SITE. Every `text-white`, `bg-white/5`,
    * `border-white/10` across the pages now resolves to sand, because pure
    * white next to sand reads as two unrelated lights. Remapping the token is
    * the one-line, whole-site version of that rule; the pages get rewritten on
    * the new system page by page, but nothing can look wrong in the meantime. */
-  --color-white: #d9c9a9;
+  --color-white: #cdb78a;
 
   /* ------------------------------------------------------------------------
    * THE SITE'S ONE EASING CURVE. Fast at first, then a long gentle settle —
@@ -218,7 +218,7 @@ body {
   background: #0f1012;
   /* Default text colour: sand. Reading text is dimmed per element, never
    * recoloured. */
-  color: #d9c9a9;
+  color: #cdb78a;
   /* Default typeface for all text, unless a component overrides it. */
   font-family: var(--font-sans);
   /* Regular weight. The old 300 read as uncommitted on a dark ground; Archivo
@@ -640,7 +640,7 @@ body {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 2.5rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23d9c9a9' stroke-opacity='.6' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23cdb78a' stroke-opacity='.6' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 1rem center;
 }
@@ -655,7 +655,7 @@ body {
  * not "glass over the page". */
 .field-select option {
   background-color: #141518;
-  color: #d9c9a9;
+  color: #cdb78a;
 }
 
 /* The big frame titles — "The Past", "The Present", "The Future". Sand, wide,
@@ -801,7 +801,7 @@ body {
 
 .glass-cta:hover,
 .glass-cta:focus-visible {
-  background: #ece0c6;
+  background: #e3d4b3;
   outline: none;
 }
 
@@ -879,7 +879,7 @@ body {
   display: block;
   width: 1px;
   height: 34px;
-  background: linear-gradient(to bottom, rgba(217, 201, 169, 0.6), transparent);
+  background: linear-gradient(to bottom, rgba(205, 183, 138, 0.6), transparent);
   transform-origin: top;
   animation: cue-drift 2.4s var(--ease-out-expo) infinite;
 }
@@ -916,7 +916,7 @@ body {
   /* A very large radius makes any element a perfect circle. */
   border-radius: 9999px;
   /* Sand, like every other light thing on the site. No halo. */
-  background: rgba(217, 201, 169, 0.95);
+  background: rgba(205, 183, 138, 0.95);
   /* Never intercept clicks — it sits over every interactive element. */
   pointer-events: none;
   /* Starts hidden; JS reveals it on first pointer movement so it doesn't
