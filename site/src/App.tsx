@@ -4,6 +4,7 @@ import { Loader } from './components/Loader'
 import { Nav } from './components/Nav'
 import { Footer } from './components/Footer'
 import { Cursor } from './components/Cursor'
+import { FactSnakes } from './components/FactSnakes'
 import { PageTransition } from './components/PageTransition'
 import { Home } from './pages/Home'
 import { About } from './pages/About'
@@ -23,6 +24,9 @@ function Shell() {
   return (
     <>
       <GlobalScene />
+      {/* The facts, as vertical snakes between the scene and the content on
+          every route; they fade themselves out as Contact takes the screen. */}
+      <FactSnakes />
       {/* No global background scene. Per the hero architecture, each page owns
           its own visual world. The sun cursor + nebula (astronomy concept) were
           parked 2026-07-27; the new abstract/editorial hero is TBD. */}

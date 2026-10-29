@@ -98,7 +98,7 @@ const PROSE_STACK =
  * ------------------------------------------------------------------------ */
 function FrameDots({ active }: { active: number }) {
   return (
-    // bottom-3: tucked under the hero ticker (which sits at ~5.5vh), not on it.
+    // bottom-3: low, out of the way of the name block and the fact snakes.
     <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
       {FRAMES.map((f, i) => (
         <button
@@ -122,27 +122,16 @@ function FrameDots({ active }: { active: number }) {
  * Frame 0 — Identity. Tagline kicker on top, the name in gold, then the pitch.
  * A soft vignette lifts it off the mask so it reads as one clean centred block.
  * ------------------------------------------------------------------------ */
-/* The running line of facts under the name (board idea 3). Real roles only,
- * from Otto's `context/uni.md`; nothing aspirational. Rendered twice inside
- * the ticker so the loop is seamless. */
-const FACTS = [
-  'Co-lead and finance lead, Hack The Nest',
-  'Vice president, GDG on Campus at EMU',
-  'Founder and president, SPARC',
-  'Winner, SpartaHack 11',
-  'Winner, GrizzHacks 8',
-  'Kuwait → India → Michigan',
-  'Computer science, Eastern Michigan University',
-]
-
 /* 2026-10-29 REBUILD. The old frame was a centred stack (kicker, name with
  * glow, spaced-out surname, paragraph, three pills, four icons) sitting ON TOP
  * of the mask. Now: the mask owns the left of the screen untouched, and the
  * name owns the right, bottom-aligned, the way a film title sits in a frame.
  * The first name is enormous and assembles out of particles on load
- * (NameAssembly); under it the second line is the quiet narrow cut; under that
- * a thin mono ticker of real facts. One primary action, one secondary. The
- * socials become three mono text links in the top-right meta row. */
+ * (NameAssembly); under it the second line is the quiet narrow cut. One
+ * primary action, one secondary. The socials become three mono text links in
+ * the top-right meta row. The facts (board idea 3) were a horizontal ticker
+ * along the bottom until 2026-10-29; they are now the vertical snakes behind
+ * every page (FactSnakes.tsx, data in data/facts.json). */
 function IdentityFrame({ index }: { index: number }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const firstNameRef = useRef<HTMLSpanElement>(null)
@@ -235,25 +224,6 @@ function IdentityFrame({ index }: { index: number }) {
         </div>
       </div>
 
-      {/* The ticker. Absolute to the bottom edge so it reads as part of the
-          frame, not of the text block. Duplicated once for a seamless loop. */}
-      <div
-        aria-label="Roles and milestones"
-        className="ticker frame-item absolute inset-x-6 bottom-[5.5vh] md:left-10 md:right-[100px] lg:left-14 lg:right-[110px]"
-        style={FI(0.1)}
-      >
-        <div className="ticker-track">
-          {[0, 1].map((copy) => (
-            <span key={copy} aria-hidden={copy === 1} className="ticker-run">
-              {FACTS.map((f) => (
-                <span key={f} className="ticker-item">
-                  {f}
-                </span>
-              ))}
-            </span>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }

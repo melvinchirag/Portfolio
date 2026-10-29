@@ -96,6 +96,20 @@ running locally, logged here, committed.
   Reduced motion: every piece is static, nothing is ever left at opacity 0.
   Verified in Chrome on the production build (preview server, port 4173):
   hero scrub, Work reveals + cursor ring, About; no console errors.
+- ✅ Block 5b (Melvin's note from his phone): the facts ticker is gone;
+  the facts are now **vertical snakes** behind every page (`FactSnakes.tsx`,
+  data in `data/facts.json`). One 2D canvas between the scene and the
+  content: one column per fact spaced across the width, odd columns travel
+  down and even ones up, each sentence rotated to read along its travel,
+  fading in on landing with a per-column stagger, and an arcade-pixel trail
+  (3px squares on a grid, swaying on a slow sine) behind the tail. Wraps
+  edge to edge forever. Fades out with `contactHandoff.t` so it is gone on
+  Contact. Reduced motion: one still frame, no trails. His words: "take one
+  fact, make it go from up to down, and then from down to up ... pixels
+  dragging at the tail ... almost looks like a snake ... arcade style".
+  PARKED from the same note: "we could probably use ASCII libraries, like
+  ASCII elements, in some parts of the website". Candidate spots: the Vision
+  centrepiece, the 404, the loader's no-WebGL fallback. Needs a pick-board.
 - ⏭ Block 6 Work gallery, 7 About/Vision/Contact scenes, 8 camera v1,
   9 second mask, 10 ship. "Foundations first, then the camera, then the
   second mask."
