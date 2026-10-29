@@ -113,6 +113,18 @@ running locally, logged here, committed.
   site's ONE COOL COLOUR, slate `rgb(139,155,180)` dim, against the warm
   sand of everything else (his point: one colour for everything is boring).
   Same warm/cool split the loader uses. The palette is otherwise unchanged.
+  THIRD NOTE, same day: the slate colour is dead ("so bad"); snakes are sand
+  again. Faster still (60-84 px/s). And the real change: **the mask feels the
+  snakes.** `hooks/snakeField.ts` is a shared buffer FactSnakes writes each
+  frame (every sentence's screen segment in clip space); MaskField's velocity
+  shader reads it as `uSnakes[8]`, projects each particle with `uMVP`
+  (projection x view x rayMesh.matrixWorld, so it follows the mask's path)
+  and pushes particles sideways and a little forward within R=0.06 of a
+  sentence, so a sentence passing through the face parts the dust and the
+  spring brings it back behind it. His words: "if it touches the mask it
+  should go through the shaders of the mask, so the physics is right". Knobs:
+  R and the 0.0045 / 0.0015 forces in simVelocity. This is the first change
+  to MaskField's sim shader since it was tuned; it adds only the snake block.
   PARKED from the same note: "we could probably use ASCII libraries, like
   ASCII elements, in some parts of the website". Candidate spots: the Vision
   centrepiece, the 404, the loader's no-WebGL fallback. Needs a pick-board.

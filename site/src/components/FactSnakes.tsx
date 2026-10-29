@@ -31,19 +31,18 @@
 import { useEffect, useRef } from 'react'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import { contactHandoff } from '../hooks/contactVisibility'
+import { SNAKE_SLOTS, snakeField } from '../hooks/snakeField'
 import FACTS from '../data/facts.json'
 
 const FONT = '500 11px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace'
-/** THE SITE'S ONE COOL COLOUR (Melvin, 2026-10-29: "if the mask and text,
- *  everything is the same colour, it's boring"). A muted slate, deliberately
- *  grey rather than teal, so the snakes read as the machine layer against
- *  the warm sand of everything human. Same warm/cool split the loader uses
- *  (blue dendrites, gold cell bodies). Kept dim; it must never compete with
- *  reading text. */
-const SLATE = '139, 155, 180'
-/** CSS px per second. A sentence crosses a laptop screen in ~15s. */
-const SPEED_MIN = 30
-const SPEED_MAX = 44
+/** Sand, like everything else that is light. A slate-blue version was tried
+ *  for one commit (2026-10-29) as "the one cool colour" and Melvin killed it
+ *  on sight ("the colour is bad, so bad"). The second colour the site has is
+ *  not a hue: it is the mask reacting to the snakes (see snakeField.ts). */
+const SAND = '205, 183, 138'
+/** CSS px per second. A sentence crosses a laptop screen in ~9s. */
+const SPEED_MIN = 60
+const SPEED_MAX = 84
 /** The arcade trail: square size (CSS px), how many, and their spacing.
  *  Short and quiet (Melvin: "a little less emphasis ... should not be
  *  distracting"). */
@@ -144,8 +143,13 @@ export function FactSnakes() {
       if (page <= 0) return
       ctx.font = FONT
       ctx.textBaseline = 'middle'
+      // Publish every sentence's screen segment for the mask sim (clip
+      // space, y up). Slots past `count` are zeroed so the shader ignores them.
+      snakeField.data.fill(0)
+      snakeField.count = Math.min(SNAKE_SLOTS, snakes.length)
 
-      for (const s of snakes) {
+      for (let si = 0; si < snakes.length; si++) {
+        const s = snakes[si]
         const age = (now - s.born) / 1000
         if (age < 0) continue
         const fade = Math.min(1, age / FADE_SECS)
@@ -166,9 +170,17 @@ export function FactSnakes() {
         ctx.save()
         ctx.translate(s.x, s.y)
         ctx.rotate(Math.PI / 2)
-        ctx.fillStyle = `rgba(${SLATE}, ${0.4 * a})`
+        ctx.fillStyle = `rgba(${SAND}, ${0.34 * a})`
         ctx.fillText(s.text.toUpperCase(), 0, 0)
         ctx.restore()
+
+        if (si < SNAKE_SLOTS) {
+          const o = si * 4
+          snakeField.data[o] = (s.x / W) * 2 - 1
+          snakeField.data[o + 1] = 1 - (s.y / H) * 2
+          snakeField.data[o + 2] = 1 - ((s.y + s.len) / H) * 2
+          snakeField.data[o + 3] = reduced ? 0 : a
+        }
 
         if (reduced) continue
 
@@ -183,7 +195,7 @@ export function FactSnakes() {
           const sway = Math.sin(t * 2.2 + s.seed + i * 0.6) * (1 + k * 2.5)
           const px = snap(s.x + sway) - PX / 2
           const py = snap(along) - PX / 2
-          ctx.fillStyle = `rgba(${SLATE}, ${(1 - k) * (1 - k) * 0.3 * a})`
+          ctx.fillStyle = `rgba(${SAND}, ${(1 - k) * (1 - k) * 0.3 * a})`
           ctx.fillRect(px, py, PX, PX)
         }
       }
@@ -220,6 +232,8 @@ export function FactSnakes() {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', onResize)
       document.removeEventListener('visibilitychange', onVisibility)
+      snakeField.count = 0
+      snakeField.data.fill(0)
     }
   }, [reduced])
 

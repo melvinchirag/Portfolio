@@ -20,6 +20,7 @@
  * ========================================================================= */
 
 import { useFrame, useThree } from '@react-three/fiber'
+import { SNAKE_SLOTS, snakeField } from '../../hooks/snakeField'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { heroScroll } from '../../hooks/heroScroll'
@@ -220,6 +221,14 @@ const simVelocity = /* glsl */ `
   uniform float uMouseSpeed;   // 1 on move, decays each frame
   uniform float uForce;        // velocity damping
   uniform float uTime;
+  // THE FACT SNAKES (snakeField.ts). Each slot is a vertical sentence on
+  // screen in clip space: x, yTop, yBottom, strength (0 = empty slot). uMVP
+  // takes a sim-local position to clip space so the two can be compared;
+  // uAspect makes the distance isotropic in screen pixels.
+  uniform mat4  uMVP;
+  uniform float uAspect;
+  uniform vec4  uSnakes[8];
+  uniform int   uSnakeN;
 
   void main() {
     vec2 uv = gl_FragCoord.xy / resolution.xy;
@@ -239,6 +248,32 @@ const simVelocity = /* glsl */ `
     float maxD = 0.12;
     if (md < maxD) {
       vel += normalize(pos - uMouse) * (1.0 - md / maxD) * 0.008 * uMouseSpeed;
+    }
+
+    // A snake passing through the face parts the dust (Melvin, 2026-10-29:
+    // "if it touches the mask it should go through the shaders of the mask,
+    // so the physics is right"). Particles within a small screen radius of a
+    // sentence are pushed sideways, away from its line, and a little forward
+    // out of the face; the spring above brings them home once it has passed.
+    vec4 clip = uMVP * vec4(pos, 1.0);
+    if (clip.w > 0.0) {
+      vec2 ndc = clip.xy / clip.w;
+      for (int i = 0; i < 8; i++) {
+        if (i >= uSnakeN) break;
+        vec4 s = uSnakes[i];
+        if (s.w <= 0.0) continue;
+        float yc = clamp(ndc.y, s.z, s.y);
+        float dx = (ndc.x - s.x) * uAspect;
+        float dy = ndc.y - yc;
+        float dd = length(vec2(dx, dy));
+        float R = 0.06;
+        if (dd < R) {
+          float f = 1.0 - dd / R;
+          float side = dx >= 0.0 ? 1.0 : -1.0;
+          vel.x += side * f * f * 0.0045 * s.w;
+          vel.z += f * f * 0.0015 * s.w;
+        }
+      }
     }
 
     // OUR touch: a whisper of ambient drift so it breathes without the mouse
@@ -469,6 +504,7 @@ export function MaskParticles() {
   const gl = useThree((s) => s.gl)
   const camera = useThree((s) => s.camera)
   const pointer = useThree((s) => s.pointer)
+  const viewport = useThree((s) => s.size)
 
   // Load the CC-BY cyborg mask ourselves (draco-compressed). Manual loader (no
   // Suspense) so failures surface as console errors instead of a silent hang.
@@ -596,6 +632,10 @@ export function MaskParticles() {
       velVar.material.uniforms.uMouseSpeed = { value: 0 }
       velVar.material.uniforms.uForce = { value: 0.72 }
       velVar.material.uniforms.uTime = { value: 0 }
+      velVar.material.uniforms.uMVP = { value: new THREE.Matrix4() }
+      velVar.material.uniforms.uAspect = { value: 1 }
+      velVar.material.uniforms.uSnakes = { value: new Float32Array(SNAKE_SLOTS * 4) }
+      velVar.material.uniforms.uSnakeN = { value: 0 }
 
       const err = gpu.init()
       if (err) console.error('[MaskField] GPGPU init error:', err)
@@ -877,6 +917,16 @@ export function MaskParticles() {
     mouseSpeed.current *= 0.9
     velVar.material.uniforms.uMouseSpeed.value = mouseSpeed.current
     velVar.material.uniforms.uTime.value += delta
+
+    // Snakes → sim. The matrix is rebuilt from rayMesh (already posed for
+    // this frame, above) so the comparison follows the mask along its path.
+    const u = velVar.material.uniforms
+    ;(u.uMVP.value as THREE.Matrix4)
+      .multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+      .multiply(rayMesh.matrixWorld)
+    u.uAspect.value = viewport.width / viewport.height
+    ;(u.uSnakes.value as Float32Array).set(snakeField.data)
+    u.uSnakeN.value = snakeField.count
 
     gpu.compute()
     const posTex = gpu.getCurrentRenderTarget(posVar).texture
