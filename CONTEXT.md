@@ -33,11 +33,21 @@ running locally, logged here, committed.
   box, `sync-glass-rect` removed from the hero, mask + contact swarm + scene
   background recoloured. `tsc` and build clean. Fonts bundled, zero third-party
   font requests.
-- ⏭ Block 3: hero rebuilt on the system (name treatment above, composition on
-  phone + laptop). Then 4 content, 5 motion, 6 Work gallery, 7 About/Vision/
-  Contact, 8 camera v1, 9 second mask, 10 ship. Full table in the Otto session
-  log; the short version is "foundations first, then the camera, then the
-  second mask".
+- ✅ Block 3: hero Identity frame rebuilt (`HeroBeats.tsx` IdentityFrame).
+  Mask owns the left, name owns the right, bottom-aligned like a film title.
+  "MELVIN" enormous in wide Archivo, assembles out of ~5k sand dots on load
+  (`NameAssembly.tsx`, 2D canvas, waits for Loader + font, reduced-motion
+  skips it), then the DOM text fades in. "Chirag Karupati" in the narrow cut.
+  Mono ticker of real roles along the bottom (`.ticker` in index.css). Top
+  meta row carries GitHub / LinkedIn / Résumé as mono text links; the icon row
+  and the three pills are gone from the hero. One primary CTA ("See the work"),
+  one secondary ("Contact"). Clock rail kept; content pads right to clear it.
+  KNOWN: on phones the mask sits half off the left edge (MaskField's OFFSET
+  is not responsive). Fix in the phone pass, by scaling the path's x with the
+  viewport aspect, not by touching the crop or the poses.
+- ⏭ Block 4 content, 5 motion, 6 Work gallery, 7 About/Vision/Contact,
+  8 camera v1, 9 second mask, 10 ship. "Foundations first, then the camera,
+  then the second mask."
 
 **Still owed by Melvin:** current résumé, Devpost/GitHub links (Lingo, EventOS,
 Manas), Vision text choice, Spidey (hide or two lines), contact email, domain

@@ -139,6 +139,73 @@ html {
   color: var(--color-sand-dim);
 }
 
+/* ---------------------------------------------------------------------------
+ * THE TICKER — one thin line of real facts running under the hero name.
+ * ----------------------------------------------------------------------------
+ * The track holds the list TWICE and slides exactly half its width per loop,
+ * so the seam is invisible. Both edges are masked so items fade in and out
+ * instead of popping at the frame edge. Reduced motion: no animation, the
+ * second copy is hidden, and the list simply wraps as text.
+ * ------------------------------------------------------------------------ */
+.ticker {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-run 60s linear infinite;
+}
+.ticker-run {
+  display: flex;
+  flex: none;
+  white-space: nowrap;
+}
+.ticker-item {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-sand-dim);
+  padding-right: 3.2em;
+}
+/* A small sand dot separates items; the last one in each copy still gets one,
+ * which is what joins the two copies seamlessly. */
+.ticker-item::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-sand-deep);
+  margin-right: 1.2em;
+  vertical-align: 0.15em;
+}
+@keyframes ticker-run {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+  .ticker-track {
+    animation: none;
+    width: auto;
+  }
+  .ticker-run {
+    flex-wrap: wrap;
+    white-space: normal;
+    row-gap: 0.6em;
+  }
+  .ticker-run[aria-hidden='true'] {
+    display: none;
+  }
+}
+
 /* Style the <body> element, which wraps all visible content. */
 body {
   /* Browsers add a default margin around the body; remove it so our full-bleed

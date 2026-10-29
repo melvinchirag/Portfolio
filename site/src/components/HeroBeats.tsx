@@ -28,13 +28,13 @@
  * state (`useHeroFrame`) only swaps which frame is interactive.
  * ========================================================================= */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BEAT_COUNT, heroScroll, useHeroFrame } from '../hooks/heroScroll'
 import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
 import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
-import { SocialLinks } from './SocialLinks'
+import { NameAssembly } from './NameAssembly'
 import { TagThread } from './TagThread'
 
 const FRAMES = [
@@ -93,7 +93,8 @@ const PROSE_STACK =
  * ------------------------------------------------------------------------ */
 function FrameDots({ active }: { active: number }) {
   return (
-    <div className="absolute bottom-7 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
+    // bottom-3: tucked under the hero ticker (which sits at ~5.5vh), not on it.
+    <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
       {FRAMES.map((f, i) => (
         <button
           key={f.id}
@@ -116,73 +117,102 @@ function FrameDots({ active }: { active: number }) {
  * Frame 0 — Identity. Tagline kicker on top, the name in gold, then the pitch.
  * A soft vignette lifts it off the mask so it reads as one clean centred block.
  * ------------------------------------------------------------------------ */
+/* The running line of facts under the name (board idea 3). Real roles only,
+ * from Otto's `context/uni.md`; nothing aspirational. Rendered twice inside
+ * the ticker so the loop is seamless. */
+const FACTS = [
+  'Co-lead and finance lead, Hack The Nest',
+  'Vice president, GDG on Campus at EMU',
+  'Founder and president, SPARC',
+  'Winner, SpartaHack 11',
+  'Winner, GrizzHacks 8',
+  'Kuwait → India → Michigan',
+  'Computer science, Eastern Michigan University',
+]
+
+/* 2026-10-29 REBUILD. The old frame was a centred stack (kicker, name with
+ * glow, spaced-out surname, paragraph, three pills, four icons) sitting ON TOP
+ * of the mask. Now: the mask owns the left of the screen untouched, and the
+ * name owns the right, bottom-aligned, the way a film title sits in a frame.
+ * The first name is enormous and assembles out of particles on load
+ * (NameAssembly); under it the second line is the quiet narrow cut; under that
+ * a thin mono ticker of real facts. One primary action, one secondary. The
+ * socials become three mono text links in the top-right meta row. */
 function IdentityFrame({ index }: { index: number }) {
-  // Surname is rendered letter-by-letter with `justify-between` inside a box
-  // that stretches to the first-name line's width, so "KARUPATI" spans exactly
-  // the same width as "Melvin Chirag" at every viewport.
-  const surname = 'KARUPATI'.split('')
+  const rootRef = useRef<HTMLDivElement>(null)
+  const firstNameRef = useRef<HTMLSpanElement>(null)
+  // The DOM name stays invisible until the particles have formed it, then
+  // fades in as they fade out. Reduced motion: NameAssembly fires onDone at
+  // once, so the name is simply there.
+  const [nameShown, setNameShown] = useState(false)
+  const reveal = useCallback(() => setNameShown(true), [])
+
+  const linkRow = 'label flex items-center gap-5'
+  const link =
+    'ease-out-expo text-sand-dim transition-colors duration-300 hover:text-sand focus-visible:text-sand focus-visible:outline-none'
 
   return (
     // data-pan marks this as a panned root — the rAF loop writes its transform.
-    // NO max-width here (there was one, max-w-2xl, until 2026-08-09): the name
-    // now runs at real display scale, per the eladiodieste.com reference, and a
-    // 672px cap would force it to wrap mid-word. The column shrink-wraps to its
-    // widest child instead; the description paragraph below keeps its own
-    // narrower max-w-md so body copy still reads at a comfortable measure.
-    <div data-pan={index} className="relative flex flex-col items-center px-4 text-center">
-      {/* Soft halo so the name reads cleanly wherever the mask sits behind it.
-          Oversized (negative inset) so it fades out well past the text. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -inset-x-40 -inset-y-28"
-        style={{
-          background:
-            'radial-gradient(52% 50% at 50% 50%, rgba(15,16,18,0.62) 0%, rgba(15,16,18,0.3) 48%, transparent 74%)',
-        }}
-      />
+    // Full-bleed: the frame IS the viewport cell, and the layout inside it is a
+    // 12-column grid so the name can sit in the right half, clear of the mask.
+    <div
+      ref={rootRef}
+      data-pan={index}
+      // Right padding on md+ clears the fixed 76px clock rail (HeroClockRail).
+      className="relative grid h-full w-full grid-cols-12 items-end px-6 pb-[12vh] md:px-10 md:pr-[100px] lg:px-14 lg:pr-[110px]"
+    >
+      <NameAssembly rootRef={rootRef} targetRef={firstNameRef} onDone={reveal} />
 
-      <div className="relative flex flex-col items-center">
-        {/* Tagline kicker, above the name. "Beyond" links to Vision. */}
-        <p className="mb-6 font-display text-[clamp(1.05rem,2.4vw,1.5rem)] text-sand/75">
-          Computer Science and{' '}
-          <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
-            Beyond
-          </Link>
-        </p>
-
-        {/* Scale bumped 2026-08-09, per the Dieste reference: display type is
-            meant to run uncomfortably big, closer to the viewport edge than
-            feels safe, not a "nice size". Tracking tightened to match (huge
-            letters read as loose at the old -0.01em). */}
-        <h1 className="inline-flex flex-col">
-          <span className="name-gold display-wide font-display text-[clamp(2.75rem,11vw,9rem)] leading-[0.95] font-bold tracking-[-0.02em]">
-            Melvin Chirag
-          </span>
-          <span
-            aria-label="Karupati"
-            className="mt-3 flex justify-between font-display text-[clamp(1.4rem,3.6vw,2.6rem)] text-sand-dim"
+      {/* Top meta row: who/where on the left, the three links recruiters want
+          on the right. Sits under the nav, in the nav's own gutter. */}
+      <div className="absolute inset-x-6 top-[11vh] flex items-center justify-between gap-6 md:left-10 md:right-[100px] lg:left-14 lg:right-[110px]">
+        <span className="label hidden sm:inline">Computer science · Eastern Michigan University</span>
+        <div className={linkRow}>
+          <a href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
+            GitHub
+          </a>
+          <a
+            href="https://linkedin.com/in/melvin-chirag-karupati-a34452380"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={link}
           >
-            {surname.map((ch, i) => (
-              <span key={i} aria-hidden>
-                {ch}
-              </span>
-            ))}
+            LinkedIn
+          </a>
+          <a href="/resume.pdf" target="_blank" rel="noopener noreferrer" className={link}>
+            Résumé ↗
+          </a>
+        </div>
+      </div>
+
+      {/* The name block: right half on laptops, full width on phones. */}
+      <div className="relative col-span-12 md:col-span-7 md:col-start-6">
+        <h1 className="flex flex-col">
+          <span
+            ref={firstNameRef}
+            className={`name-gold display-wide ease-out-expo font-display text-[clamp(4rem,15vw,9rem)] leading-[0.86] font-extrabold tracking-[-0.03em] uppercase transition-opacity duration-700 md:text-[clamp(5rem,9.4vw,12rem)] ${
+              nameShown ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            Melvin
+          </span>
+          <span className="display-narrow mt-3 font-display text-[clamp(1.1rem,3.2vw,2rem)] leading-none font-normal tracking-[0.01em] text-sand-dim">
+            Chirag Karupati
           </span>
         </h1>
 
-        <p className="mt-7 max-w-md text-[13.5px] leading-relaxed text-sand/80">
-          I'm exploring computer vision, intelligent systems, machine learning, and full stack
-          products. I like building things where software meets the real world, connecting ideas
-          across domains and turning curiosity into something that actually works.
+        <p className="mt-7 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/75 sm:text-[15.5px]">
+          I build computer-vision and machine-learning systems that work outside the screen, and I
+          co-lead Hack The Nest, EMU's first hackathon. This site can{' '}
+          <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
+            see further
+          </Link>
+          .
         </p>
 
-        {/* Projects goes to the Work page (the full view of what Melvin builds). */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            to="/work"
-            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide"
-          >
-            Projects
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <Link to="/work" className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide">
+            See the work
           </Link>
           <button
             type="button"
@@ -191,17 +221,26 @@ function IdentityFrame({ index }: { index: number }) {
           >
             Contact
           </button>
-          <a
-            href="/resume.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="glass-cta is-secondary rounded-full px-6 py-2.5 text-sm tracking-wide"
-          >
-            Resume <span aria-hidden>↗</span>
-          </a>
         </div>
+      </div>
 
-        <SocialLinks className="mt-7 justify-center" />
+      {/* The ticker. Absolute to the bottom edge so it reads as part of the
+          frame, not of the text block. Duplicated once for a seamless loop. */}
+      <div
+        aria-label="Roles and milestones"
+        className="ticker absolute inset-x-6 bottom-[5.5vh] md:left-10 md:right-[100px] lg:left-14 lg:right-[110px]"
+      >
+        <div className="ticker-track">
+          {[0, 1].map((copy) => (
+            <span key={copy} aria-hidden={copy === 1} className="ticker-run">
+              {FACTS.map((f) => (
+                <span key={f} className="ticker-item">
+                  {f}
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   )
