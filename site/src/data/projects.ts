@@ -45,14 +45,14 @@ export const PROJECTS: Project[] = [
     blurb:
       'A desktop console that runs four real space simulations in one window, driven from a terminal. Every visual is computed from physics, not animated.',
     stack: ['TypeScript', 'WebGL2', 'GLSL', 'Tauri 2'],
-    href: '', // TODO: repo / demo link
+    href: 'https://github.com/melvinchirag/Manas',
   },
   {
     name: 'Portfolio (Melvin Chirag)',
     blurb:
       'A cinematic space built to tell a technical story through motion and interface design. A real time WebGL experience I built from scratch, not a template.',
     stack: ['React', 'TypeScript', 'Three.js', 'React Three Fiber', 'WebGL / GLSL', 'GSAP'],
-    href: '', // TODO: public repo link (if the source is to be shared)
+    href: 'https://github.com/melvinchirag/Portfolio',
   },
   {
     // Replaces the old "Hackathon Project / TBD" placeholder outright — this
@@ -61,6 +61,6 @@ export const PROJECTS: Project[] = [
     blurb:
       'An AI bridge for contextual communication, breaking down grammar, idioms, and cultural nuance so non-native speakers never get lost. Won the Roots and Renewal track at SpartaHack 11.',
     stack: ['React Vite', 'OpenRouter', 'Gemini API', 'Tailwind CSS', 'Framer motion', 'FastAPI', 'Vercel v0'],
-    href: '', // TODO: repo / demo link
+    href: 'https://devpost.com/software/culture-bridge',
   },
 ]

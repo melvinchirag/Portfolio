@@ -14,13 +14,10 @@ export function ProjectMedia({ media }: { media?: WorkProject['media'] }) {
   const images = media?.images ?? []
   const hasVideo = Boolean(media?.video)
 
-  if (images.length === 0 && !hasVideo) {
-    return (
-      <div className="mt-6 flex h-28 items-center justify-center rounded-lg border border-dashed border-white/10 bg-white/[0.01]">
-        <p className="text-[10px] tracking-widest text-white/20 uppercase">Demo &amp; screenshots coming</p>
-      </div>
-    )
-  }
+  // No media yet → render nothing. (Until 2026-10-29 this was a dashed "Demo &
+  // screenshots coming" box on every single project, which is exactly the
+  // kind of placeholder a visitor must never see.)
+  if (images.length === 0 && !hasVideo) return null
 
   return (
     <div className="mt-6 flex flex-col gap-3">

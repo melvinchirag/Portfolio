@@ -45,7 +45,28 @@ running locally, logged here, committed.
   KNOWN: on phones the mask sits half off the left edge (MaskField's OFFSET
   is not responsive). Fix in the phone pass, by scaling the path's x with the
   viewport aspect, not by touching the crop or the poses.
-- ⏭ Block 4 content, 5 motion, 6 Work gallery, 7 About/Vision/Contact,
+- ✅ Block 3b (Melvin's first review): sand deepened to `#cdb78a` (particles
+  `#c4a56c`), dust→solid is a 2.6s eased crossfade, the mask waits for the
+  name (`heroIntro.nameExpected/nameDone`). Pushed; live on Vercel.
+- ✅ Block 4: content, done with Melvin's safe defaults where he hadn't
+  answered. Roles current everywhere (Work Leadership, About EMU card, hero
+  ticker): HTN co-lead + finance lead, SPARC founder/president, GDG VP. Work
+  page reordered Flagship → Hackathons → Personal → Leadership → Foundations,
+  first two open. Real links: Lingo + EventOS Devpost, Manas + Portfolio
+  GitHub; dead "GitHub" links removed (Lingo's SH13 mirror is empty, EventOS
+  repo unknown). Two hackathon projects ADDED from Otto's records: **ADE**
+  (Hack Dearborn 5, Oct 2026, Melvin's idea; written to the repo audit, no
+  overclaim, no status chip because the Devpost result is unconfirmed) and
+  **Shadow** (RocketHacks 2026, the seed of Osiris). Spidey hidden (`hidden`
+  flag). "Demo & screenshots coming" boxes removed site-wide. About: both
+  "Coming soon" squares removed, the yellow Pac-Man removed (second colour).
+  Vision rewritten to the calmer Future framing, placeholder box gone.
+  `NotFound.tsx` 404 route. `Footer.tsx` on every non-home page (résumé,
+  email, socials, contact). index.html: real description + Open Graph tags
+  (no og:image yet; make one in the ship block from the final hero).
+  Defaults taken: contact email stays melvinchirag@gmail.com; résumé PDF
+  unchanged (Melvin to send the current one).
+- ⏭ Block 5 motion, 6 Work gallery, 7 About/Vision/Contact scenes,
   8 camera v1, 9 second mask, 10 ship. "Foundations first, then the camera,
   then the second mask."
 

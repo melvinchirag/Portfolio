@@ -1,12 +1,32 @@
-import { useEffect } from 'react'
+/* ============================================================================
+ * Vision.tsx — "The Future": where the work is heading
+ * ----------------------------------------------------------------------------
+ * 2026-10-29 rewrite. The old page had two problems: a dashed box reading
+ * "[ PLACEHOLDER: WEBGL CENTERPIECE ]" filling the right half, and copy
+ * ("my life's mission is to create AGI", "transformers are fundamentally
+ * limited") that contradicted the calmer, more credible Future text on the
+ * hero. Recruiters read this page, so it now carries the hero's framing,
+ * expanded: directions, not claims, with the areas as a plain list.
+ *
+ * The reserved visual for this page (the ink-fluid simulation, or the many
+ * synced masks) is still planned. It gets built as its own block and wired
+ * in here; until then the page is a clean single column with no placeholder.
+ * ========================================================================= */
 
-const INTERESTS = [
-  'Mathematics & Logic',
-  'Neural Networks',
-  'Neuroscience',
-  'Memory Architecture',
-  'Astrophysics',
+import { useEffect } from 'react'
+import { TagThread } from '../components/TagThread'
+
+const AREAS = [
+  'Applied AI',
+  'Machine Learning',
+  'MLOps',
+  'Computer Vision',
+  'World Models',
+  'Vision, Language, Action',
+  'Robotics',
+  'Neurotechnology',
   'Aerospace',
+  'Scientific discovery',
 ]
 
 export function Vision() {
@@ -15,53 +35,44 @@ export function Vision() {
   }, [])
 
   return (
-    <div className="relative z-10 mx-auto max-w-5xl px-6 pt-32 pb-24 md:px-10">
-      <header className="mb-24 text-center md:text-left">
-        <h1 className="font-display text-5xl leading-[0.95] tracking-tight text-white md:text-7xl">
+    <div className="relative z-10 mx-auto max-w-3xl px-6 pt-32 pb-32 md:px-10">
+      <header className="mb-16">
+        <p className="label">The future</p>
+        <h1 className="display-wide mt-4 font-display text-5xl leading-[0.95] font-bold tracking-tight text-white md:text-7xl">
           Vision
         </h1>
       </header>
 
-      <div className="grid gap-16 md:grid-cols-2 md:gap-12">
-        {/* Left Col: Manifesto */}
-        <section className="flex flex-col gap-8">
-          <div>
-            <h2 className="mb-4 text-xs tracking-[0.2em] text-white/50 uppercase">The Objective</h2>
-            <p className="text-xl leading-relaxed font-light text-white/90 md:text-2xl">
-              Building toward true Artificial General Intelligence by bridging the gap between logic and physical memory.
-            </p>
-            <p className="mt-4 text-sm leading-relaxed text-white/50">
-              My life's mission is to create AGI that possesses true intelligence, rather than just contextual intelligence.
-            </p>
-          </div>
+      <section className="flex flex-col gap-10">
+        <p className="text-xl leading-relaxed text-white/90 md:text-2xl">
+          I want to build intelligent systems that move past the screen: systems that can perceive
+          the world, reason about it, and act within it.
+        </p>
 
-          <div>
-            <h2 className="mb-4 text-xs tracking-[0.2em] text-white/50 uppercase">The Missing Link</h2>
-            <p className="text-sm leading-relaxed text-white/70">
-              Present AI, heavily reliant on transformers, is fundamentally limited. It lacks true, grounded intelligence. I believe the missing piece is <span className="text-white font-medium">Memory</span>—specifically, how memory maps physically in the brain, how it interacts with decision-making, and how it anchors context over time.
-              <br /><br />
-              My work focuses on the intersection of deep neural networks, mathematics, and neuroscience to solve this fundamental architecture problem.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              {INTERESTS.map((interest) => (
-                <span key={interest} className="rounded-full border border-white/10 px-4 py-1.5 text-xs tracking-wide text-white/50">
-                  {interest}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
+        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-white/65">
+          <p>
+            Right now that means computer vision, applied machine learning, world models, and
+            systems that connect vision, language and action. Osiris is the current expression of
+            it: a camera, a model that understands what it sees, and a device that responds.
+          </p>
+          <p>
+            Longer term I want to bring the same approach into fields where the hard part is the
+            physical world: robotics, neurotechnology, aerospace, and scientific discovery. Those
+            are directions I read and study in, not fields I claim to work in yet. Manas, the
+            space-simulation console, is the first small step into one of them.
+          </p>
+          <p>
+            The goal underneath all of it is simple. Take new research and turn it into things that
+            are genuinely useful and reliable, and build systems that make hard technology feel
+            more capable, more open, and more human.
+          </p>
+        </div>
 
-        {/* Right Col: Placeholder for future visual */}
-        <section className="flex min-h-[400px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01] p-8 text-center">
-          <p className="text-[11px] tracking-widest text-white/20 uppercase">
-            [ Placeholder: WebGL Centerpiece ]
-          </p>
-          <p className="mt-4 max-w-sm text-xs leading-relaxed text-white/30">
-            Reserved for the ink-fluid Navier-Stokes simulation or the 50-60 synced masks concept.
-          </p>
-        </section>
-      </div>
+        <div>
+          <p className="label mb-3">Areas I’m exploring</p>
+          <TagThread items={AREAS} />
+        </div>
+      </section>
     </div>
   )
 }

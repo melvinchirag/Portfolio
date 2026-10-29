@@ -1,11 +1,13 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 
 import { Loader } from './components/Loader'
 import { Nav } from './components/Nav'
+import { Footer } from './components/Footer'
 import { Home } from './pages/Home'
 import { About } from './pages/About'
 import { Work } from './pages/Work'
 import { Vision } from './pages/Vision'
+import { NotFound } from './pages/NotFound'
 import { useLenis } from './hooks/useLenis'
 import { GlobalScene } from './components/scene/GlobalScene'
 
@@ -15,6 +17,7 @@ import { GlobalScene } from './components/scene/GlobalScene'
  */
 function Shell() {
   useLenis()
+  const { pathname } = useLocation()
 
   return (
     <>
@@ -29,8 +32,12 @@ function Shell() {
           <Route path="/about" element={<About />} />
           <Route path="/work" element={<Work />} />
           <Route path="/vision" element={<Vision />} />
+          {/* Catch-all: Vercel rewrites every path here, so this is the 404. */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
+      {/* Home ends in its own Contact section; every other page gets the footer. */}
+      {pathname !== '/' && <Footer />}
       <div className="progressive-blur" />
       <Loader />
     </>

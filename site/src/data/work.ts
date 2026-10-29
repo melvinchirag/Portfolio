@@ -63,6 +63,10 @@ export type WorkProject = {
   media?: { images?: string[]; video?: string }
   /** True while the copy is a placeholder awaiting real details. */
   tentative?: boolean
+  /** Hidden from the page entirely (kept in data so nothing is lost). Rule
+   *  since 2026-10-29: a visitor never sees a placeholder, so a project with
+   *  no real write-up is hidden rather than shown as "more on it soon". */
+  hidden?: boolean
 }
 
 export const WORK_PROJECTS: WorkProject[] = [
@@ -163,10 +167,9 @@ export const WORK_PROJECTS: WorkProject[] = [
       },
     ],
     stack: ['React', 'Vite', 'Node.js', 'Tailwind CSS', 'Framer Motion', 'Gemini', 'OpenRouter', 'FastAPI', 'v0'],
-    links: [
-      { label: 'Devpost', href: '' }, // TODO: real Devpost link
-      { label: 'GitHub', href: '' }, // TODO: repo
-    ],
+    // The Devpost slug really is "culture-bridge" (the project's working name).
+    // No GitHub link: the SH13 mirror is an empty repository.
+    links: [{ label: 'Devpost', href: 'https://devpost.com/software/culture-bridge' }],
   },
   {
     id: 'eventos',
@@ -244,9 +247,79 @@ export const WORK_PROJECTS: WorkProject[] = [
       'CogVideoX',
       'Google OAuth',
     ],
+    links: [{ label: 'Devpost', href: 'https://devpost.com/software/eventsos' }],
+  },
+  {
+    id: 'ade',
+    name: 'ADE',
+    category: 'hackathon',
+    // No status chip: the Devpost results page could not be read (403), so
+    // the prize outcome is unconfirmed. Add 'Winner' only once it is.
+    blurb:
+      'Agentique Desktop Ecosystem. A team of AI agents that lives on your desktop as six small 3D animals on the taskbar. You talk to one; it hands the work to specialists, and a rule-based warden approves every action before it happens.',
+    tags: ['cs', 'aiml', 'agents', 'electron', 'react', 'typescript', 'threejs', 'hackathon'],
+    role: 'Idea. Built Chip (the orchestrator), Archie (files), Warden (the gate) and the test suite',
+    event: 'Hack Dearborn 5, October 2026',
+    team: 'Chanuth Jayatissa, Melvin, Shafeen Rahman, Zarin Zara',
+    detail: [
+      {
+        body: [
+          'My idea, built in 24 hours with three teammates. The pitch: the agents you use should feel like they live somewhere. ADE draws a transparent, always-on-top layer on a Windows desktop where six low-poly animals stand on the taskbar. Hold one to talk, or type in the hub.',
+        ],
+      },
+      {
+        heading: 'The animals',
+        points: [
+          {
+            label: 'Chip',
+            text: 'The orchestrator. Takes what you said, decides who does it, runs jobs in parallel, and nudges you when something needs a decision. Regex guardrails catch the model promising to act without acting.',
+          },
+          {
+            label: 'Archie',
+            text: 'Works on local files inside a sandboxed path, with a journal that supports undo even after a restart and a soft trash that empties after seven days.',
+          },
+          {
+            label: 'Pixel, Scout, Swarm',
+            text: 'Gmail, Calendar and Drive over OAuth with a strict route allowlist (no send, delete or share routes). Web research. Plans.',
+          },
+          {
+            label: 'Warden',
+            text: 'A deterministic rule table that reviews every tool call, puts up an approval card for anything risky, and screens incoming content for prompt injection. Built against a 77-row rule matrix and an injection corpus.',
+          },
+        ],
+      },
+      {
+        heading: 'Honest scope',
+        body: [
+          'One biome exists (forest). The desert and tundra in the marketplace are labels. The agents speak through ElevenLabs and log every event to a Timescale database. About 770 test cases across 108 files, written during the hackathon.',
+        ],
+      },
+    ],
+    stack: ['Electron', 'React 19', 'TypeScript', 'React Three Fiber', 'Backboard', 'ElevenLabs', 'TimescaleDB', 'Google OAuth'],
+    links: [{ label: 'Devpost', href: 'https://devpost.com/software/agentique-desktop-ecosystem' }],
+  },
+  {
+    id: 'shadow',
+    name: 'Shadow',
+    category: 'hackathon',
+    blurb:
+      'Point a webcam at your hands and it speaks the sign. Sign language to a full sentence to speech, in one pass. The project where I first worked with live computer vision, and the seed of Osiris.',
+    tags: ['cs', 'aiml', 'computerVision', 'python', 'opencv', 'openrouter', 'hackathon'],
+    role: 'Co-lead with Arwen Campbell',
+    event: 'RocketHacks 2026, University of Toledo',
+    team: 'Arwen Campbell, Melvin, Alissa Logsdon, William Dalian',
+    detail: [
+      {
+        body: [
+          'OpenCV grabs webcam frames, crops the centre, and sends a small JPEG to a vision model, which recognises the sign and phrases a natural sentence in one call. A majority-vote window over the last eight predictions stops the output flickering. ElevenLabs reads the sentence aloud.',
+          'A second mode turned gestures into device control: volume, slides, a screenshot. That mode is what became Osiris.',
+        ],
+      },
+    ],
+    stack: ['Python', 'OpenCV', 'GPT-4o-mini (vision) via OpenRouter', 'ElevenLabs'],
     links: [
-      { label: 'Devpost', href: '' }, // TODO: real Devpost link
-      { label: 'GitHub', href: '' }, // TODO: repo
+      { label: 'Devpost', href: 'https://devpost.com/software/shadow-rzgiuj' },
+      { label: 'GitHub', href: 'https://github.com/MelvinOrionis/ASLShadow' },
     ],
   },
 
@@ -308,9 +381,7 @@ export const WORK_PROJECTS: WorkProject[] = [
       },
     ],
     stack: ['TypeScript', 'Vite', 'WebGL2', 'GLSL', 'Tauri 2', 'vitest'],
-    links: [
-      { label: 'GitHub', href: '' }, // TODO: repo
-    ],
+    links: [{ label: 'GitHub', href: 'https://github.com/melvinchirag/Manas' }],
   },
   {
     id: 'portfolio',
@@ -373,9 +444,7 @@ export const WORK_PROJECTS: WorkProject[] = [
       'Lenis',
       'Vercel',
     ],
-    links: [
-      { label: 'GitHub', href: '' }, // TODO: public repo (if source is shared)
-    ],
+    links: [{ label: 'GitHub', href: 'https://github.com/melvinchirag/Portfolio' }],
   },
 
   {
@@ -496,6 +565,8 @@ export const WORK_PROJECTS: WorkProject[] = [
     blurb: 'A project I’m building for fun. More on it soon.',
     tags: ['cs', 'forFun'],
     tentative: true,
+    // Hidden until Melvin writes two real lines about it (2026-10-29).
+    hidden: true,
   },
 ]
 

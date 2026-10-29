@@ -55,6 +55,9 @@ export const TAGS = {
   vjepa: { label: 'V-JEPA', axis: 'tech' },
   modelTraining: { label: 'Model Training', axis: 'tech' },
   fineTuning: { label: 'Fine-tuning', axis: 'tech' },
+  electron: { label: 'Electron', axis: 'tech' },
+  opencv: { label: 'OpenCV', axis: 'tech' },
+  agents: { label: 'AI Agents', axis: 'tech' },
 
   // ── purpose ────────────────────────────────────────────────────────────────
   flagship: { label: 'Flagship', axis: 'purpose' },

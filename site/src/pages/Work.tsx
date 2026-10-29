@@ -31,10 +31,23 @@ import { ProjectRow } from '../components/work/ProjectRow'
 import { SkillDisclosure } from '../components/work/SkillDisclosure'
 import { ProjectSearch } from '../components/work/ProjectSearch'
 
+// Current roles, from Otto's `context/uni.md` (2026-10-29). Newest first.
 const LEADERSHIP = [
-  { role: 'Executive Member & Treasurer', org: 'Google Developer Group @ EMU' },
-  { role: 'Member', org: 'AI Club' },
-  { role: 'Finance Lead', org: 'EMU Hackathon' },
+  {
+    role: 'Co-lead and finance lead',
+    org: 'Hack The Nest, EMU’s first hackathon · November 14–15, 2026',
+    note: 'Sponsorship, budget and partnerships for a 24-hour event for students from across the Midwest, run by GDG on Campus.',
+  },
+  {
+    role: 'Founder and president',
+    org: 'SPARC · Society of Projects, Applied Research, and Collaboration',
+    note: 'Started September 2026. A student society for building and researching together.',
+  },
+  {
+    role: 'Vice president',
+    org: 'GDG on Campus at Eastern Michigan University',
+    note: 'Since August 2026; treasurer before that.',
+  },
 ]
 
 // Toggle a value's presence in a Set immutably (React needs a new reference).
@@ -51,8 +64,9 @@ export function Work() {
     window.scrollTo(0, 0)
   }, [])
 
-  // Which sections/projects are open. Flagship starts open; the rest closed.
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(['Personal']))
+  // Which sections/projects are open. Flagship and Hackathons start open (the
+  // two a recruiter reads first); the rest closed.
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(['Flagship', 'Hackathons']))
   const [openProjects, setOpenProjects] = useState<Set<string>>(new Set())
 
   const toggleSection = (title: string) => setOpenSections((s) => toggleIn(s, title))
@@ -82,9 +96,10 @@ export function Work() {
     }, 80)
   }
 
-  const flagship = WORK_PROJECTS.filter((p) => p.category === 'flagship')
-  const hackathon = WORK_PROJECTS.filter((p) => p.category === 'hackathon')
-  const personal = WORK_PROJECTS.filter((p) => p.category === 'personal')
+  const visible = WORK_PROJECTS.filter((p) => !p.hidden)
+  const flagship = visible.filter((p) => p.category === 'flagship')
+  const hackathon = visible.filter((p) => p.category === 'hackathon')
+  const personal = visible.filter((p) => p.category === 'personal')
 
   // Personal projects are grouped by their purpose tag into sub-sections
   // (Manas → Domain Expansion, the site → Skill Building, etc.). Only purposes
@@ -124,7 +139,31 @@ export function Work() {
 
       <ProjectSearch onRevealProject={revealProject} onRevealFoundations={revealFoundations} />
 
+      {/* Order (2026-10-29): what a recruiter wants first. Flagship, then the
+          hackathon record, then personal builds, then roles, then the skills
+          inventory last. Personal used to be first with Osiris collapsed
+          below it, which buried the strongest thing on the page. */}
       <div className="flex flex-col">
+        <WorkSection
+          id="section-flagship"
+          title="Flagship"
+          count={flagship.length}
+          open={openSections.has('Flagship')}
+          onToggle={() => toggleSection('Flagship')}
+        >
+          {renderRows(flagship)}
+        </WorkSection>
+
+        <WorkSection
+          id="section-hackathons"
+          title="Hackathons"
+          count={hackathon.length}
+          open={openSections.has('Hackathons')}
+          onToggle={() => toggleSection('Hackathons')}
+        >
+          {renderRows(hackathon)}
+        </WorkSection>
+
         <WorkSection
           id="section-personal"
           title="Personal"
@@ -146,23 +185,21 @@ export function Work() {
         </WorkSection>
 
         <WorkSection
-          id="section-flagship"
-          title="Flagship"
-          count={flagship.length}
-          open={openSections.has('Flagship')}
-          onToggle={() => toggleSection('Flagship')}
+          id="section-leadership"
+          title="Leadership"
+          count={LEADERSHIP.length}
+          open={openSections.has('Leadership')}
+          onToggle={() => toggleSection('Leadership')}
         >
-          {renderRows(flagship)}
-        </WorkSection>
-
-        <WorkSection
-          id="section-hackathons"
-          title="Hackathons"
-          count={hackathon.length}
-          open={openSections.has('Hackathons')}
-          onToggle={() => toggleSection('Hackathons')}
-        >
-          {renderRows(hackathon)}
+          <ul className="flex flex-col gap-5">
+            {LEADERSHIP.map((l) => (
+              <li key={l.role + l.org} className="flex flex-col gap-1 border-l border-white/10 pl-4">
+                <span className="text-sm font-medium text-white/85">{l.role}</span>
+                <span className="text-xs text-white/50">{l.org}</span>
+                <span className="max-w-xl text-xs leading-relaxed text-white/40">{l.note}</span>
+              </li>
+            ))}
+          </ul>
         </WorkSection>
 
         <WorkSection
@@ -185,23 +222,6 @@ export function Work() {
               </div>
             ))}
           </div>
-        </WorkSection>
-
-        <WorkSection
-          id="section-leadership"
-          title="Leadership"
-          count={LEADERSHIP.length}
-          open={openSections.has('Leadership')}
-          onToggle={() => toggleSection('Leadership')}
-        >
-          <ul className="flex flex-col gap-4">
-            {LEADERSHIP.map((l) => (
-              <li key={l.role + l.org} className="flex flex-col border-l border-white/10 pl-4">
-                <span className="text-sm font-medium text-white/80">{l.role}</span>
-                <span className="text-xs text-white/40">{l.org}</span>
-              </li>
-            ))}
-          </ul>
         </WorkSection>
       </div>
     </div>

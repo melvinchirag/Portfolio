@@ -29,7 +29,7 @@ const MILESTONES = [
     year: 'Fall 2025 — Present',
     title: 'Eastern Michigan University',
     description:
-      'Transferred in as a Junior. Leaning heavily into AI/ML, stepped up as Executive Member & Treasurer for the Google Developer Group.',
+      'Transferred in as a junior, concentrating in AI/ML. Vice president of GDG on Campus, co-lead and finance lead of Hack The Nest (EMU’s first hackathon), and founder of SPARC, a student society for building and research.',
   },
 ]
 
@@ -92,28 +92,6 @@ function Card({
 
 
 
-function PacMan() {
-  return (
-    <>
-      <style>{`
-        @keyframes pacman-bob {
-          0%, 100% { transform: translateY(0px); }
-          50%       { transform: translateY(-8px); }
-        }
-        .pacman-bob {
-          animation: pacman-bob 2s ease-in-out infinite;
-          display: inline-block;
-        }
-      `}</style>
-      <span className="pacman-bob ml-3 inline-block" aria-hidden="true">
-        <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50,50 L95,20 A45,45 0 1,0 95,80 Z" fill="#FACC15" />
-        </svg>
-      </span>
-    </>
-  )
-}
-
 // ─── Abstract Threads Layout ─────────────────────────────────────────────
 
 function AbstractThreads({ items }: { items: typeof THREADS }) {
@@ -149,12 +127,13 @@ export function About() {
             <h1 className="font-display text-5xl leading-[0.95] tracking-tight text-white md:text-7xl">
               Get to know me
             </h1>
+            <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/55">
+              Three countries, two colleges, one habit: building things until they work.
+            </p>
           </header>
-
-          {/* Coming soon placeholder */}
-          <div className="sync-glass-rect mt-16 flex aspect-square w-full max-w-[550px] items-center justify-center rounded-2xl border border-white/5 bg-white/[0.02] md:mt-24">
-            <span className="font-display text-2xl text-white/15 md:text-3xl">Coming soon</span>
-          </div>
+          {/* The square "Coming soon" box that sat here (a photo slot) was
+              removed 2026-10-29: no placeholders on the live site. Put a real
+              photo back here when Melvin supplies one. */}
         </div>
 
         {/* Right column — milestone cards */}
@@ -180,7 +159,6 @@ export function About() {
             <p className="text-[12px] uppercase tracking-[0.32em] text-white/35">The threads</p>
             <h2 className="mt-4 flex flex-wrap items-center font-display text-4xl leading-[1.05] text-white md:text-5xl">
               Get to know me even more
-              <PacMan />
             </h2>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/45">
               The through-lines that do not fit into a single year &mdash; the interests, disciplines,
@@ -191,19 +169,15 @@ export function About() {
           {/* Act II — the abstract non-linear threads */}
           <AbstractThreads items={THREADS} />
 
-          {/* Closing spacer */}
+          {/* Closing */}
           <div className="mt-40">
             <p className="font-display text-3xl text-white/25 md:text-4xl">The work continues.</p>
             <p className="mt-3 text-sm text-white/30">Building the next chapter.</p>
           </div>
         </div>
-
-        {/* Right column — Coming soon placeholder */}
-        <div className="w-full mt-16 md:mt-0 md:pl-8 flex items-center justify-center">
-          <div className="sync-glass-rect flex aspect-square w-full max-w-[550px] items-center justify-center rounded-2xl border border-white/5 bg-white/[0.02]">
-            <span className="font-display text-2xl text-white/15 md:text-3xl">Coming soon</span>
-          </div>
-        </div>
+        {/* The second "Coming soon" square (right column) was removed
+            2026-10-29. The grid keeps two columns so the threads stay in the
+            left half, against the video, as designed. */}
       </div>
     </div>
   )
