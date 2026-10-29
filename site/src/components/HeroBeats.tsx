@@ -68,13 +68,11 @@ const AREAS = [
  * also widens the content column, which costs the long intro paragraph a
  * wrapped line or two on its own. Measured on a simulated 390px phone: this
  * takes the Present box from ~31px of headroom to ~70px. */
-// `sync-glass-rect` is what hands this box to the REAL WebGL glass shader
-// (LiquidGlassField). Before 2026-08-12 the hero's panels were CSS-blur only
-// (.slide-glass) and the shader skipped the hero entirely, which is why the
-// glass never looked like glass here — see the note on .slide-glass in
-// index.css.
-const GLASS_BOX =
-  'slide-glass sync-glass-rect px-6 py-7 sm:px-8 sm:py-9 md:px-10 [text-shadow:0_1px_16px_rgba(0,0,0,0.55)]'
+// 2026-10-29: no glass in the hero any more (Melvin's call). `sync-glass-rect`
+// is gone from every hero element, so the WebGL glass shader skips this page,
+// and `.slide-glass` is now a plain transparent box (see index.css). The
+// text-shadow went with it: no shadows, no glow, anywhere.
+const GLASS_BOX = 'slide-glass px-6 py-7 sm:px-8 sm:py-9 md:px-10'
 
 /* The prose block inside Past and Future, as ONE shared class so the two
  * frames can't drift apart (Melvin, 2026-08-11: "this formatting needs to be
@@ -88,7 +86,7 @@ const GLASS_BOX =
  * that frame off screen. Desktop is untouched — everything below `sm:` only
  * applies under 640px. */
 const PROSE_STACK =
-  'mt-5 space-y-3.5 text-[12.5px] leading-[1.6] sm:mt-7 sm:space-y-5 sm:text-[14px] sm:leading-relaxed text-white/85'
+  'mt-5 space-y-3.5 text-[12.5px] leading-[1.6] sm:mt-7 sm:space-y-5 sm:text-[14px] sm:leading-relaxed text-sand/85'
 
 /* ---------------------------------------------------------------------------
  * Bottom frame indicator: dots only, no connecting line. Each jumps to a frame.
@@ -105,8 +103,8 @@ function FrameDots({ active }: { active: number }) {
           aria-current={i === active}
           className={`ease-out-expo block rounded-full transition-all duration-500 ${
             i === active
-              ? 'h-[9px] w-[9px] bg-white shadow-[0_0_10px_2px_rgba(255,255,255,0.4)]'
-              : 'h-[7px] w-[7px] bg-white/25 hover:bg-white/50'
+              ? 'h-[9px] w-[9px] bg-sand'
+              : 'h-[7px] w-[7px] bg-sand/25 hover:bg-sand/50'
           }`}
         />
       ))}
@@ -139,13 +137,13 @@ function IdentityFrame({ index }: { index: number }) {
         className="pointer-events-none absolute -inset-x-40 -inset-y-28"
         style={{
           background:
-            'radial-gradient(52% 50% at 50% 50%, rgba(6,7,13,0.62) 0%, rgba(6,7,13,0.3) 48%, transparent 74%)',
+            'radial-gradient(52% 50% at 50% 50%, rgba(15,16,18,0.62) 0%, rgba(15,16,18,0.3) 48%, transparent 74%)',
         }}
       />
 
       <div className="relative flex flex-col items-center">
-        {/* Tagline kicker, above the name. "Beyond" glows and links to Vision. */}
-        <p className="mb-6 font-display text-[clamp(1.05rem,2.4vw,1.5rem)] text-white/75 [text-shadow:0_1px_20px_rgba(0,0,0,0.6)]">
+        {/* Tagline kicker, above the name. "Beyond" links to Vision. */}
+        <p className="mb-6 font-display text-[clamp(1.05rem,2.4vw,1.5rem)] text-sand/75">
           Computer Science and{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
             Beyond
@@ -157,13 +155,12 @@ function IdentityFrame({ index }: { index: number }) {
             feels safe, not a "nice size". Tracking tightened to match (huge
             letters read as loose at the old -0.01em). */}
         <h1 className="inline-flex flex-col">
-          <span className="name-gold font-display text-[clamp(2.75rem,11vw,9rem)] leading-[0.95] tracking-[-0.02em]">
+          <span className="name-gold display-wide font-display text-[clamp(2.75rem,11vw,9rem)] leading-[0.95] font-bold tracking-[-0.02em]">
             Melvin Chirag
           </span>
           <span
             aria-label="Karupati"
-            className="mt-3 flex justify-between font-display text-[clamp(1.4rem,3.6vw,2.6rem)]"
-            style={{ color: 'rgba(255,220,174,0.6)' }}
+            className="mt-3 flex justify-between font-display text-[clamp(1.4rem,3.6vw,2.6rem)] text-sand-dim"
           >
             {surname.map((ch, i) => (
               <span key={i} aria-hidden>
@@ -173,7 +170,7 @@ function IdentityFrame({ index }: { index: number }) {
           </span>
         </h1>
 
-        <p className="mt-7 max-w-md text-[13.5px] leading-relaxed text-white/80 [text-shadow:0_1px_16px_rgba(0,0,0,0.6)]">
+        <p className="mt-7 max-w-md text-[13.5px] leading-relaxed text-sand/80">
           I'm exploring computer vision, intelligent systems, machine learning, and full stack
           products. I like building things where software meets the real world, connecting ideas
           across domains and turning curiosity into something that actually works.
@@ -183,14 +180,14 @@ function IdentityFrame({ index }: { index: number }) {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/work"
-            className="glass-cta sync-glass-rect rounded-full px-6 py-2.5 text-sm tracking-wide"
+            className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide"
           >
             Projects
           </Link>
           <button
             type="button"
             onClick={() => heroScrollTo('contact')}
-            className="glass-cta sync-glass-rect rounded-full px-6 py-2.5 text-sm tracking-wide"
+            className="glass-cta is-secondary rounded-full px-6 py-2.5 text-sm tracking-wide"
           >
             Contact
           </button>
@@ -198,7 +195,7 @@ function IdentityFrame({ index }: { index: number }) {
             href="/resume.pdf"
             target="_blank"
             rel="noopener noreferrer"
-            className="glass-cta sync-glass-rect rounded-full px-6 py-2.5 text-sm tracking-wide"
+            className="glass-cta is-secondary rounded-full px-6 py-2.5 text-sm tracking-wide"
           >
             Resume <span aria-hidden>↗</span>
           </a>

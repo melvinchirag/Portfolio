@@ -197,7 +197,7 @@ export function GlobalScene() {
   const showSwarm = useSwarmMounted()
 
   return (
-    <div className="fixed inset-0 z-0 bg-[#050609]">
+    <div className="fixed inset-0 z-0 bg-[#0f1012]">
       <Canvas
         camera={{ position: [0, 0, 1.5], fov: 50, near: 0.1, far: 1000 }}
         gl={{ antialias: true, alpha: false }}
@@ -205,7 +205,7 @@ export function GlobalScene() {
           gl.toneMapping = THREE.ACESFilmicToneMapping
         }}
       >
-        <color attach="background" args={['#050609']} />
+        <color attach="background" args={['#0f1012']} />
         <SceneContents isHome={isHome} isAbout={isAbout} aboutTex={aboutTex} showSwarm={showSwarm} />
       </Canvas>
     </div>

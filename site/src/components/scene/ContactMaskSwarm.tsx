@@ -598,7 +598,8 @@ export function ContactMaskSwarm() {
             uPositionTexture: { value: null },
             uVelocityTexture: { value: null },
             uParticleSize: { value: 0.65 },
-            uColor: { value: new THREE.Color('#80fff0') },
+            // Sand (2026-10-29), the site's one light colour. Was teal '#80fff0'.
+          uColor: { value: new THREE.Color('#d9c9a9') },
             uMinAlpha: { value: 0.05 },
             uMaxAlpha: { value: 0.8 },
             uFeatureFloor: { value: 0.34 },
@@ -643,7 +644,7 @@ export function ContactMaskSwarm() {
             uAtlas: { value: atlas.texture },
             uCols: { value: atlas.cols },
             uFade: { value: 0 },
-            uColor: { value: new THREE.Color('#b9fff2').multiplyScalar(1.7) },
+            uColor: { value: new THREE.Color('#f0e4cc').multiplyScalar(1.7) },
           },
           vertexShader: glyphVertex,
           fragmentShader: glyphFragment,

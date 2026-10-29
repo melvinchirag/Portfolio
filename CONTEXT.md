@@ -1,6 +1,53 @@
 # CONTEXT — Portfolio project handoff
 
-Last updated: 2026-07-31 · Owner: Melvin
+Last updated: 2026-10-29 · Owner: Melvin
+
+## ⚡ THE OCTOBER SPRINT (2026-10-29) — READ THIS FIRST, everything below is older
+Melvin restarted the site after a 2.5-month pause ("we are reaching the peak of
+recognition now with HTN, Spark, GDG"). His verdict on the August build: the mask
+is great, everything on top of it looks cheap ("my name looks cheap, the glass
+looks cheap, the teal and gold is a rookie choice"). He wants an award-level site
+and the concept that earns it is **computer vision in the browser** (the site
+sees the visitor). Pace: hourly blocks, not weeks. Each block ends with: shown
+running locally, logged here, committed.
+
+**Decisions made 2026-10-29 (from a four-way direction board he picked from):**
+- Direction **B "Graphite"** with the **Sand** tint. Ground `#0f1012`, light
+  `#d9c9a9`. One light colour for everything light: name, text, particles,
+  cursor. **No second colour. No glow anywhere. No glass in the hero.**
+- Type: **Archivo** (variable, width axis) for everything; **JetBrains Mono** for
+  labels. Both self-hosted via fontsource. General Sans + Inter are gone.
+- The mask stays ("the mask cannot go, bro"). It is recoloured to sand.
+- The name: idea 1 + idea 3 from the board combined, as one design: first name
+  set enormous, assembling out of particles on load, with one thin running
+  line of his real facts under it. (If he meant the camera-flashlight idea 2
+  by "name appearing", it joins the camera block.)
+- Camera layer is opt-in, on-device, and the site must be complete without it.
+
+**Block log**
+- ✅ Block 1: direction picked (board at claude.ai/artifact/MMPXeyA6MygFfMa6XMh2YK).
+- ✅ Block 2: the system. `index.css` tokens rewritten (graphite/sand, one font
+  family, `--color-white` remapped to sand so every legacy `text-white` is
+  correct until pages are rewritten), every text-shadow/glow removed, `.glass-cta`
+  is a solid sand button (+ `.is-secondary` outline), `.slide-glass` is a plain
+  box, `sync-glass-rect` removed from the hero, mask + contact swarm + scene
+  background recoloured. `tsc` and build clean. Fonts bundled, zero third-party
+  font requests.
+- ⏭ Block 3: hero rebuilt on the system (name treatment above, composition on
+  phone + laptop). Then 4 content, 5 motion, 6 Work gallery, 7 About/Vision/
+  Contact, 8 camera v1, 9 second mask, 10 ship. Full table in the Otto session
+  log; the short version is "foundations first, then the camera, then the
+  second mask".
+
+**Still owed by Melvin:** current résumé, Devpost/GitHub links (Lingo, EventOS,
+Manas), Vision text choice, Spidey (hide or two lines), contact email, domain
+name, the About "Coming soon" box (photo or remove).
+
+**Operational:** dev server must be started as `npx vite --port 5173
+--strictPort --host 127.0.0.1` from `site/`. `npm run dev -- --port` passes
+the number as Vite's ROOT and serves a 404 (bit us 2026-10-29). The old
+Vercel link on the GitHub repo (portfolio-iand-me) points at a Vercel login;
+the real site is melvinchirag.vercel.app.
 
 ## 🔀 PARALLEL WORK IN PROGRESS (2026-07-31) — read this, AGY
 Melvin is running **Claude on the HERO (Home) + all WebGL** and **AGY on the

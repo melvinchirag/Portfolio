@@ -633,7 +633,8 @@ export function MaskParticles() {
           uPositionTexture: { value: null },
           uVelocityTexture: { value: null },
           uParticleSize: { value: 1.7 },
-          uColor: { value: new THREE.Color('#80fff0') },
+          // Sand (2026-10-29), the site's one light colour. Was teal '#80fff0'.
+          uColor: { value: new THREE.Color('#d9c9a9') },
           uMinAlpha: { value: 0.04 },
           uMaxAlpha: { value: 0.85 },
           // Shared with the glyph layer so a dot converts into its glyph in sync.
@@ -695,7 +696,7 @@ export function MaskParticles() {
           // shared Bloom intensity (which would also brighten the base dot layer,
           // not just the glyphs Melvin asked about). Same hue, 1.7x intensity
           // (1.5→1.7, 2026-08-01: "a bit more prominent").
-          uColor: { value: new THREE.Color('#b9fff2').multiplyScalar(1.7) },
+          uColor: { value: new THREE.Color('#f0e4cc').multiplyScalar(1.7) },
         },
         vertexShader: glyphVertex,
         fragmentShader: glyphFragment,

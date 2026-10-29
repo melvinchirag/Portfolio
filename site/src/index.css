@@ -10,27 +10,21 @@
  *   4. Defines the handful of custom classes Tailwind can't express: liquid
  *      glass, the progressive blur edge, text reveals, and the custom cursor.
  *
- * PALETTE — "warm film", chosen 2026-07-24
- * Amber / gold / bronze on a warm near-black. Replaced an earlier blue-violet
- * placeholder that read as generic. This palette leans into the "cinematic
- * film" third of the planned triptych portrait, and no other CS student
- * portfolio looks like it. See docs/references.md.
+ * PALETTE — "Graphite + Sand", chosen by Melvin 2026-10-29 from a four-way
+ * direction board. Replaces the amber/gold "warm film" palette (2026-07-24),
+ * which he called "a rookie choice" once the teal mask sat next to it.
+ * One neutral dark ground, one warm light (sand) for everything that is light:
+ * the name, the reading text, AND the particles. No second colour. No glow
+ * anywhere: light comes from the WebGL scene, never from a text-shadow.
  * ========================================================================= */
 
-/* Load our two typefaces before anything else, so text never renders in a
- * fallback font first. General Sans is the display face (the name, headings);
- * Inter is the body face. `display=swap` shows fallback text immediately
- * rather than leaving a blank space while fonts download.
- *
- * General Sans is from Fontshare (Indian Type Foundry), free for commercial
- * use. Chosen 2026-08-09 after Melvin reviewed two references (eladiodieste.com,
- * cyrillic.digital) and picked the Dieste lane: a rounded, humanist, NOT
- * geometric-cold grotesk, run at real display scale rather than a "nice size".
- * Dieste itself uses a bespoke licensed typeface we cannot legally reproduce;
- * General Sans is the closest freely licensable match to that character
- * (rounded terminals, humanist proportions, warm rather than clinical). */
-@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+/* Typefaces, SELF-HOSTED (fontsource packages in node_modules), so the name no
+ * longer flashes in from a fallback while a third-party font server answers.
+ *   Archivo (variable: weight 100-900, width 62-125). One family for the whole
+ *   site: its widest cut for the name, its narrowest for small text.
+ *   JetBrains Mono (variable) for labels, readouts and numbers. */
+@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource-variable/jetbrains-mono';
 /* Pull in the whole Tailwind CSS framework. This one line is what makes utility
  * classes like `flex`, `px-6`, and `text-white/40` work in our components. */
 @import 'tailwindcss';
@@ -39,40 +33,42 @@
  * declared here becomes BOTH a normal CSS variable AND a Tailwind utility —
  * `--color-ember` automatically enables classes like `text-ember`. */
 @theme {
-  /* The display typeface, used for large headings like the hero name.
-     General Sans, Melvin's pick 2026-08-09 (see the @import note above for
-     why). Falls back to Inter, not a serif, if it fails to load, since the
-     two read as the same family visually and neither surprises the layout. */
-  --font-display: 'General Sans', 'Inter', system-ui, sans-serif;
-  /* The body typeface, used for everything else. The fallbacks after it apply
-   * only if Inter fails to load. */
-  --font-sans: 'Inter', system-ui, sans-serif;
+  /* One family for display AND body (Archivo, variable width). The two tokens
+   * stay separate so a component can still say "display" and get the wide cut
+   * via `.display-wide` below, but there is no second typeface to drift. */
+  --font-display: 'Archivo Variable', 'Archivo', Arial, sans-serif;
+  --font-sans: 'Archivo Variable', 'Archivo', Arial, sans-serif;
+  /* Labels, readouts, numbers. */
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
 
-  /* The page background. Deliberately NOT pure black (#000) — a warm near-black
-   * has depth and stops the amber particles looking like they float on a void. */
-  --color-void: #080604;
-  /* A slightly lighter warm black, for surfaces that need to sit above the base. */
-  --color-deep: #120d08;
-  /* Deep bronze — the coolest, dimmest end of the particle colour range. */
-  --color-bronze: #6b3f1d;
-  /* Mid amber — the bulk of the warm palette, used for most accents. */
-  --color-amber: #c87a2e;
-  /* Hot gold — the brightest highlight. Used rarely, on purpose. */
-  --color-gold: #f0b356;
+  /* THE GROUND. Graphite, not black: a cool near-black with enough lift that
+   * sand particles read as dust in air rather than pixels on a void. */
+  --color-void: #0f1012;
+  /* One step up, for surfaces that must sit above the ground (cards, menus). */
+  --color-deep: #141518;
+  /* Hairlines and dividers. */
+  --color-line: #26272c;
 
-  /* ------------------------------------------------------------------------
-   * THE SITE ACCENT (mid amber). Chosen by Melvin 2026-08-07.
-   * ------------------------------------------------------------------------
-   * One warm, used for everything "important" across the WHOLE site: his name
-   * (nav + hero), section titles, primary actions, and hover/focus states.
-   * Before this, four different warms had drifted apart (#ffdcae on the name and
-   * Beyond, #f3c67f on the frame titles, #f0b356 in this token, plus assorted
-   * inline values) and nothing had chosen them together, so the site read as
-   * having no identity. Everything accent-coloured must reference THIS token.
-   * Declaring it in @theme also gives us the Tailwind utilities text-accent,
-   * border-accent and so on.
-   * --------------------------------------------------------------------- */
-  --color-accent: #f3c67f;
+  /* THE LIGHT. Sand, chosen 2026-10-29 from four tints (bone / sand / stone /
+   * clay). Everything that is light on this site is sand: the name, headings,
+   * reading text (at reduced opacity), the particles, the cursor. */
+  --color-sand: #d9c9a9;
+  /* Dimmer sand for secondary text and inactive controls. */
+  --color-sand-dim: #a79a7f;
+  /* Deepest sand, for borders that should read warm rather than grey. */
+  --color-sand-deep: #5f584b;
+
+  /* `accent` is kept as a NAME because `text-accent` / `border-accent` are
+   * used across every page. It now points at sand: there is no separate
+   * accent colour any more, on purpose (one light, used everywhere, no glow). */
+  --color-accent: #d9c9a9;
+
+  /* THERE IS NO WHITE ON THIS SITE. Every `text-white`, `bg-white/5`,
+   * `border-white/10` across the pages now resolves to sand, because pure
+   * white next to sand reads as two unrelated lights. Remapping the token is
+   * the one-line, whole-site version of that rule; the pages get rewritten on
+   * the new system page by page, but nothing can look wrong in the meantime. */
+  --color-white: #d9c9a9;
 
   /* ------------------------------------------------------------------------
    * THE SITE'S ONE EASING CURVE. Fast at first, then a long gentle settle —
@@ -121,7 +117,26 @@ html {
   /* Set the background here as well as on <body> so that "overscroll" areas —
    * the rubber-band space when you scroll past the end — are also dark, rather
    * than flashing white. */
-  background: #080604;
+  background: #0f1012;
+}
+
+/* Archivo's width axis is what makes one family do two jobs. The name and big
+ * headings run WIDE (125); small labels run NARROW (62) so they sit quietly.
+ * Everything else is the default width (100). */
+.display-wide {
+  font-variation-settings: 'wdth' 125;
+}
+.display-narrow {
+  font-variation-settings: 'wdth' 62;
+}
+/* Labels: mono, small, tracked, uppercase. One rule so every label on the site
+ * is the same label. */
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-sand-dim);
 }
 
 /* Style the <body> element, which wraps all visible content. */
@@ -133,15 +148,15 @@ body {
    * the page a few pixels wider and create an ugly horizontal scrollbar. */
   overflow-x: hidden;
   /* The base page background, matching <html> above. */
-  background: #080604;
-  /* Default text colour: a warm off-white rather than pure white, so it sits
-   * comfortably in the warm palette instead of looking clinical. */
-  color: #f2e9dd;
+  background: #0f1012;
+  /* Default text colour: sand. Reading text is dimmed per element, never
+   * recoloured. */
+  color: #d9c9a9;
   /* Default typeface for all text, unless a component overrides it. */
-  font-family: 'Inter', system-ui, sans-serif;
-  /* Light weight (300) as the default. Thin type reads as more refined at large
-   * sizes, and we bump specific elements heavier where they need emphasis. */
-  font-weight: 300;
+  font-family: var(--font-sans);
+  /* Regular weight. The old 300 read as uncommitted on a dark ground; Archivo
+   * at 400 is the quiet default and headings go heavier. */
+  font-weight: 400;
   /* Renders text with smoother edges on WebKit browsers. Makes light-weight
    * type on dark backgrounds look noticeably less chunky. */
   -webkit-font-smoothing: antialiased;
@@ -159,32 +174,27 @@ body {
   overflow: hidden;
 }
 
-/* The hero name "Melvin Chirag", in the site accent, with a soft glow plus a
- * dark legibility shadow so it holds up over the mask. */
+/* The hero name. Sand, wide Archivo, NO glow and no shadow: the 2026-10-29
+ * review found the glow was the single biggest "cheap" tell on the site. */
 .name-gold {
-  color: var(--color-accent);
-  text-shadow:
-    0 2px 22px rgba(0, 0, 0, 0.55),
-    0 0 36px rgba(243, 198, 127, 0.32);
+  color: var(--color-sand);
 }
 
-/* The social icon buttons. Neutral at rest so the row stays quiet, then the
- * accent plus a warm halo on hover/focus. Focus is included deliberately: a
- * keyboard user must get the same signal a mouse user does. */
+/* The social icon buttons. Dim at rest, full sand on hover/focus, border
+ * sharpens. No halo. Focus is included deliberately: a keyboard user must get
+ * the same signal a mouse user does. */
 .social-btn {
-  color: rgba(255, 255, 255, 0.55);
-  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-sand-dim);
+  border-color: var(--color-line);
   transition:
     color 300ms var(--ease-out-expo),
-    border-color 300ms var(--ease-out-expo),
-    box-shadow 300ms var(--ease-out-expo);
+    border-color 300ms var(--ease-out-expo);
 }
 
 .social-btn:hover,
 .social-btn:focus-visible {
-  color: var(--color-accent);
-  border-color: rgba(243, 198, 127, 0.5);
-  box-shadow: 0 0 20px -3px rgba(243, 198, 127, 0.45);
+  color: var(--color-sand);
+  border-color: var(--color-sand-dim);
   outline: none;
 }
 
@@ -297,10 +307,11 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.55em;
-  color: var(--color-accent);
+  color: var(--color-sand);
   opacity: 0.82;
-  font-size: 12.5px;
-  letter-spacing: 0.015em;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
   white-space: nowrap;
 }
 
@@ -309,8 +320,7 @@ body {
   height: 4px;
   flex: none;
   border-radius: 999px;
-  background: var(--color-accent);
-  box-shadow: 0 0 6px 1px rgba(243, 198, 127, 0.55);
+  background: var(--color-sand);
 }
 
 /* Present's project cards are a third the width of Future's box, so the same
@@ -330,7 +340,6 @@ body {
 .tag-thread-compact .tag-thread-dot {
   width: 3px;
   height: 3px;
-  box-shadow: 0 0 4px 1px rgba(243, 198, 127, 0.5);
 }
 
 /* ---------------------------------------------------------------------------
@@ -367,13 +376,18 @@ body {
  *   - Keep the fill nearly clear. Anything opaque sits ON TOP of the shader's
  *     output and mutes it. The small tint that remains is a safety net for
  *     no-WebGL browsers, where it plus the text-shadow keeps copy readable. */
+/* 2026-10-29: GLASS IS GONE FROM THE HERO (Melvin: "the glass thing probably
+ * should not even be there in the hero page"). Over a near-black ground there
+ * is nothing for glass to refract, so it only ever read as a grey rectangle.
+ * This class is now a plain, unbordered content box: no fill, no blur, no
+ * shadow. It keeps its name and radius so HeroBeats' layout is untouched. The
+ * `.sync-glass-rect` hook was removed from the hero in HeroBeats.tsx, so the
+ * WebGL shader no longer draws here either. */
 .slide-glass {
   position: relative;
-  border-radius: 26px;
-  background: rgba(10, 11, 16, 0.1);
+  border-radius: 0;
+  background: transparent;
   --glass-frost: none;
-  /* Ambient contact shadow only — the rim/highlight now come from the shader. */
-  box-shadow: 0 24px 60px -34px rgba(0, 0, 0, 0.85);
   overflow: hidden;
 }
 
@@ -459,11 +473,11 @@ body {
   justify-content: center;
   border-radius: 999px;
   transform: translateY(-50%);
-  background: rgba(6, 7, 13, 0.6);
-  color: var(--color-accent);
+  background: var(--color-void);
+  color: var(--color-sand);
   font-size: 18px;
   line-height: 1;
-  box-shadow: inset 0 0 0 1px rgba(243, 198, 127, 0.35);
+  box-shadow: inset 0 0 0 1px var(--color-sand-deep);
   transition:
     background-color 300ms var(--ease-out-expo),
     box-shadow 300ms var(--ease-out-expo);
@@ -471,8 +485,8 @@ body {
 
 .project-rail-arrow:hover:not(:disabled),
 .project-rail-arrow:focus-visible {
-  background: rgba(243, 198, 127, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(243, 198, 127, 0.6);
+  background: var(--color-deep);
+  box-shadow: inset 0 0 0 1px var(--color-sand-dim);
   outline: none;
 }
 
@@ -482,7 +496,6 @@ body {
 .project-rail-arrow:disabled {
   opacity: 0.25;
   cursor: default;
-  box-shadow: inset 0 0 0 1px rgba(243, 198, 127, 0.18);
 }
 
 .project-rail-arrow-left {
@@ -525,10 +538,10 @@ body {
  * ------------------------------------------------------------------------ */
 .field {
   width: 100%;
-  border-radius: 12px;
+  border-radius: 4px;
   background-color: rgba(255, 255, 255, 0.025);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  color: #f2e9dd;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  color: var(--color-sand);
   color-scheme: dark;
   font: inherit;
   padding: 0.8rem 1rem;
@@ -538,7 +551,7 @@ body {
 }
 
 .field::placeholder {
-  color: rgba(242, 233, 221, 0.3);
+  color: var(--color-sand-deep);
 }
 
 .field:hover {
@@ -551,7 +564,7 @@ body {
 .field:focus {
   outline: none;
   background-color: rgba(255, 255, 255, 0.055);
-  box-shadow: inset 0 0 0 1px rgba(243, 198, 127, 0.55);
+  box-shadow: inset 0 0 0 1px var(--color-sand-dim);
 }
 
 /* Native select arrows are unstyleable and look like an OS widget dropped onto
@@ -560,7 +573,7 @@ body {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 2.5rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23f2e9dd' stroke-opacity='.5' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23d9c9a9' stroke-opacity='.6' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 1rem center;
 }
@@ -574,18 +587,16 @@ body {
  * normal element would, so a low-alpha value here would just look grey/wrong,
  * not "glass over the page". */
 .field-select option {
-  background-color: #120d08;
-  color: #f2e9dd;
+  background-color: #141518;
+  color: #d9c9a9;
 }
 
-/* The big frame titles — "The Past", "The Present", "The Future" — in warm amber
- * gold so each slide has a strong warm anchor, with a legibility shadow + a faint
- * glow. Distinct from .name-gold (which is the brighter hero-name tone). */
+/* The big frame titles — "The Past", "The Present", "The Future". Sand, wide,
+ * no shadow, no glow. */
 .frame-title {
-  color: var(--color-accent);
-  text-shadow:
-    0 2px 20px rgba(0, 0, 0, 0.5),
-    0 0 30px rgba(243, 198, 127, 0.22);
+  color: var(--color-sand);
+  font-variation-settings: 'wdth' 125;
+  font-weight: 700;
 }
 
 /* ---------------------------------------------------------------------------
@@ -705,31 +716,39 @@ body {
  * not a lens to see through), and the hover state is a fill/border shift, not
  * a diffuse halo. Weight bumped off the body's default 300 (thin reads as
  * uncommitted on something you're meant to press). */
+/* 2026-10-29: now a SOLID sand button with graphite text. The translucent
+ * tinted pill was the last "glassmorphism" object on the hero. A solid fill is
+ * what a confident primary action looks like; the secondary variant below is
+ * an outline. No blur, no shadow, no glow. */
 .glass-cta {
-  /* Positioning context for the ::before rim below. */
   position: relative;
-  color: var(--color-accent);
+  color: var(--color-void);
   font-weight: 500;
-  background: rgba(243, 198, 127, 0.12);
-  box-shadow:
-    0 0 0 1px rgba(243, 198, 127, 0.38) inset,
-    0 4px 18px -6px rgba(0, 0, 0, 0.55);
-  /* Animate hover changes on our standard easing curve. */
+  background: var(--color-sand);
+  --glass-frost: none;
   transition:
-    background 400ms var(--ease-out-expo),
-    box-shadow 400ms var(--ease-out-expo);
+    background 300ms var(--ease-out-expo),
+    color 300ms var(--ease-out-expo),
+    box-shadow 300ms var(--ease-out-expo);
 }
 
-/* On hover/focus the fill deepens and the rim sharpens — a direct, immediate
- * state change. No lift or scale (nothing on this site bounces) and no glow
- * halo (that was the cliché). */
 .glass-cta:hover,
 .glass-cta:focus-visible {
-  background: rgba(243, 198, 127, 0.2);
-  box-shadow:
-    0 0 0 1px rgba(243, 198, 127, 0.68) inset,
-    0 6px 22px -6px rgba(0, 0, 0, 0.6);
+  background: #ece0c6;
   outline: none;
+}
+
+/* Secondary action: outline only. Same shape, same type, quieter. */
+.glass-cta.is-secondary {
+  background: transparent;
+  color: var(--color-sand);
+  box-shadow: inset 0 0 0 1px var(--color-sand-deep);
+}
+
+.glass-cta.is-secondary:hover,
+.glass-cta.is-secondary:focus-visible {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-sand);
 }
 
 /* The interactive word "Beyond" in the hero tagline "Computer Science and
@@ -741,20 +760,14 @@ body {
  * link; the effects are pure decoration on top. */
 .beyond-link {
   position: relative;
-  color: var(--color-accent);
-  font-style: italic; /* Times New Roman italic gives it a display flourish */
-  text-shadow: 0 0 16px rgba(243, 198, 127, 0.35);
-  transition:
-    color 400ms var(--ease-out-expo),
-    text-shadow 400ms var(--ease-out-expo);
-  animation: beyond-glow 4.5s ease-in-out infinite;
+  color: var(--color-sand);
+  transition: color 400ms var(--ease-out-expo);
 }
 .beyond-link:hover,
 .beyond-link:focus-visible {
-  color: #fff0dc;
-  text-shadow: 0 0 26px rgba(255, 200, 150, 0.7);
+  color: #f0e6d2;
 }
-/* The underline is a centred light-sweep that scales in — not a static rule. */
+/* A plain one-pixel underline that draws in from the left on hover. */
 .beyond-link::after {
   content: '';
   position: absolute;
@@ -762,9 +775,9 @@ body {
   right: 0;
   bottom: -0.1em;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 214, 165, 0.9), transparent);
+  background: currentColor;
   transform: scaleX(0);
-  transform-origin: center;
+  transform-origin: left;
   transition: transform 500ms var(--ease-out-expo);
 }
 .beyond-link:hover::after,
@@ -772,21 +785,7 @@ body {
   transform: scaleX(1);
 }
 
-@keyframes beyond-glow {
-  0%,
-  100% {
-    text-shadow: 0 0 14px rgba(255, 190, 130, 0.3);
-  }
-  50% {
-    text-shadow: 0 0 24px rgba(255, 190, 130, 0.6);
-  }
-}
-
-/* Respect reduced-motion: keep the look, drop the ambient pulse + sweep. */
 @media (prefers-reduced-motion: reduce) {
-  .beyond-link {
-    animation: none;
-  }
   .beyond-link::after {
     transition: none;
   }
@@ -813,7 +812,7 @@ body {
   display: block;
   width: 1px;
   height: 34px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), transparent);
+  background: linear-gradient(to bottom, rgba(217, 201, 169, 0.6), transparent);
   transform-origin: top;
   animation: cue-drift 2.4s var(--ease-out-expo) infinite;
 }
@@ -849,10 +848,8 @@ body {
   margin: -3.5px 0 0 -3.5px;
   /* A very large radius makes any element a perfect circle. */
   border-radius: 9999px;
-  /* Warm white core, matching the palette. */
-  background: rgba(255, 244, 230, 0.92);
-  /* An amber halo so the dot reads as a light source, not a sticker. */
-  box-shadow: 0 0 14px 3px rgba(240, 179, 86, 0.5);
+  /* Sand, like every other light thing on the site. No halo. */
+  background: rgba(217, 201, 169, 0.95);
   /* Never intercept clicks — it sits over every interactive element. */
   pointer-events: none;
   /* Starts hidden; JS reveals it on first pointer movement so it doesn't
