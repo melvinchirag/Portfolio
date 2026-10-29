@@ -28,7 +28,7 @@
  * state (`useHeroFrame`) only swaps which frame is interactive.
  * ========================================================================= */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { BEAT_COUNT, heroScroll, useHeroFrame } from '../hooks/heroScroll'
 import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
@@ -36,6 +36,11 @@ import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
 import { NameAssembly, SOLIDIFY_SECS } from './NameAssembly'
 import { TagThread } from './TagThread'
+
+/** Inline `--k` for a `.frame-item`: how late (0..0.3) it arrives after the
+ *  frame's title as the frame pans to centre. See the motion system in
+ *  index.css; `--fin` itself is written per frame by the pan loop below. */
+const FI = (k: number) => ({ '--k': k }) as CSSProperties
 
 const FRAMES = [
   { id: 'identity', label: 'Identity' },
@@ -165,7 +170,10 @@ function IdentityFrame({ index }: { index: number }) {
 
       {/* Top meta row: who/where on the left, the three links recruiters want
           on the right. Sits under the nav, in the nav's own gutter. */}
-      <div className="absolute inset-x-6 top-[11vh] flex items-center justify-between gap-6 md:left-10 md:right-[100px] lg:left-14 lg:right-[110px]">
+      <div
+        className="frame-item absolute inset-x-6 top-[11vh] flex items-center justify-between gap-6 md:left-10 md:right-[100px] lg:left-14 lg:right-[110px]"
+        style={FI(0.1)}
+      >
         <span className="label hidden sm:inline">Computer science · Eastern Michigan University</span>
         <div className={linkRow}>
           <a href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
@@ -186,7 +194,7 @@ function IdentityFrame({ index }: { index: number }) {
       </div>
 
       {/* The name block: right half on laptops, full width on phones. */}
-      <div className="relative col-span-12 md:col-span-7 md:col-start-6">
+      <div className="frame-item relative col-span-12 md:col-span-7 md:col-start-6" style={FI(0)}>
         <h1 className="flex flex-col">
           <span
             ref={firstNameRef}
@@ -231,7 +239,8 @@ function IdentityFrame({ index }: { index: number }) {
           frame, not of the text block. Duplicated once for a seamless loop. */}
       <div
         aria-label="Roles and milestones"
-        className="ticker absolute inset-x-6 bottom-[5.5vh] md:left-10 md:right-[100px] lg:left-14 lg:right-[110px]"
+        className="ticker frame-item absolute inset-x-6 bottom-[5.5vh] md:left-10 md:right-[100px] lg:left-14 lg:right-[110px]"
+        style={FI(0.1)}
       >
         <div className="ticker-track">
           {[0, 1].map((copy) => (
@@ -255,10 +264,13 @@ function IdentityFrame({ index }: { index: number }) {
 function PastFrame({ index }: { index: number }) {
   return (
       <div data-pan={index} className={`${GLASS_BOX} w-[min(88vw,600px)]`}>
-        <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
+        <h2
+          className="frame-title frame-item font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]"
+          style={FI(0)}
+        >
           The Past
         </h2>
-        <div className={PROSE_STACK}>
+        <div className={`${PROSE_STACK} frame-item`} style={FI(0.12)}>
           <p>
             Born in Hyderabad and raised in Kuwait, I later continued my education in India before
             moving to Michigan for computer science.
@@ -275,9 +287,13 @@ function PastFrame({ index }: { index: number }) {
         </div>
         <Link
           to="/about"
-          className="ease-out-expo text-accent/85 hover:text-accent mt-7 inline-block text-[13px] tracking-wide transition-colors duration-300"
+          className="arrow-link frame-item mt-7 inline-block text-[13px] tracking-wide"
+          style={FI(0.24)}
         >
-          Read the full story <span aria-hidden>→</span>
+          Read the full story{' '}
+          <span className="arrow" aria-hidden>
+            →
+          </span>
         </Link>
       </div>
   )
@@ -573,7 +589,10 @@ function PresentFrame({ index }: { index: number }) {
   // against the rail alone, which sat them low and over the cards.
   return (
       <div data-pan={index} className={`${GLASS_BOX} relative w-[min(94vw,1060px)]`}>
-        <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
+        <h2
+          className="frame-title frame-item font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]"
+          style={FI(0)}
+        >
           The Present
         </h2>
         {/* Full glass-box width, NOT max-w-xl (Melvin, 2026-08-11: "make it
@@ -582,7 +601,10 @@ function PresentFrame({ index }: { index: number }) {
             cards up"). The narrow measure was costing a wrapped line or two
             of pure height in a frame that has none to spare — widening it is
             the cheapest vertical space on this slide. */}
-        <p className="mt-4 text-[12px] leading-[1.6] sm:text-[13px] sm:leading-relaxed text-white/85">
+        <p
+          className="frame-item mt-4 text-[12px] leading-[1.6] text-white/85 sm:text-[13px] sm:leading-relaxed"
+          style={FI(0.12)}
+        >
           I am currently exploring topics in computer science like computer vision, V-JEPA, neural
           architecture, PaLM-E models, and much more. My vision is to ensure that AI interacts with
           real-world information, which may ultimately lead us to the genesis of AGI. I love merging AI
@@ -590,7 +612,9 @@ function PresentFrame({ index }: { index: number }) {
           potential for domain expansion.
         </p>
 
-        <ProjectRail />
+        <div className="frame-item" style={FI(0.24)}>
+          <ProjectRail />
+        </div>
       </div>
   )
 }
@@ -601,10 +625,13 @@ function PresentFrame({ index }: { index: number }) {
 function FutureFrame({ index }: { index: number }) {
   return (
       <div data-pan={index} className={`${GLASS_BOX} w-[min(90vw,680px)]`}>
-        <h2 className="frame-title font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]">
+        <h2
+          className="frame-title frame-item font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]"
+          style={FI(0)}
+        >
           The Future
         </h2>
-        <div className={PROSE_STACK}>
+        <div className={`${PROSE_STACK} frame-item`} style={FI(0.12)}>
           <p>
             I want to build intelligent systems that move past the screen, systems that can perceive
             the world, reason about it, and act within it.
@@ -626,10 +653,10 @@ function FutureFrame({ index }: { index: number }) {
             most templated element on any portfolio). Same accent-thread
             treatment as the Present cards' stack, so both slides carry ONE
             considered version of "a short word list", not two designs. */}
-        <p className="mt-7 text-[10px] tracking-[0.3em] text-white/45 uppercase">
-          Areas I'm exploring
-        </p>
-        <TagThread items={AREAS} />
+        <div className="frame-item" style={FI(0.24)}>
+          <p className="label mt-7">Areas I'm exploring</p>
+          <TagThread items={AREAS} />
+        </div>
       </div>
   )
 }
@@ -654,12 +681,22 @@ export function HeroBeats() {
     if (!root) return
     const panes = Array.from(root.querySelectorAll<HTMLElement>('[data-pan]'))
     const LAST = BEAT_COUNT - 1
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let raf = 0
     const tick = () => {
       const step = root.clientWidth || window.innerWidth
-      const x = heroScroll.progress * LAST * step
+      const centre = heroScroll.progress * LAST
+      const x = centre * step
       for (const el of panes) {
-        el.style.transform = `translate3d(${Number(el.dataset.pan) * step - x}px,0,0)`
+        const k = Number(el.dataset.pan)
+        el.style.transform = `translate3d(${k * step - x}px,0,0)`
+        // `--fin`: 1 when this frame is centred, 0 once it is ~60% of a frame
+        // away. The `.frame-item` children fade and lift off it (index.css),
+        // so a frame's content arrives as it slides in and leaves as it
+        // slides out, scrubbed by scroll rather than timed. Reduced motion
+        // keeps everything at full opacity; the pan itself still runs.
+        const d = Math.abs(k - centre)
+        el.style.setProperty('--fin', reduced ? '1' : Math.max(0, 1 - d * 1.65).toFixed(3))
       }
       raf = requestAnimationFrame(tick)
     }

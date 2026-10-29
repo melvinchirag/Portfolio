@@ -10,6 +10,7 @@
  * ========================================================================= */
 
 import { Collapsible } from '../Collapsible'
+import { PlusMinus } from '../PlusMinus'
 import type { Skill } from '../../data/skills'
 
 export function SkillDisclosure({ skill }: { skill: Skill }) {
@@ -22,10 +23,7 @@ export function SkillDisclosure({ skill }: { skill: Skill }) {
   if (!hasWriteup && !hasRepos) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.015] px-4 py-2.5 text-sm text-white/70">
-        <span
-          aria-hidden
-          className="h-1 w-1 rounded-full bg-accent shadow-[0_0_6px_1px_rgba(243,198,127,0.55)]"
-        />
+        <span aria-hidden className="h-1 w-1 rounded-full bg-sand" />
         {skill.name}
       </div>
     )
@@ -41,14 +39,11 @@ export function SkillDisclosure({ skill }: { skill: Skill }) {
           <span className="flex items-center gap-2 text-sm text-white/80">
             {/* Same glowing dot as TagThread, so a skill reads as part of the
                 site's one tag motif. */}
-            <span
-              aria-hidden
-              className="h-1 w-1 rounded-full bg-accent shadow-[0_0_6px_1px_rgba(243,198,127,0.55)]"
-            />
+            <span aria-hidden className="h-1 w-1 rounded-full bg-sand" />
             {skill.name}
           </span>
-          <span className="text-sm leading-none text-accent transition-colors group-hover:text-white">
-            {open ? '−' : '+'}
+          <span className="ease-out-expo flex text-sand-dim transition-colors duration-300 group-hover:text-sand">
+            <PlusMinus open={open} />
           </span>
         </>
       )}
@@ -72,9 +67,12 @@ export function SkillDisclosure({ skill }: { skill: Skill }) {
                 href={r.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="border-b border-white/15 pb-0.5 text-xs text-white/60 transition-colors hover:border-accent hover:text-white"
+                className="arrow-link text-xs"
               >
-                {r.label} &rarr;
+                {r.label}{' '}
+                <span className="arrow" aria-hidden>
+                  →
+                </span>
               </a>
             ) : (
               <span

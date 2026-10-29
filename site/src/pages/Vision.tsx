@@ -15,6 +15,7 @@
 
 import { useEffect } from 'react'
 import { TagThread } from '../components/TagThread'
+import { Reveal } from '../components/Reveal'
 
 const AREAS = [
   'Applied AI',
@@ -36,20 +37,20 @@ export function Vision() {
 
   return (
     <div className="relative z-10 mx-auto max-w-3xl px-6 pt-32 pb-32 md:px-10">
-      <header className="mb-16">
+      <Reveal as="header" className="mb-16">
         <p className="label">The future</p>
         <h1 className="display-wide mt-4 font-display text-5xl leading-[0.95] font-bold tracking-tight text-white md:text-7xl">
           Vision
         </h1>
-      </header>
+      </Reveal>
 
       <section className="flex flex-col gap-10">
-        <p className="text-xl leading-relaxed text-white/90 md:text-2xl">
+        <Reveal as="p" delay={80} className="text-xl leading-relaxed text-white/90 md:text-2xl">
           I want to build intelligent systems that move past the screen: systems that can perceive
           the world, reason about it, and act within it.
-        </p>
+        </Reveal>
 
-        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-white/65">
+        <Reveal delay={160} className="flex flex-col gap-5 text-[15px] leading-relaxed text-white/65">
           <p>
             Right now that means computer vision, applied machine learning, world models, and
             systems that connect vision, language and action. Osiris is the current expression of
@@ -66,12 +67,12 @@ export function Vision() {
             are genuinely useful and reliable, and build systems that make hard technology feel
             more capable, more open, and more human.
           </p>
-        </div>
+        </Reveal>
 
-        <div>
+        <Reveal delay={240}>
           <p className="label mb-3">Areas I’m exploring</p>
           <TagThread items={AREAS} />
-        </div>
+        </Reveal>
       </section>
     </div>
   )

@@ -106,7 +106,7 @@ export function ProjectSearch({
       />
 
       {showDropdown && (
-        <div className="absolute z-20 mt-2 max-h-[60vh] w-full overflow-y-auto rounded-xl border border-white/10 bg-[#0d0a07] p-2 shadow-2xl shadow-black/60">
+        <div className="absolute z-20 mt-2 max-h-[60vh] w-full overflow-y-auto rounded-xl border border-white/10 bg-deep p-2 shadow-2xl shadow-black/60">
           <div className="px-3 py-2 text-[11px] tracking-wider text-white/40 uppercase">
             {total} {total === 1 ? 'result' : 'results'}
           </div>

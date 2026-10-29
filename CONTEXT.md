@@ -66,9 +66,39 @@ running locally, logged here, committed.
   (no og:image yet; make one in the ship block from the final hero).
   Defaults taken: contact email stays melvinchirag@gmail.com; résumé PDF
   unchanged (Melvin to send the current one).
-- ⏭ Block 5 motion, 6 Work gallery, 7 About/Vision/Contact scenes,
-  8 camera v1, 9 second mask, 10 ship. "Foundations first, then the camera,
-  then the second mask."
+- ✅ Block 5: motion. One language everywhere: a short fade plus a small
+  rise on the site's one easing curve, nothing bounces or slides sideways.
+  Pieces (all in `index.css` under MOTION SYSTEM, each with its own file):
+  · `PageTransition.tsx`: routes render against a location that lags the
+    real one by a 220ms fade-out, then the new page fades in over 650ms.
+    OPACITY ONLY on that wrapper: a transform there would turn the fixed
+    clock rail into a child of the page. Footer moved inside it so it fades
+    with its page.
+  · `Reveal.tsx` (`.reveal`): arrive-on-scroll for cards, headers,
+    paragraphs, sections; one shared IntersectionObserver, one-shot per
+    element, `delay` staggers siblings. Applied on Work, About, Vision,
+    Contact, 404 and the footer.
+  · Hero frames (`.frame-item`, `--fin`): the pan loop in HeroBeats writes
+    how centred each frame is; a frame's title, prose and links fade and
+    lift off that value with a per-item lag (`FI(k)`). Scrubbed by scroll,
+    never timed, so it can't desync from the pan.
+  · Nav: mono `.label` links with a hairline that draws in on hover and
+    stays on the current page; graphite tint + hairline once scrolled (no
+    blur); mobile menu links rise in one after another.
+  · `PlusMinus.tsx`: every disclosure's +/− is now a drawn plus whose
+    vertical bar rotates away (was a character swap). `.arrow-link`: arrows
+    nudge right on hover (project links, skill repos, "Read the full story").
+  · `Cursor.tsx`: sand dot on the pointer + a hairline ring that trails it
+    and opens over anything clickable. Fine pointers only, native cursor
+    hidden only once the dot is drawing. Easy to remove (one line in App).
+  Also fixed on the way: the last amber (`rgba(243,198,127)`) glow dots in
+  SkillDisclosure and the Contact toggle, and the brown search dropdown.
+  Reduced motion: every piece is static, nothing is ever left at opacity 0.
+  Verified in Chrome on the production build (preview server, port 4173):
+  hero scrub, Work reveals + cursor ring, About; no console errors.
+- ⏭ Block 6 Work gallery, 7 About/Vision/Contact scenes, 8 camera v1,
+  9 second mask, 10 ship. "Foundations first, then the camera, then the
+  second mask."
 
 **Still owed by Melvin:** current résumé, Devpost/GitHub links (Lingo, EventOS,
 Manas), Vision text choice, Spidey (hide or two lines), contact email, domain

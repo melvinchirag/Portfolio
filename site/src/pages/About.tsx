@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { Reveal } from '../components/Reveal'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -102,9 +103,9 @@ function AbstractThreads({ items }: { items: typeof THREADS }) {
         // i % 2 === 1 -> Center aligned
         const alignClass = i % 2 === 0 ? 'self-start' : 'self-start ml-16 md:ml-[320px]'
         return (
-          <div key={item.title} className={`w-full max-w-[280px] md:max-w-[320px] ${alignClass}`}>
+          <Reveal key={item.title} delay={(i % 2) * 90} className={`w-full max-w-[280px] md:max-w-[320px] ${alignClass}`}>
             <Card {...item} />
-          </div>
+          </Reveal>
         )
       })}
     </div>
@@ -123,14 +124,14 @@ export function About() {
       {/* ── SECTION 1: "Get to know me !" — header left, milestone cards right ── */}
       <div className="grid grid-cols-1 gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="max-w-2xl flex flex-col items-center justify-center">
-          <header>
-            <h1 className="font-display text-5xl leading-[0.95] tracking-tight text-white md:text-7xl">
+          <Reveal as="header">
+            <h1 className="display-wide font-display text-5xl leading-[0.95] font-bold tracking-tight text-white md:text-7xl">
               Get to know me
             </h1>
             <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/55">
               Three countries, two colleges, one habit: building things until they work.
             </p>
-          </header>
+          </Reveal>
           {/* The square "Coming soon" box that sat here (a photo slot) was
               removed 2026-10-29: no placeholders on the live site. Put a real
               photo back here when Melvin supplies one. */}
@@ -142,9 +143,9 @@ export function About() {
             {MILESTONES.map((m, i) => {
               const alignClass = i % 2 === 0 ? 'self-start' : 'self-end'
               return (
-                <div key={m.title} className={`w-full max-w-[280px] md:max-w-[320px] ${alignClass}`}>
+                <Reveal key={m.title} delay={(i % 2) * 90} className={`w-full max-w-[280px] md:max-w-[320px] ${alignClass}`}>
                   <Card {...m} />
-                </div>
+                </Reveal>
               )
             })}
           </div>
@@ -155,25 +156,25 @@ export function About() {
       <div className="mt-32 grid grid-cols-1 gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Left column — threads content */}
         <div className="max-w-2xl">
-          <div className="mb-16">
-            <p className="text-[12px] uppercase tracking-[0.32em] text-white/35">The threads</p>
-            <h2 className="mt-4 flex flex-wrap items-center font-display text-4xl leading-[1.05] text-white md:text-5xl">
+          <Reveal className="mb-16">
+            <p className="label">The threads</p>
+            <h2 className="display-wide mt-4 flex flex-wrap items-center font-display text-4xl leading-[1.05] font-bold text-white md:text-5xl">
               Get to know me even more
             </h2>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/45">
               The through-lines that do not fit into a single year &mdash; the interests, disciplines,
               and practices that shape the direction of the journey.
             </p>
-          </div>
+          </Reveal>
 
           {/* Act II — the abstract non-linear threads */}
           <AbstractThreads items={THREADS} />
 
           {/* Closing */}
-          <div className="mt-40">
+          <Reveal className="mt-40">
             <p className="font-display text-3xl text-white/25 md:text-4xl">The work continues.</p>
             <p className="mt-3 text-sm text-white/30">Building the next chapter.</p>
-          </div>
+          </Reveal>
         </div>
         {/* The second "Coming soon" square (right column) was removed
             2026-10-29. The grid keeps two columns so the threads stay in the

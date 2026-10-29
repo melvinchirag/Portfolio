@@ -14,6 +14,7 @@
  * ========================================================================= */
 
 import { Collapsible } from '../Collapsible'
+import { PlusMinus } from '../PlusMinus'
 import { TagThread } from '../TagThread'
 import { ProjectMedia } from './ProjectMedia'
 import { tagsOf } from '../../data/tags'
@@ -59,8 +60,8 @@ export function ProjectRow({
             <span className="min-w-0">
               <TagThread items={tagLabels} compact />
             </span>
-            <span className="shrink-0 text-lg leading-none text-accent transition-colors group-hover:text-white">
-              {open ? '−' : '+'}
+            <span className="ease-out-expo flex shrink-0 text-sand-dim transition-colors duration-300 group-hover:text-sand">
+              <PlusMinus open={open} />
             </span>
           </span>
         </>
@@ -149,9 +150,12 @@ export function ProjectRow({
                 href={l.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="border-b border-white/20 pb-0.5 text-xs text-white/70 transition-colors hover:border-accent hover:text-white"
+                className="arrow-link text-xs"
               >
-                {l.label} &rarr;
+                {l.label}{' '}
+                <span className="arrow" aria-hidden>
+                  →
+                </span>
               </a>
             ) : (
               <span

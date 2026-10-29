@@ -858,84 +858,197 @@ body {
   }
 }
 
-/* Per-character reveal. Fade and rise only — nothing bounces, per the motion
-   language in CLAUDE.md. */
-.reveal-char {
-  display: inline-block;
-  white-space: pre;
+/* ---------------------------------------------------------------------------
+ * MOTION SYSTEM (block 5, 2026-10-29). Four pieces, one personality: every
+ * move is a short fade plus a small rise on the site's one easing curve.
+ * Nothing bounces, nothing slides in from the side, nothing scales.
+ *
+ *   .page-in / .page-out   route change (PageTransition.tsx). OPACITY ONLY on
+ *                          the page wrapper: a transform there would turn
+ *                          every `position: fixed` child (the hero clock rail)
+ *                          into a child of the page and scroll it away.
+ *   .reveal                anything that should arrive as it scrolls into
+ *                          view (Reveal.tsx adds `is-in` once, via one shared
+ *                          IntersectionObserver). `--d` staggers siblings.
+ *   .frame-item            hero frame content: faded and lifted by HOW FAR the
+ *                          frame is from centre (`--fin`, written per frame in
+ *                          HeroBeats' pan loop), so it is scrubbed by scroll,
+ *                          never timed. `--k` staggers items inside a frame.
+ *   .plus-minus            the +/− on every disclosure: a real plus whose
+ *                          vertical bar collapses when open.
+ *
+ * Reduced motion: every one of these is static (see the media query at the
+ * end of the file), and the content is always readable before any of them
+ * completes, per CLAUDE.md.
+ * ------------------------------------------------------------------------ */
+.page-in {
+  animation: page-in 650ms var(--ease-out-expo);
+}
+.page-out {
   opacity: 0;
-  transform: translateY(0.5em);
-  animation: char-in 900ms var(--ease-out-expo) forwards;
+  transition: opacity 220ms ease-out;
 }
-
-@keyframes char-in {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.scroll-cue {
-  display: block;
-  width: 1px;
-  height: 34px;
-  background: linear-gradient(to bottom, rgba(205, 183, 138, 0.6), transparent);
-  transform-origin: top;
-  animation: cue-drift 2.4s var(--ease-out-expo) infinite;
-}
-
-@keyframes cue-drift {
-  0% {
-    transform: scaleY(0);
-    opacity: 0;
-  }
-  40% {
-    transform: scaleY(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scaleY(1) translateY(34px);
+@keyframes page-in {
+  from {
     opacity: 0;
   }
 }
 
-/* The custom cursor dot. Sits above everything and must never eat a click.
- * Its position is set from JavaScript every frame — see Cursor.tsx. */
-.cursor-dot {
-  /* Fixed to the viewport; JS writes `left`/`top` in pixels each frame. */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 900ms var(--ease-out-expo) var(--d, 0ms),
+    transform 900ms var(--ease-out-expo) var(--d, 0ms);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* `--fin` is 1 when the frame is centred and falls to 0 as it leaves; each
+ * item's own `--k` (0, 0.12, 0.24 …) delays its arrival so a frame's title
+ * lands first and its links last. clamp() keeps the maths inside 0..1. */
+.frame-item {
+  --k: 0;
+  --fi: clamp(0, calc((var(--fin, 1) - var(--k)) / (1 - var(--k))), 1);
+  opacity: var(--fi);
+  transform: translateY(calc((1 - var(--fi)) * 22px));
+}
+
+/* A plus drawn from two bars, 11px square, in the current text colour. Open
+ * state rotates the vertical bar away so only the minus remains. */
+.plus-minus {
+  position: relative;
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  flex: none;
+}
+.plus-minus::before,
+.plus-minus::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 11px;
+  height: 1px;
+  background: currentColor;
+  transition: transform 500ms var(--ease-out-expo);
+}
+.plus-minus::after {
+  transform: rotate(90deg);
+}
+.plus-minus.is-open::after {
+  transform: rotate(0deg);
+}
+
+/* Text links with an arrow: the arrow nudges right on hover, the text comes
+ * up to full sand. Used on project links, skill repos and the frame links. */
+.arrow-link {
+  color: var(--color-sand-dim);
+  transition: color 300ms var(--ease-out-expo);
+}
+.arrow-link .arrow {
+  display: inline-block;
+  transition: transform 500ms var(--ease-out-expo);
+}
+.arrow-link:hover,
+.arrow-link:focus-visible {
+  color: var(--color-sand);
+  outline: none;
+}
+.arrow-link:hover .arrow,
+.arrow-link:focus-visible .arrow {
+  transform: translateX(4px);
+}
+
+/* Nav links: mono labels, with a hairline that draws in from the left on
+ * hover and stays on the current page. */
+.nav-link {
+  position: relative;
+  padding: 6px 0;
+  color: var(--color-sand-dim);
+  transition: color 300ms var(--ease-out-expo);
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 500ms var(--ease-out-expo);
+}
+.nav-link:hover,
+.nav-link:focus-visible,
+.nav-link.is-active {
+  color: var(--color-sand);
+  outline: none;
+}
+.nav-link:hover::after,
+.nav-link:focus-visible::after,
+.nav-link.is-active::after {
+  transform: scaleX(1);
+}
+
+/* ---------------------------------------------------------------------------
+ * THE CURSOR (Cursor.tsx). A 6px sand dot that follows the pointer with a
+ * little inertia, and a 34px hairline ring that grows around it over anything
+ * clickable. Pointer devices only, and the native cursor is hidden ONLY once
+ * the dot is actually drawing (`html.has-cursor`), so a script failure never
+ * leaves the visitor with no cursor. Text fields keep the native I-beam.
+ * ------------------------------------------------------------------------ */
+.cursor-dot,
+.cursor-ring {
   position: fixed;
   top: 0;
   left: 0;
-  /* Above the nav (z-50) and the loader (z-100) so it is never occluded. */
   z-index: 200;
-  width: 7px;
-  height: 7px;
-  /* Shift by half its size so the dot is centred on the pointer rather than
-   * hanging below and to the right of it. */
-  margin: -3.5px 0 0 -3.5px;
-  /* A very large radius makes any element a perfect circle. */
   border-radius: 9999px;
-  /* Sand, like every other light thing on the site. No halo. */
-  background: rgba(205, 183, 138, 0.95);
-  /* Never intercept clicks — it sits over every interactive element. */
   pointer-events: none;
-  /* Starts hidden; JS reveals it on first pointer movement so it doesn't
-   * appear parked in the corner before the mouse has moved. */
   opacity: 0;
-  /* Only `transform` and `opacity` are transitioned — position must NOT be, or
-   * the CSS transition would fight the per-frame JS updates and lag behind. */
-  transition:
-    transform 400ms var(--ease-out-expo),
-    opacity 300ms linear;
+  will-change: transform;
 }
-
+.cursor-dot {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: var(--color-sand);
+  transition: opacity 300ms linear;
+}
+.cursor-ring {
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  box-shadow: inset 0 0 0 1px var(--color-sand-dim);
+  transition:
+    opacity 300ms linear,
+    scale 500ms var(--ease-out-expo);
+  scale: 0.45;
+}
+html.has-cursor .cursor-dot,
+html.has-cursor .cursor-ring {
+  opacity: 1;
+}
+html.has-cursor.cursor-hover .cursor-ring {
+  scale: 1;
+}
+html.has-cursor.cursor-hover .cursor-dot {
+  opacity: 0;
+}
 @media (pointer: fine) {
-  /* Only hide the native cursor where the custom one actually renders — the
-     class is added by SunCursor once WebGL is confirmed working, so a failure
-     never leaves the visitor with no cursor at all. */
-  html.has-sun-cursor,
-  html.has-sun-cursor * {
+  html.has-cursor,
+  html.has-cursor * {
     cursor: none;
+  }
+  html.has-cursor input,
+  html.has-cursor textarea,
+  html.has-cursor select {
+    cursor: auto;
   }
 }
 
@@ -948,15 +1061,19 @@ body {
     transition-duration: 0.01ms !important;
   }
 
-  /* The reveal animation is what makes these visible; without it they must
-     not be left at opacity 0. */
-  .reveal-char {
+  /* Motion-gated visibility must never leave content at opacity 0. */
+  .reveal,
+  .frame-item {
     opacity: 1;
     transform: none;
   }
-
-  .scroll-cue {
-    opacity: 0.6;
-    transform: none;
+  .page-in,
+  .page-out {
+    animation: none;
+    opacity: 1;
+  }
+  .cursor-dot,
+  .cursor-ring {
+    display: none;
   }
 }

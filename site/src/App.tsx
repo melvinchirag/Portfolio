@@ -1,8 +1,10 @@
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 import { Loader } from './components/Loader'
 import { Nav } from './components/Nav'
 import { Footer } from './components/Footer'
+import { Cursor } from './components/Cursor'
+import { PageTransition } from './components/PageTransition'
 import { Home } from './pages/Home'
 import { About } from './pages/About'
 import { Work } from './pages/Work'
@@ -17,7 +19,6 @@ import { GlobalScene } from './components/scene/GlobalScene'
  */
 function Shell() {
   useLenis()
-  const { pathname } = useLocation()
 
   return (
     <>
@@ -27,18 +28,28 @@ function Shell() {
           parked 2026-07-27; the new abstract/editorial hero is TBD. */}
       <Nav />
       <main className="relative z-10">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/work" element={<Work />} />
-          <Route path="/vision" element={<Vision />} />
-          {/* Catch-all: Vercel rewrites every path here, so this is the 404. */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        {/* PageTransition renders the routes against a location that lags the
+            real one by one fade-out, so the old page leaves before the new one
+            arrives. The footer is inside it so it fades with its page. */}
+        <PageTransition>
+          {(location) => (
+            <>
+              <Routes location={location}>
+                <Route path="/" element={<Home />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/work" element={<Work />} />
+                <Route path="/vision" element={<Vision />} />
+                {/* Catch-all: Vercel rewrites every path here, so this is the 404. */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              {/* Home ends in its own Contact section; every other page gets the footer. */}
+              {location.pathname !== '/' && <Footer />}
+            </>
+          )}
+        </PageTransition>
       </main>
-      {/* Home ends in its own Contact section; every other page gets the footer. */}
-      {pathname !== '/' && <Footer />}
       <div className="progressive-blur" />
+      <Cursor />
       <Loader />
     </>
   )

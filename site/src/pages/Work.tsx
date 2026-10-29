@@ -30,6 +30,7 @@ import { WorkSection } from '../components/work/WorkSection'
 import { ProjectRow } from '../components/work/ProjectRow'
 import { SkillDisclosure } from '../components/work/SkillDisclosure'
 import { ProjectSearch } from '../components/work/ProjectSearch'
+import { Reveal } from '../components/Reveal'
 
 // Current roles, from Otto's `context/uni.md` (2026-10-29). Newest first.
 const LEADERSHIP = [
@@ -130,14 +131,17 @@ export function Work() {
 
   return (
     <div className="relative z-10 mx-auto max-w-4xl px-6 pt-32 pb-24 md:px-10">
-      <header className="mb-10">
-        <h1 className="font-display text-5xl leading-[0.95] tracking-tight text-white md:text-7xl">
+      <Reveal as="header" className="mb-10">
+        <p className="label">The present</p>
+        <h1 className="display-wide mt-4 font-display text-5xl leading-[0.95] font-bold tracking-tight text-white md:text-7xl">
           Work
         </h1>
         <p className="mt-4 max-w-xl text-sm text-white/40">What I'm building now.</p>
-      </header>
+      </Reveal>
 
-      <ProjectSearch onRevealProject={revealProject} onRevealFoundations={revealFoundations} />
+      <Reveal delay={80}>
+        <ProjectSearch onRevealProject={revealProject} onRevealFoundations={revealFoundations} />
+      </Reveal>
 
       {/* Order (2026-10-29): what a recruiter wants first. Flagship, then the
           hackathon record, then personal builds, then roles, then the skills

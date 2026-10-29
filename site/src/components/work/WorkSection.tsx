@@ -12,6 +12,8 @@
 
 import type { ReactNode } from 'react'
 import { Collapsible } from '../Collapsible'
+import { PlusMinus } from '../PlusMinus'
+import { Reveal } from '../Reveal'
 
 export function WorkSection({
   id,
@@ -29,7 +31,7 @@ export function WorkSection({
   children: ReactNode
 }) {
   return (
-    <section id={id} className="scroll-mt-28 border-t border-white/10">
+    <Reveal as="section" id={id} className="scroll-mt-28 border-t border-line">
       <Collapsible
         heading={2}
         open={open}
@@ -44,14 +46,14 @@ export function WorkSection({
                 <span className="text-xs font-light text-white/30">{count}</span>
               )}
             </span>
-            <span className="text-lg leading-none text-accent transition-colors group-hover:text-white">
-              {isOpen ? '−' : '+'}
+            <span className="ease-out-expo flex self-center text-sand-dim transition-colors duration-300 group-hover:text-sand">
+              <PlusMinus open={isOpen} />
             </span>
           </>
         )}
       >
         {children}
       </Collapsible>
-    </section>
+    </Reveal>
   )
 }

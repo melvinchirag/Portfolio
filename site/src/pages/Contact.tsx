@@ -32,6 +32,7 @@ import { useState, type CSSProperties } from 'react'
 import { heroScrollToTop } from '../hooks/useLenis'
 import { PROFILE, SOCIALS } from '../data/profile'
 import { ICON_PATHS } from '../components/SocialLinks'
+import { Reveal } from '../components/Reveal'
 
 /** What brings people to the contact form. Doubles as the email subject line.
  *  The last two are Melvin's own joke additions (2026-08-10) — verbatim, not
@@ -80,7 +81,7 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
     <div
       role="tablist"
       aria-label="Contact or kind words"
-      className="inline-flex gap-1 rounded-full p-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+      className="inline-flex gap-1 rounded-full p-1 shadow-[inset_0_0_0_1px_var(--color-line)]"
     >
       {tabs.map((t) => (
         <button
@@ -93,8 +94,8 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
           onClick={() => onChange(t.id)}
           className={`ease-out-expo rounded-full px-5 py-2 text-sm tracking-wide transition-colors duration-300 ${
             view === t.id
-              ? 'text-accent bg-[rgba(243,198,127,0.12)] shadow-[inset_0_0_0_1px_rgba(243,198,127,0.4)]'
-              : 'text-white/50 hover:text-white/80'
+              ? 'text-sand bg-sand/10 shadow-[inset_0_0_0_1px_rgba(205,183,138,0.4)]'
+              : 'text-sand-dim hover:text-sand'
           }`}
         >
           {t.label}
@@ -210,17 +211,17 @@ function ContactView() {
 
   return (
     <div id="panel-contact" role="tabpanel" aria-labelledby="tab-contact">
-      <header className="max-w-2xl">
-        <h1 className="font-display text-[clamp(2.4rem,6vw,4.2rem)] leading-[1.02] tracking-tight text-white">
+      <Reveal as="header" className="max-w-2xl">
+        <h1 className="display-wide font-display text-[clamp(2.4rem,6vw,4.2rem)] leading-[1.02] font-bold tracking-tight text-white">
           Let's Build What Comes Next.
         </h1>
         <p className="mt-6 max-w-xl text-[14px] leading-relaxed text-white/70">
           I'm always open to internships, jobs, research, and projects worth building. If you have
           something in mind, or you just want to talk through an idea, send it over.
         </p>
-      </header>
+      </Reveal>
 
-      <div className="mt-16 grid gap-14 md:grid-cols-[1.1fr_0.9fr] md:gap-20">
+      <Reveal delay={120} className="mt-16 grid gap-14 md:grid-cols-[1.1fr_0.9fr] md:gap-20">
         <section aria-labelledby="contact-form-heading">
           <h2 id="contact-form-heading" className="sr-only">
             Send a message
@@ -342,7 +343,7 @@ function ContactView() {
 
           <FindMeHere />
         </section>
-      </div>
+      </Reveal>
     </div>
   )
 }
@@ -373,17 +374,17 @@ function TestimonialsView() {
 
   return (
     <div id="panel-testimonials" role="tabpanel" aria-labelledby="tab-testimonials">
-      <header className="max-w-2xl">
-        <h1 className="font-display text-[clamp(2.4rem,6vw,4.2rem)] leading-[1.02] tracking-tight text-white">
+      <Reveal as="header" className="max-w-2xl">
+        <h1 className="display-wide font-display text-[clamp(2.4rem,6vw,4.2rem)] leading-[1.02] font-bold tracking-tight text-white">
           Work With Me?
         </h1>
         <p className="mt-6 max-w-xl text-[14px] leading-relaxed text-white/70">
           If we have built, learned, organized, or collaborated together, share a few words about
           the experience. Submitted testimonials may be reviewed and published on this site.
         </p>
-      </header>
+      </Reveal>
 
-      <div className="mt-16 max-w-xl">
+      <Reveal delay={120} className="mt-16 max-w-xl">
         {composed ? (
           <div
             aria-live="polite"
@@ -477,7 +478,7 @@ function TestimonialsView() {
             </div>
           </form>
         )}
-      </div>
+      </Reveal>
     </div>
   )
 }
@@ -487,15 +488,15 @@ export function Contact() {
 
   return (
     <div className="relative z-10 mx-auto w-full max-w-5xl px-6 pt-16 pb-24 md:px-10">
-      <div className="mb-14 flex justify-center">
+      <Reveal className="mb-14 flex justify-center">
         <ViewToggle view={view} onChange={setView} />
-      </div>
+      </Reveal>
 
       {view === 'contact' ? <ContactView /> : <TestimonialsView />}
 
       {/* Loop back to the top of the hero. Uses Lenis (heroScrollToTop) so it
           glides instead of fighting the smooth-scroll engine. */}
-      <div className="mt-24 flex justify-center">
+      <Reveal className="mt-24 flex justify-center">
         <button
           type="button"
           onClick={heroScrollToTop}
@@ -503,7 +504,7 @@ export function Contact() {
         >
           Return to Start
         </button>
-      </div>
+      </Reveal>
     </div>
   )
 }
