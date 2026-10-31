@@ -125,6 +125,16 @@ running locally, logged here, committed.
   should go through the shaders of the mask, so the physics is right". Knobs:
   R and the 0.0045 / 0.0015 forces in simVelocity. This is the first change
   to MaskField's sim shader since it was tuned; it adds only the snake block.
+  FOURTH NOTE (2026-10-31, from his phone): "everything is going vertically,
+  but what if we made some horizontal and they'd alternate." Done: facts now
+  alternate orientation (fact 0 a column, fact 1 a row, ...). Columns are
+  spread across the width as before; rows are spread down the height below
+  the nav (`TOP_PX`/`BOTTOM_PX`), capped by height (`ROW_EVERY`). Within each
+  orientation the motion still alternates (down/up, right/left) and the text
+  always reads the natural way. `snakeField` is now a general line segment
+  per slot (`seg` x0,y0,x1,y1 + `w`), and the mask shader does
+  closest-point-on-segment, so rows part the dust up/down just as columns
+  part it sideways. Laptop: 4 columns + 3 rows; phone: 1 + 1.
   PARKED from the same note: "we could probably use ASCII libraries, like
   ASCII elements, in some parts of the website". Candidate spots: the Vision
   centrepiece, the 404, the loader's no-WebGL fallback. Needs a pick-board.

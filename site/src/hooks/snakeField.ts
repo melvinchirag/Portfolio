@@ -12,13 +12,17 @@
  * Same "mutable object, not React state" pattern as heroScroll.ts: it is
  * read inside animation loops, so it must cost nothing.
  *
- * Layout: four floats per snake in CLIP space (-1..1, y up):
- *   [x, yTop, yBottom, strength]   strength 0 = ignore this slot.
+ * Layout (2026-10-31, snakes can be vertical OR horizontal now): each slot
+ * is one line segment in CLIP space (-1..1, y up), four floats:
+ *   seg[o..o+3] = [x0, y0, x1, y1]
+ * and its strength lives beside it:
+ *   w[i]        = 0..1, 0 = ignore this slot.
  * ========================================================================= */
 
 export const SNAKE_SLOTS = 8
 
 export const snakeField = {
   count: 0,
-  data: new Float32Array(SNAKE_SLOTS * 4),
+  seg: new Float32Array(SNAKE_SLOTS * 4),
+  w: new Float32Array(SNAKE_SLOTS),
 }

@@ -221,13 +221,15 @@ const simVelocity = /* glsl */ `
   uniform float uMouseSpeed;   // 1 on move, decays each frame
   uniform float uForce;        // velocity damping
   uniform float uTime;
-  // THE FACT SNAKES (snakeField.ts). Each slot is a vertical sentence on
-  // screen in clip space: x, yTop, yBottom, strength (0 = empty slot). uMVP
-  // takes a sim-local position to clip space so the two can be compared;
-  // uAspect makes the distance isotropic in screen pixels.
+  // THE FACT SNAKES (snakeField.ts). Each slot is one sentence on screen as
+  // a line segment in clip space (x0, y0, x1, y1), vertical or horizontal,
+  // with its strength beside it (0 = empty slot). uMVP takes a sim-local
+  // position to clip space so the two can be compared; uAspect makes the
+  // distance isotropic in screen pixels.
   uniform mat4  uMVP;
   uniform float uAspect;
   uniform vec4  uSnakes[8];
+  uniform float uSnakeW[8];
   uniform int   uSnakeN;
 
   void main() {
@@ -258,20 +260,27 @@ const simVelocity = /* glsl */ `
     vec4 clip = uMVP * vec4(pos, 1.0);
     if (clip.w > 0.0) {
       vec2 ndc = clip.xy / clip.w;
+      // Work in aspect-corrected clip space so distances are screen-isotropic.
+      vec2 p = vec2(ndc.x * uAspect, ndc.y);
       for (int i = 0; i < 8; i++) {
         if (i >= uSnakeN) break;
+        float w = uSnakeW[i];
+        if (w <= 0.0) continue;
         vec4 s = uSnakes[i];
-        if (s.w <= 0.0) continue;
-        float yc = clamp(ndc.y, s.z, s.y);
-        float dx = (ndc.x - s.x) * uAspect;
-        float dy = ndc.y - yc;
-        float dd = length(vec2(dx, dy));
+        vec2 a = vec2(s.x * uAspect, s.y);
+        vec2 b = vec2(s.z * uAspect, s.w);
+        vec2 ab = b - a;
+        float h = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+        vec2 d = p - (a + ab * h);
+        float dd = length(d);
         float R = 0.06;
         if (dd < R) {
           float f = 1.0 - dd / R;
-          float side = dx >= 0.0 ? 1.0 : -1.0;
-          vel.x += side * f * f * 0.0045 * s.w;
-          vel.z += f * f * 0.0015 * s.w;
+          // Push straight away from the sentence's line (sideways for a
+          // column, up/down for a row) and a little forward out of the face.
+          vec2 away = normalize(vec2(d.x / uAspect, d.y) + 1e-6);
+          vel.xy += away * f * f * 0.0045 * w;
+          vel.z += f * f * 0.0015 * w;
         }
       }
     }
@@ -635,6 +644,7 @@ export function MaskParticles() {
       velVar.material.uniforms.uMVP = { value: new THREE.Matrix4() }
       velVar.material.uniforms.uAspect = { value: 1 }
       velVar.material.uniforms.uSnakes = { value: new Float32Array(SNAKE_SLOTS * 4) }
+      velVar.material.uniforms.uSnakeW = { value: new Float32Array(SNAKE_SLOTS) }
       velVar.material.uniforms.uSnakeN = { value: 0 }
 
       const err = gpu.init()
@@ -925,7 +935,8 @@ export function MaskParticles() {
       .multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
       .multiply(rayMesh.matrixWorld)
     u.uAspect.value = viewport.width / viewport.height
-    ;(u.uSnakes.value as Float32Array).set(snakeField.data)
+    ;(u.uSnakes.value as Float32Array).set(snakeField.seg)
+    ;(u.uSnakeW.value as Float32Array).set(snakeField.w)
     u.uSnakeN.value = snakeField.count
 
     gpu.compute()
