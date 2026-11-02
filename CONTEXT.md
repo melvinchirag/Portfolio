@@ -135,6 +135,25 @@ running locally, logged here, committed.
   per slot (`seg` x0,y0,x1,y1 + `w`), and the mask shader does
   closest-point-on-segment, so rows part the dust up/down just as columns
   part it sideways. Laptop: 4 columns + 3 rows; phone: 1 + 1.
+- ✅ Block 5c (2026-11-01, Melvin from his phone, "small changes to the UI"
+  before the finishing tasks): the mask is a little brighter (base colour
+  1.15x, resting alpha 0.04→0.06). **Pupils**: two dedicated sprites at the
+  eye centres (`PUPIL_Z`, `PUPIL_PX` in MaskField) because the model's eye
+  hollows are recessed and carry almost no surface particles; they blink with
+  the lids. **Scroll glow**: one 0..1 activity value (`scrollMem.glow`, page
+  scroll speed + the mask's own speed along its path, fast attack, slow
+  decay) drives: eyes and pupils flare and settle, face glyphs glow, come
+  out further (`uBurst`) and more of the pool lights (`uOnFrac` x1.9 at full
+  scroll). **Free glyphs**: a CPU-simulated population (`FREE_MAX` 120) born
+  on the face, inheriting the mask's velocity, then living in world space so
+  the mask flies on without them (the inertia he asked for). Forces: buoyant
+  wander, pushed out of the mask's ellipsoid if it moves into them, pushed
+  aside by snake sentences (same segment test as the sim shader, in screen
+  space). Birth rate 2.5/s idle, +38/s at full scroll. His words: "I want
+  some of them to float around in the page ... physics is right so if a
+  sentence collides with one it should move, same thing with the mask ...
+  behave with inertia and come out ... a bright pupil in its eyes and then I
+  want the eyes glow and de-glow as I scroll."
   PARKED from the same note: "we could probably use ASCII libraries, like
   ASCII elements, in some parts of the website". Candidate spots: the Vision
   centrepiece, the 404, the loader's no-WebGL fallback. Needs a pick-board.

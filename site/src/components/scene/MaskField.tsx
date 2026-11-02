@@ -108,6 +108,18 @@ const EYE_HW = 0.09       // eye half-width (corners at |x|-EYE_X = ±this)
 const EYE_OPEN = 0.035    // how far the lids bow from the centre line (eye "openness")
 const EYE_LINE_BW = 0.01  // half-thickness of the drawn eyelid lines
 const EYE_IRIS_R = 0.028  // iris/pupil dot radius
+// PUPIL (Melvin, 2026-11-01: "a bright pupil in its eyes ... the eyes glow and
+// de-glow as I scroll"). A hot core inside the iris that is always lit; the
+// whole eye then brightens with scroll activity (uGlow, see useFrame).
+const EYE_PUPIL_R = 0.015
+// The eye hollows on this model are RECESSED, so almost no front-facing surface
+// samples land at the eye centre and a particle-carried pupil barely shows.
+// The pupils are therefore two dedicated sprites at the eye centres (mask-local
+// space, so they ride every pose and the drag-spin), sized here in px at
+// scale 1, and sitting just proud of the hollow in z so they read from the
+// turned poses too.
+const PUPIL_Z = 0.17
+const PUPIL_PX = 30
 // LIPS: highlight REMOVED entirely (Melvin, 2026-08-01). Repeated attempts to draw a
 // mouth on this featureless mesh never landed where he wanted, so the mouth area is
 // left at the normal (un-brightened) field — no lip term in featureWeight anymore.
@@ -140,6 +152,43 @@ function noseWeight(x: number, y: number): number {
   const noseDist = Math.hypot(x / NOSE_X_HALF, (y - NOSE_Y) / NOSE_Y_HALF)
   return Math.max(0, 1 - noseDist) * 0.85
 }
+// Pupil: a small hot disc at the exact eye centre (mirrored via |x|).
+function pupilWeight(x: number, y: number): number {
+  const d = Math.hypot(Math.abs(x) - EYE_X, y - EYE_Y)
+  return Math.max(0, 1 - d / EYE_PUPIL_R)
+}
+
+/* ---- FREE GLYPHS (Melvin, 2026-11-01) ------------------------------------
+ * "I want some of them to float around in the page, I think it looks cooler
+ *  and more full ... make sure the physics is right so if a sentence collides
+ *  with one it should move, same thing with the mask ... when I scroll the
+ *  glyphs need to behave with inertia and come out and more should float
+ *  around."
+ * A second, small population of glyphs that LEAVE the face. Each is born on
+ * the face surface (a random home point, posed where the mask is this frame),
+ * inherits the mask's current velocity, and from then on lives in WORLD
+ * space: the mask flies on along its scroll path and the glyph stays behind,
+ * which is the inertia. CPU-simulated (a hundred bodies is nothing) and drawn
+ * as one Points with the same atlas. Three forces: a slow buoyant wander; a
+ * push out of the mask's volume when the mask moves into one; and a push away
+ * from any fact snake whose sentence runs into it (the same segment test the
+ * sim shader does, here in screen space). Birth rate and brightness rise with
+ * scroll activity, so scrolling shakes more letters loose. */
+const FREE_MAX = 120
+const FREE_IDLE_RATE = 2.5   // births per second at rest
+const FREE_SCROLL_RATE = 38  // extra births per second at full scroll activity
+const FREE_LIFE_MIN = 7
+const FREE_LIFE_MAX = 14
+const FREE_DAMP = 0.9        // per-second velocity decay (half-life ≈ 0.77s)
+const FREE_SNAKE_R = 0.06    // same screen radius the mask sim uses for snakes
+const SPAWN_N = 4096         // how many face points we keep as birth spots
+type FreeGlyph = {
+  x: number; y: number; z: number
+  vx: number; vy: number; vz: number
+  age: number; life: number; seed: number; glyph: number; size: number
+}
+const vA = new THREE.Vector3()
+const vB = new THREE.Vector3()
 
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
  * The mask no longer just sits on the left — it travels a path, scales, and
@@ -304,16 +353,21 @@ const renderVertex = /* glsl */ `
   attribute float aGlyphSeed;// glyph seed if this dot is a glyph candidate, else -1
   attribute float aEye;      // eye-feature weight (0..1) — animated by the blink
   attribute float aNose;     // nose-feature weight (0..1) — static
+  attribute float aPupil;    // pupil weight (0..1) — the hot core of each eye
   uniform float uEyeOpen;    // 1 = eyes open, 0 = shut (the blink)
   varying float vSpeed;
   varying float vGlyphFade;  // 1 while this dot's glyph is lit → dot fades to 0
   varying float vFeature;
+  varying float vEye;
+  varying float vPupil;
 
   void main() {
     vec3 pos = texture2D(uPositionTexture, aRef).xyz;
     vSpeed = length(texture2D(uVelocityTexture, aRef).xyz);
     // Eyes fade out as they blink shut; nose is unaffected.
     vFeature = max(aNose, aEye * uEyeOpen);
+    vEye = aEye * uEyeOpen;
+    vPupil = aPupil * uEyeOpen;
 
     // CONVERSION: if this dot is a glyph candidate, recompute the SAME life curve
     // the glyph layer uses, and report how "lit" its glyph is. The fragment fades
@@ -339,17 +393,25 @@ const renderFragment = /* glsl */ `
   uniform float uMaxAlpha;
   uniform float uFade;       // 0→1 intro fade-in (the "emerge from the black" reveal)
   uniform float uFeatureFloor;
+  uniform float uGlow;       // scroll activity 0..1 (see useFrame): the eyes light up
   varying float vSpeed;
   varying float vGlyphFade;
   varying float vFeature;
+  varying float vEye;
+  varying float vPupil;
 
   void main() {
     if (length(gl_PointCoord - 0.5) > 0.5) discard;   // round sprite
     float a = clamp(vSpeed * 100.0, uMinAlpha, uMaxAlpha);
-    a = max(a, vFeature * uFeatureFloor); // eyes/nose/lips get a solid shading floor
+    a = max(a, vFeature * uFeatureFloor); // eyes/nose get a solid shading floor
+    // THE PUPIL: a hot core that is always lit, and the whole eye brightens
+    // with scroll and settles again (Melvin, 2026-11-01). Overdriven past 1 so
+    // Bloom catches it.
+    a = max(a, vPupil * 0.95);
+    vec3 col = uColor * (1.0 + vPupil * (1.6 + 2.4 * uGlow) + vEye * uGlow * 1.2);
     a *= (1.0 - vGlyphFade);   // dot vanishes as its glyph forms (the conversion)
     a *= uFade;                // whole mask fades up on load
-    gl_FragColor = vec4(uColor, a);
+    gl_FragColor = vec4(col, a);
   }
 `
 
@@ -442,6 +504,7 @@ const glyphVertex = /* glsl */ `
   uniform float uDriftUp;   // how far a glyph rises off the face over its lifetime
   uniform float uDriftOut;  // how far it peels FORWARD (out of the face) as it goes
   uniform float uDriftSide; // random horizontal sway so the rise isn't a straight line
+  uniform float uBurst;     // scroll activity 0..1: glyphs come out further
   attribute vec2 aRef;
   attribute float aSeed;
   varying float vGlyph;
@@ -470,8 +533,10 @@ const glyphVertex = /* glsl */ `
     // dissipates — then relights elsewhere. Ease with lp*lp so it accelerates away.
     float lp = clamp(life / uOnFrac, 0.0, 1.0);
     float rise = lp * lp;
-    pos.y += uDriftUp * rise;
-    pos.z += uDriftOut * rise;
+    // Scroll makes them COME OUT further (Melvin, 2026-11-01: "when I scroll I
+    // want the mask glyphs to glow and come out"). uBurst is the scroll activity.
+    pos.y += uDriftUp * rise * (1.0 + uBurst * 0.8);
+    pos.z += uDriftOut * rise * (1.0 + uBurst * 2.2);
     pos.x += (hash(aSeed * 17.0) - 0.5) * uDriftSide * rise;
 
     // Re-pick the character each time this particle relights (integer part of its
@@ -495,6 +560,7 @@ const glyphFragment = /* glsl */ `
   uniform float uCols;
   uniform vec3 uColor;
   uniform float uFade;   // 0→1 intro fade-in, shared with the base dot layer
+  uniform float uGlow;   // scroll activity 0..1: glyphs glow while you scroll
   varying float vGlyph;
   varying float vAlpha;
   void main() {
@@ -505,7 +571,53 @@ const glyphFragment = /* glsl */ `
     vec2 uv = (vec2(cx, cy) + gl_PointCoord) / uCols;
     vec4 g = texture2D(uAtlas, uv);
     if (g.a < 0.15) discard;
-    gl_FragColor = vec4(uColor, g.a * vAlpha * uFade);
+    gl_FragColor = vec4(uColor * (1.0 + uGlow * 0.9), g.a * vAlpha * uFade);
+  }
+`
+
+// The free glyphs (see FREE GLYPHS above): plain world-space points whose
+// position, character, alpha and size are written from the CPU each frame.
+// Shares glyphFragment with the face glyphs.
+const freeVertex = /* glsl */ `
+  uniform float uGlyphSize;
+  attribute float aGlyph;
+  attribute float aAlpha;
+  attribute float aSize;
+  varying float vGlyph;
+  varying float vAlpha;
+  void main() {
+    vGlyph = aGlyph;
+    vAlpha = aAlpha;
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = (uGlyphSize * aSize / -mv.z) * step(0.002, aAlpha);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+
+// THE PUPILS: two sprites, a hot core with a soft halo. They close with the
+// blink (uEyeOpen) and flare with scroll activity (uGlow).
+const pupilVertex = /* glsl */ `
+  uniform float uSize;
+  uniform float uScale;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = uSize * uScale / -mv.z;
+    gl_Position = projectionMatrix * mv;
+  }
+`
+const pupilFragment = /* glsl */ `
+  precision highp float;
+  uniform vec3  uColor;
+  uniform float uFade;
+  uniform float uEyeOpen;
+  uniform float uGlow;
+  void main() {
+    float d = length(gl_PointCoord - 0.5) * 2.0;
+    if (d > 1.0) discard;
+    float core = 1.0 - smoothstep(0.0, 0.42, d);
+    float halo = (1.0 - d) * (1.0 - d);
+    float a = (core * 0.95 + halo * (0.22 + 0.5 * uGlow)) * uEyeOpen * uFade;
+    gl_FragColor = vec4(uColor * (1.8 + 2.4 * uGlow), a);
   }
 `
 
@@ -554,6 +666,11 @@ export function MaskParticles() {
     rayMesh: THREE.Mesh
     glyphGeo: THREE.BufferGeometry
     glyphMat: THREE.ShaderMaterial
+    freeGeo: THREE.BufferGeometry
+    freeMat: THREE.ShaderMaterial
+    spawnPts: Float32Array
+    pupilGeo: THREE.BufferGeometry
+    pupilMat: THREE.ShaderMaterial
   } | null>(null)
 
   useEffect(() => {
@@ -570,6 +687,7 @@ export function MaskParticles() {
       const refs = new Float32Array(count * 2)
       const eyeData = new Float32Array(count)  // per-dot eye-feature weight (blinks)
       const noseData = new Float32Array(count) // per-dot nose-feature weight (static)
+      const pupilData = new Float32Array(count) // per-dot pupil weight (the hot core)
       const p = new THREE.Vector3()
       const n = new THREE.Vector3()
 
@@ -617,6 +735,7 @@ export function MaskParticles() {
           // with where the dot actually renders. Kept separate for the blink.
           eyeData[idx] = eyeWeight(p.x, p.y)
           noseData[idx] = noseWeight(p.x, p.y)
+          pupilData[idx] = pupilWeight(p.x, p.y)
           refs[idx * 2 + 0] = (j + 0.5) / SIZE
           refs[idx * 2 + 1] = (i + 0.5) / SIZE
         }
@@ -677,6 +796,7 @@ export function MaskParticles() {
       geometry.setAttribute('aGlyphSeed', new THREE.BufferAttribute(baseGlyphSeed, 1))
       geometry.setAttribute('aEye', new THREE.BufferAttribute(eyeData, 1))
       geometry.setAttribute('aNose', new THREE.BufferAttribute(noseData, 1))
+      geometry.setAttribute('aPupil', new THREE.BufferAttribute(pupilData, 1))
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -684,8 +804,10 @@ export function MaskParticles() {
           uVelocityTexture: { value: null },
           uParticleSize: { value: 1.7 },
           // Sand (2026-10-29), the site's one light colour. Was teal '#80fff0'.
-          uColor: { value: new THREE.Color('#c4a56c') },
-          uMinAlpha: { value: 0.04 },
+          // Lifted 1.15x and the resting alpha 0.04→0.06 (Melvin, 2026-11-01:
+          // "make the face mask a little brighter").
+          uColor: { value: new THREE.Color('#c4a56c').multiplyScalar(1.15) },
+          uMinAlpha: { value: 0.06 },
           uMaxAlpha: { value: 0.85 },
           // Shared with the glyph layer so a dot converts into its glyph in sync.
           uTime: { value: 0 },
@@ -698,6 +820,7 @@ export function MaskParticles() {
           // stronger features, lower for subtler.
           uFeatureFloor: { value: 0.34 },
           uEyeOpen: { value: 1 }, // 1 open → 0 shut; driven by the blink in useFrame
+          uGlow: { value: 0 },    // scroll activity; lights the eyes (see useFrame)
         },
         vertexShader: renderVertex,
         fragmentShader: renderFragment,
@@ -738,6 +861,8 @@ export function MaskParticles() {
           uDriftUp: { value: 0.16 },
           uDriftOut: { value: 0.1 },
           uDriftSide: { value: 0.05 },
+          uGlow: { value: 0 },  // scroll activity → brighter glyphs
+          uBurst: { value: 0 }, // scroll activity → glyphs come out further
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
           uFade: { value: 0 }, // intro fade-in, shared with the base dot layer
@@ -756,6 +881,61 @@ export function MaskParticles() {
         blending: THREE.AdditiveBlending,
       })
 
+      // ---- free glyphs: birth spots are a random sample of the face's home
+      // points; the Points buffer is sized for FREE_MAX and written each frame.
+      const spawnPts = new Float32Array(SPAWN_N * 3)
+      for (let q = 0; q < SPAWN_N; q++) {
+        const k = (Math.random() * count) | 0
+        spawnPts[q * 3] = homeData[k * 4]
+        spawnPts[q * 3 + 1] = homeData[k * 4 + 1]
+        spawnPts[q * 3 + 2] = homeData[k * 4 + 2]
+      }
+      const freeGeo = new THREE.BufferGeometry()
+      freeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(FREE_MAX * 3), 3))
+      freeGeo.setAttribute('aGlyph', new THREE.BufferAttribute(new Float32Array(FREE_MAX), 1))
+      freeGeo.setAttribute('aAlpha', new THREE.BufferAttribute(new Float32Array(FREE_MAX), 1))
+      freeGeo.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(FREE_MAX), 1))
+      freeGeo.setDrawRange(0, 0)
+      const freeMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uGlyphSize: { value: 17 },
+          uAtlas: { value: atlas.texture },
+          uCols: { value: atlas.cols },
+          uColor: { value: new THREE.Color('#e6d2a4').multiplyScalar(1.7) },
+          uFade: { value: 0 },
+          uGlow: { value: 0 },
+        },
+        vertexShader: freeVertex,
+        fragmentShader: glyphFragment,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+
+      // ---- pupils: two sprites at the eye centres (see PUPIL_Z).
+      const pupilGeo = new THREE.BufferGeometry()
+      pupilGeo.setAttribute(
+        'position',
+        new THREE.BufferAttribute(new Float32Array([-EYE_X, EYE_Y, PUPIL_Z, EYE_X, EYE_Y, PUPIL_Z]), 3),
+      )
+      const pupilMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uSize: { value: PUPIL_PX },
+          uScale: { value: 1 },
+          uColor: { value: new THREE.Color('#e6d2a4') },
+          uFade: { value: 0 },
+          uEyeOpen: { value: 1 },
+          uGlow: { value: 0 },
+        },
+        vertexShader: pupilVertex,
+        fragmentShader: pupilFragment,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+
       // a hidden mesh (with BVH) purely for cursor→surface raycasting
       ;(maskGeometry as unknown as { computeBoundsTree: () => void }).computeBoundsTree()
       const rayMesh = new THREE.Mesh(maskGeometry)
@@ -763,7 +943,7 @@ export function MaskParticles() {
       rayMesh.updateMatrixWorld()
 
       if (!isCancelled) {
-        setSim({ gpu, posVar, velVar, geometry, material, rayMesh, glyphGeo, glyphMat })
+        setSim({ gpu, posVar, velVar, geometry, material, rayMesh, glyphGeo, glyphMat, freeGeo, freeMat, spawnPts, pupilGeo, pupilMat })
       }
     }
 
@@ -796,6 +976,10 @@ export function MaskParticles() {
   const blink = useRef({ clock: 0, next: 3.0, start: -1 })
   // Reused each frame by samplePath so scroll choreography allocates nothing.
   const poseScratch = useRef<Pose>({ x: 0, y: 0, s: 1, rz: 0, ry: 0 })
+  // Scroll activity memory: last scrollY, last mask pose (for its velocity),
+  // the smoothed glow 0..1, and the fractional birth accumulator for free glyphs.
+  const scrollMem = useRef({ inited: false, y: 0, px: 0, py: 0, glow: 0, spawn: 0 })
+  const free = useRef<FreeGlyph[]>([])
 
   // Drag anywhere to spin the mask 360° (it stays on the left; we rotate the
   // group, not the camera). Plain mouse-move still disturbs the particles.
@@ -822,7 +1006,7 @@ export function MaskParticles() {
 
   useFrame((_, delta) => {
     if (!sim) return
-    const { gpu, posVar, velVar, material, glyphMat, rayMesh } = sim
+    const { gpu, posVar, velVar, material, glyphMat, rayMesh, freeGeo, freeMat, spawnPts, pupilMat } = sim
 
     // SCROLL CHOREOGRAPHY: the mask travels a path, scales, and rolls as you
     // scroll the hero. Drives off heroScroll.progress (the read-only contract, so
@@ -885,6 +1069,8 @@ export function MaskParticles() {
     const fade = eIntro * leaveFade
     material.uniforms.uFade.value = fade
     glyphMat.uniforms.uFade.value = fade
+    pupilMat.uniforms.uFade.value = fade
+    pupilMat.uniforms.uScale.value = pose.s
 
     // BLINK: advance the clock; when it's time, run a close→open over BLINK_DUR
     // (uEyeOpen 1→0→1 via a sine so it's smooth), then schedule the next at a random
@@ -906,6 +1092,7 @@ export function MaskParticles() {
       }
     }
     material.uniforms.uEyeOpen.value = eyeOpen
+    pupilMat.uniforms.uEyeOpen.value = eyeOpen
 
     if (groupRef.current) {
       groupRef.current.position.set(pose.x + offX, pose.y + offY, zIn)
@@ -916,6 +1103,157 @@ export function MaskParticles() {
     rayMesh.scale.setScalar(pose.s)
     rayMesh.rotation.set(rot.current.x, rot.current.y + pose.ry, pose.rz)
     rayMesh.updateMatrixWorld()
+
+    // SCROLL ACTIVITY → glow (Melvin, 2026-11-01: eyes and glyphs "glow and
+    // de-glow as I scroll"). Page scroll speed plus the mask's own speed along
+    // its path, normalised to 0..1; rises fast, decays slowly once you stop.
+    const pm = scrollMem.current
+    const sy = window.scrollY
+    const dtSafe = Math.max(delta, 1e-3)
+    let vmx = 0
+    let vmy = 0
+    let act = 0
+    if (pm.inited) {
+      vmx = (pose.x - pm.px) / dtSafe
+      vmy = (pose.y - pm.py) / dtSafe
+      act = Math.min(1, Math.abs(sy - pm.y) / dtSafe / 1400 + Math.hypot(vmx, vmy) / 1.4)
+    }
+    pm.inited = true
+    pm.y = sy
+    pm.px = pose.x
+    pm.py = pose.y
+    pm.glow += (act - pm.glow) * (1 - Math.exp(-delta * (act > pm.glow ? 14 : 1.6)))
+    const glow = pm.glow
+    material.uniforms.uGlow.value = glow
+    glyphMat.uniforms.uGlow.value = glow
+    glyphMat.uniforms.uBurst.value = glow
+    freeMat.uniforms.uGlow.value = glow
+    freeMat.uniforms.uFade.value = fade
+    pupilMat.uniforms.uGlow.value = glow
+    // More of the pool lights while scrolling ("more should float around").
+    // Shared by both layers so the dot→glyph conversion stays in lockstep.
+    const onFrac = GLYPH_ON_FRAC * (1 + glow * 0.9)
+    material.uniforms.uOnFrac.value = onFrac
+    glyphMat.uniforms.uOnFrac.value = onFrac
+
+    // FREE GLYPHS (see the block up top): births, forces, ageing, attributes.
+    const fg = free.current
+    if (fade > 0.5) {
+      pm.spawn = Math.min(2, pm.spawn + (FREE_IDLE_RATE + FREE_SCROLL_RATE * glow) * delta)
+      while (pm.spawn >= 1 && fg.length < FREE_MAX) {
+        pm.spawn -= 1
+        const k = (Math.random() * SPAWN_N) | 0
+        vA.set(spawnPts[k * 3], spawnPts[k * 3 + 1], spawnPts[k * 3 + 2])
+        rayMesh.localToWorld(vA)
+        vB.set(0, 0, 1).applyQuaternion(rayMesh.quaternion) // face-forward, in world
+        // Inherit the mask's velocity (capped) so a scroll flings letters off.
+        let ivx = vmx * 0.8
+        let ivy = vmy * 0.8
+        const sp = Math.hypot(ivx, ivy)
+        if (sp > 0.6) { ivx *= 0.6 / sp; ivy *= 0.6 / sp }
+        const telugu = Math.random() < 0.5
+        fg.push({
+          x: vA.x, y: vA.y, z: vA.z,
+          vx: ivx + vB.x * 0.1 + (Math.random() - 0.5) * 0.05,
+          vy: ivy + vB.y * 0.1 + (Math.random() - 0.5) * 0.05 + 0.02,
+          vz: vB.z * 0.12,
+          age: 0,
+          life: FREE_LIFE_MIN + Math.random() * (FREE_LIFE_MAX - FREE_LIFE_MIN),
+          seed: Math.random() * 1000,
+          glyph: telugu ? TEL_START + ((Math.random() * TELUGU.length) | 0) : BIN_START + ((Math.random() * 2) | 0),
+          size: 0.8 + Math.random() * 0.5,
+        })
+      }
+    } else {
+      pm.spawn = 0
+    }
+    {
+      const tNow = glyphMat.uniforms.uTime.value as number
+      const aspect = viewport.width / viewport.height
+      const damp = Math.exp(-delta * FREE_DAMP)
+      const cam = camera as THREE.PerspectiveCamera
+      const halfH = Math.tan((cam.fov * Math.PI) / 360)
+      for (let i = fg.length - 1; i >= 0; i--) {
+        const f = fg[i]
+        f.age += delta
+        if (f.age >= f.life) { fg[i] = fg[fg.length - 1]; fg.pop(); continue }
+        // Slow buoyant wander, like the face glyphs' rise.
+        f.vx += Math.sin(tNow * 0.7 + f.seed) * 0.03 * delta
+        f.vy += (0.012 + Math.cos(tNow * 0.55 + f.seed * 1.3) * 0.02) * delta
+        f.vz += Math.sin(tNow * 0.4 + f.seed * 0.7) * 0.015 * delta
+        // The mask's volume (an ellipsoid round the face crop, in mask-local
+        // space): a glyph inside it is pushed out along the surface normal, so
+        // when the mask moves into a floating letter the letter gives way.
+        vA.set(f.x, f.y, f.z)
+        rayMesh.worldToLocal(vA)
+        const ex = vA.x / 0.38
+        const ey = (vA.y + 0.14) / 0.58
+        const ez = (vA.z - 0.08) / 0.3
+        const en = Math.sqrt(ex * ex + ey * ey + ez * ez)
+        if (en < 1 && en > 1e-4) {
+          vB.set(ex / 0.38, ey / 0.58, ez / 0.3).normalize().applyQuaternion(rayMesh.quaternion)
+          const push = (1 - en) * 1.6 * delta
+          f.vx += vB.x * push
+          f.vy += vB.y * push
+          f.vz += vB.z * push
+        }
+        // The snakes: same closest-point-on-segment test the sim shader does,
+        // in aspect-corrected screen space; the push is mapped back to world
+        // units at this glyph's depth.
+        vA.set(f.x, f.y, f.z).project(camera)
+        if (Math.abs(vA.x) > 1.2 || Math.abs(vA.y) > 1.2) { fg[i] = fg[fg.length - 1]; fg.pop(); continue }
+        const px = vA.x * aspect
+        const py = vA.y
+        const wpn = halfH * (cam.position.z - f.z)
+        for (let q = 0; q < snakeField.count; q++) {
+          const w = snakeField.w[q]
+          if (w <= 0) continue
+          const o = q * 4
+          const ax = snakeField.seg[o] * aspect
+          const ay = snakeField.seg[o + 1]
+          const abx = snakeField.seg[o + 2] * aspect - ax
+          const aby = snakeField.seg[o + 3] - ay
+          const ab2 = abx * abx + aby * aby
+          let h = ab2 > 1e-9 ? ((px - ax) * abx + (py - ay) * aby) / ab2 : 0
+          h = h < 0 ? 0 : h > 1 ? 1 : h
+          const dx = px - (ax + abx * h)
+          const dy = py - (ay + aby * h)
+          const dd = Math.hypot(dx, dy)
+          if (dd < FREE_SNAKE_R && dd > 1e-6) {
+            const ff = 1 - dd / FREE_SNAKE_R
+            const kk = (ff * ff * w * 2.2 * delta * wpn) / dd
+            f.vx += (dx / aspect) * kk
+            f.vy += dy * kk
+          }
+        }
+        f.vx *= damp
+        f.vy *= damp
+        f.vz *= damp
+        f.x += f.vx * delta
+        f.y += f.vy * delta
+        f.z = Math.min(0.9, f.z + f.vz * delta) // never pass the camera
+      }
+      const posArr = freeGeo.attributes.position.array as Float32Array
+      const alphaArr = freeGeo.attributes.aAlpha.array as Float32Array
+      const glyphArr = freeGeo.attributes.aGlyph.array as Float32Array
+      const sizeArr = freeGeo.attributes.aSize.array as Float32Array
+      for (let i = 0; i < fg.length; i++) {
+        const f = fg[i]
+        posArr[i * 3] = f.x
+        posArr[i * 3 + 1] = f.y
+        posArr[i * 3 + 2] = f.z
+        const ai = Math.min(1, f.age / 0.9)
+        const ao = Math.min(1, (f.life - f.age) / 2.2)
+        alphaArr[i] = ai * ai * (3 - 2 * ai) * ao * ao * (3 - 2 * ao) * 0.8
+        glyphArr[i] = f.glyph
+        sizeArr[i] = f.size
+      }
+      freeGeo.attributes.position.needsUpdate = true
+      freeGeo.attributes.aAlpha.needsUpdate = true
+      freeGeo.attributes.aGlyph.needsUpdate = true
+      freeGeo.attributes.aSize.needsUpdate = true
+      freeGeo.setDrawRange(0, fg.length)
+    }
 
     // cursor → 3D point on the (possibly rotated) mask → sim-local space
     raycaster.current.setFromCamera(pointer as THREE.Vector2, camera)
@@ -952,10 +1290,16 @@ export function MaskParticles() {
 
   if (!sim) return null
   return (
-    <group ref={groupRef} position={[OFFSET.x, OFFSET.y, OFFSET.z]}>
-      <points geometry={sim.geometry} material={sim.material} frustumCulled={false} />
-      <points geometry={sim.glyphGeo} material={sim.glyphMat} frustumCulled={false} />
-    </group>
+    <>
+      <group ref={groupRef} position={[OFFSET.x, OFFSET.y, OFFSET.z]}>
+        <points geometry={sim.geometry} material={sim.material} frustumCulled={false} />
+        <points geometry={sim.glyphGeo} material={sim.glyphMat} frustumCulled={false} />
+        <points geometry={sim.pupilGeo} material={sim.pupilMat} frustumCulled={false} />
+      </group>
+      {/* Free glyphs live in WORLD space, outside the mask's group, so the
+          mask can fly on without them (see FREE GLYPHS). */}
+      <points geometry={sim.freeGeo} material={sim.freeMat} frustumCulled={false} />
+    </>
   )
 }
 
