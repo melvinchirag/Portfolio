@@ -4092,3 +4092,16 @@ domain name · sound in/out.
   mask, beats run top to bottom); second mask is pulled forward to today;
   camera stays parked. Pick-boards owed per LESSONS #1 before the phone,
   About and second-mask builds.
+- ✅ Content (2026-11-05, 844eca3): ADE award line = Main Track (Ideation
+  Matrix), Best Use of ElevenLabs, the CTF, "Applied to Y Combinator with
+  it" (from his LinkedIn post). HTN title now "vice president and finance
+  lead" everywhere (hero, About, Work, meta, facts). Facts gain "Three
+  wins, Hack Dearborn 5". Melvin's order: ASCII About → second mask →
+  vertical phone → everything else. Résumé: list BOTH emails; old PDF's
+  LinkedIn URL (linkedin.com/in/melvin-chirag) is a 404, real one is
+  /in/melvin-chirag-karupati-a34452380. LinkedIn headline also lists
+  Founder & President SPARC, VP GDG EMU, "3x Hackathon Winner".
+- 🟡 About ASCII pick-board sent: https://claude.ai/artifact/Yc1Xt6YfNmrUnCZS3PFTNi
+  Photo (Drive 1M53pah7..., 1247x1261 jpg) in scratchpad/photo; styles A
+  density / B name / C mask glyphs, reveals 1 scan / 2 dissolve, drafted
+  3-paragraph intro. Waiting on his pick.
