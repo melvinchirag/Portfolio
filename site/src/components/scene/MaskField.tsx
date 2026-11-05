@@ -189,6 +189,7 @@ type FreeGlyph = {
 }
 const vA = new THREE.Vector3()
 const vB = new THREE.Vector3()
+const ndcVec = new THREE.Vector2()
 
 /* ---- SCROLL CHOREOGRAPHY (step 1 of the hero rebuild, 2026-07-31) ----------
  * The mask no longer just sits on the left — it travels a path, scales, and
@@ -624,7 +625,6 @@ const pupilFragment = /* glsl */ `
 export function MaskParticles() {
   const gl = useThree((s) => s.gl)
   const camera = useThree((s) => s.camera)
-  const pointer = useThree((s) => s.pointer)
   const viewport = useThree((s) => s.size)
 
   // Load the CC-BY cyborg mask ourselves (draco-compressed). Manual loader (no
@@ -956,6 +956,23 @@ export function MaskParticles() {
 
   const raycaster = useRef(new THREE.Raycaster())
   const mouseSpeed = useRef(0)
+  // The pointer, in clip space, from a WINDOW listener. R3F's own pointer only
+  // updates from events that reach the canvas, and the page content covers the
+  // canvas everywhere, so it never moved: it sat at (0,0), the screen centre,
+  // and whenever the mask crossed the centre the resting ray punched a
+  // permanent round hole in the face (seen on the Past/Present beats; found
+  // 2026-11-05 while rendering the share card). Until the visitor actually
+  // moves the pointer, no raycast happens at all.
+  const ndc = useRef({ x: 0, y: 0, moved: false })
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      ndc.current.x = (e.clientX / window.innerWidth) * 2 - 1
+      ndc.current.y = -(e.clientY / window.innerHeight) * 2 + 1
+      ndc.current.moved = true
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [])
   // Smoothed scroll progress — gives the mask its own inertia so it GLIDES
   // instead of tracking scroll 1:1 (that 1:1 tracking is what read as "rigid").
   const smoothProg = useRef(0)
@@ -1256,8 +1273,12 @@ export function MaskParticles() {
     }
 
     // cursor → 3D point on the (possibly rotated) mask → sim-local space
-    raycaster.current.setFromCamera(pointer as THREE.Vector2, camera)
-    const hit = raycaster.current.intersectObject(rayMesh)
+    let hit: THREE.Intersection[] = []
+    if (ndc.current.moved) {
+      ndcVec.set(ndc.current.x, ndc.current.y)
+      raycaster.current.setFromCamera(ndcVec, camera)
+      hit = raycaster.current.intersectObject(rayMesh)
+    }
     if (hit.length > 0) {
       velVar.material.uniforms.uMouse.value.copy(rayMesh.worldToLocal(hit[0].point.clone()))
       mouseSpeed.current = 1

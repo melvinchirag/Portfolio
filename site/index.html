@@ -11,9 +11,13 @@
       name="description"
       content="Melvin Chirag Karupati. Computer science student at Eastern Michigan University building computer-vision and machine-learning systems. Co-lead of Hack The Nest, EMU's first hackathon."
     />
-    <!-- Link previews (LinkedIn, iMessage, Slack, Discord). The image is
-         added in the ship block once the hero is final; until then previews
-         show the title and description. -->
+    <!-- The absolute address. Mirrored in src/data/site.ts (per-page tags),
+         public/robots.txt and public/sitemap.xml; change all four when the
+         custom domain goes live. -->
+    <link rel="canonical" href="https://melvinchirag.vercel.app/" />
+    <!-- Link previews (LinkedIn, iMessage, Slack, Discord). The image is a
+         1200x630 render of the hero (public/og.jpg); per-page title, text and
+         url are rewritten on the client by usePageMeta. -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Melvin Chirag Karupati" />
     <meta
@@ -22,7 +26,12 @@
     />
     <meta property="og:url" content="https://melvinchirag.vercel.app/" />
     <meta property="og:site_name" content="Melvin Chirag Karupati" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="https://melvinchirag.vercel.app/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A face made of light particles beside the name Melvin Chirag Karupati" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://melvinchirag.vercel.app/og.jpg" />
     <meta name="twitter:title" content="Melvin Chirag Karupati" />
     <meta
       name="twitter:description"

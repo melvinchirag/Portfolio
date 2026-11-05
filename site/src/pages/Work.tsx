@@ -31,6 +31,7 @@ import { ProjectRow } from '../components/work/ProjectRow'
 import { SkillDisclosure } from '../components/work/SkillDisclosure'
 import { ProjectSearch } from '../components/work/ProjectSearch'
 import { Reveal } from '../components/Reveal'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 // Current roles, from Otto's `context/uni.md` (2026-10-29). Newest first.
 const LEADERSHIP = [
@@ -60,6 +61,11 @@ function toggleIn<T>(set: Set<T>, value: T): Set<T> {
 }
 
 export function Work() {
+  usePageMeta(
+    'Work',
+    '/work',
+    'Projects by Melvin Chirag Karupati: hackathon winners, computer-vision and machine-learning builds, and the work behind Hack The Nest, SPARC and GDG on Campus.',
+  )
   // Always land at the top when navigating in.
   useEffect(() => {
     window.scrollTo(0, 0)

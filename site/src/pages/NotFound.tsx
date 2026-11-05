@@ -10,8 +10,10 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Reveal } from '../components/Reveal'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export function NotFound() {
+  usePageMeta('Not found', '/404', 'That page does not exist.')
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])

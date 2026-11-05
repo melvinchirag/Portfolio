@@ -22,11 +22,13 @@
  * ========================================================================= */
 
 import { useRef } from 'react'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { HeroBeats } from '../components/HeroBeats'
 import { BEAT_COUNT, useHeroScrollTrack } from '../hooks/heroScroll'
 import { Contact } from './Contact'
 
 export function Home() {
+  usePageMeta(null, '/')
   const trackRef = useRef<HTMLElement>(null)
 
   // Measures scroll position through the track and publishes it to the shared

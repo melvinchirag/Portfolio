@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Reveal } from '../components/Reveal'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -115,6 +116,11 @@ function AbstractThreads({ items }: { items: typeof THREADS }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function About() {
+  usePageMeta(
+    'About',
+    '/about',
+    'Who Melvin Chirag Karupati is: born in Hyderabad, raised in Kuwait, now studying computer science at Eastern Michigan University and co-leading Hack The Nest.',
+  )
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])

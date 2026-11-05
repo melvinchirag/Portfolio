@@ -157,9 +157,41 @@ running locally, logged here, committed.
   PARKED from the same note: "we could probably use ASCII libraries, like
   ASCII elements, in some parts of the website". Candidate spots: the Vision
   centrepiece, the 404, the loader's no-WebGL fallback. Needs a pick-board.
-- ⏭ Block 6 Work gallery, 7 About/Vision/Contact scenes, 8 camera v1,
-  9 second mask, 10 ship. "Foundations first, then the camera, then the
-  second mask."
+- 🔁 2026-11-01, Melvin: "instead of polishing UI let's focus on finishing
+  the website, in terms of content and functionality so that we can buy the
+  domain and make it public ... I want compartmentalized tasks." The block
+  list above is replaced by the FINISHING TASKS below. Camera v1 and the
+  second mask are parked until the site is public.
+
+### FINISHING TASKS (2026-11-01; one block each: build, check in Chrome, commit, deploy)
+| # | Task | Needs from Melvin | Status |
+|---|------|-------------------|--------|
+| 1 | Launch kit: share image, per-page titles, canonical, robots + sitemap, dead code out | nothing | ✅ 2026-11-05 |
+| 2 | Contact form that delivers (+ testimonials form), spam guard | which inbox receives | ⏭ |
+| 3 | Work content final: copy checked, tentative flags cleared, links verified | EventOS repo, ADE result, images if wanted | ⏭ |
+| 4 | About + Vision proofread | photo or "no photo" | ⏭ |
+| 5 | Résumé | current PDF (site copy is 2026-07-29) | ⏭ |
+| 6 | Phone pass: mask x-offset, snakes/glyphs on small screens, menu, speed | nothing | ⏭ |
+| 7 | Go public: domain in Vercel, SITE_URL + index.html + robots + sitemap switched, GitHub About link | domain name (he buys) | ⏭ |
+
+- ✅ Task 1 (2026-11-05): `public/og.jpg` (1200x630, the mask at the Future
+  beat beside the name, rendered IN the page from the live WebGL canvas and
+  the loaded Archivo/JetBrains fonts, best of 20 frames scored to avoid snake
+  channels; the Chrome window could not be resized while the laptop was
+  locked, so no screenshot route). index.html: canonical, og:image (+width,
+  height, alt), twitter summary_large_image. `data/site.ts` holds SITE_URL /
+  SITE_NAME / DEFAULT_DESCRIPTION; `hooks/usePageMeta.ts` sets per-route
+  title ("Work · Melvin Chirag Karupati"), description, og/twitter tags and
+  canonical by rewriting the tags index.html declares. `public/robots.txt`,
+  `public/sitemap.xml` (4 pages). `pages/Chapter.tsx` deleted (unreferenced).
+  FOUND AND FIXED on the way: MaskField read R3F's pointer, which never
+  updates because page content covers the canvas, so it sat at the screen
+  centre and the resting ray punched a permanent round hole in the face on
+  every beat where the mask crosses the centre (visible on Past/Present).
+  Now a window pointermove listener feeds the raycast and nothing is cast
+  until the pointer has moved; cursor interaction actually works now.
+  NOTE for task 6: on a 767px-wide viewport the free glyphs read as a dense
+  starfield; consider halving FREE_MAX / rates below md.
 
 **Still owed by Melvin:** current résumé, Devpost/GitHub links (Lingo, EventOS,
 Manas), Vision text choice, Spidey (hide or two lines), contact email, domain

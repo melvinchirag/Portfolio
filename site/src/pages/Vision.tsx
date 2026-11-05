@@ -16,6 +16,7 @@
 import { useEffect } from 'react'
 import { TagThread } from '../components/TagThread'
 import { Reveal } from '../components/Reveal'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 const AREAS = [
   'Applied AI',
@@ -31,6 +32,11 @@ const AREAS = [
 ]
 
 export function Vision() {
+  usePageMeta(
+    'Vision',
+    '/vision',
+    'Where Melvin Chirag Karupati is heading: computer vision and machine learning that work outside the screen.',
+  )
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])

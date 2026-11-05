@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://melvinchirag.vercel.app/sitemap.xml
