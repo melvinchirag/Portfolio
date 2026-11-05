@@ -253,8 +253,9 @@ export const WORK_PROJECTS: WorkProject[] = [
     id: 'ade',
     name: 'ADE',
     category: 'hackathon',
-    // No status chip: the Devpost results page could not be read (403), so
-    // the prize outcome is unconfirmed. Add 'Winner' only once it is.
+    // Melvin confirmed the win on 2026-11-05. Prize name not given yet, so no
+    // `award` line; add it when he says which prize.
+    status: 'Winner',
     blurb:
       'Agentique Desktop Ecosystem. A team of AI agents that lives on your desktop as six small 3D animals on the taskbar. You talk to one; it hands the work to specialists, and a rule-based warden approves every action before it happens.',
     tags: ['cs', 'aiml', 'agents', 'electron', 'react', 'typescript', 'threejs', 'hackathon'],
@@ -555,18 +556,6 @@ export const WORK_PROJECTS: WorkProject[] = [
         ],
       },
     ],
-  },
-  {
-    id: 'spidey',
-    name: 'Spidey',
-    category: 'personal',
-    status: 'In Progress',
-    // Placeholder — Melvin will supply the write-up. A "for fun" personal build.
-    blurb: 'A project I’m building for fun. More on it soon.',
-    tags: ['cs', 'forFun'],
-    tentative: true,
-    // Hidden until Melvin writes two real lines about it (2026-10-29).
-    hidden: true,
   },
 ]
 
