@@ -4105,3 +4105,13 @@ domain name · sound in/out.
   Photo (Drive 1M53pah7..., 1247x1261 jpg) in scratchpad/photo; styles A
   density / B name / C mask glyphs, reveals 1 scan / 2 dissolve, drafted
   3-paragraph intro. Waiting on his pick.
+- ✅ Task 7 GO PUBLIC (2026-11-05, f12251a): melvinchirag.com bought on
+  Namecheap (account mkarupat; domain auto-renew ON, privacy ON, expires
+  2027-11-05). Nameservers = Custom DNS ns1/ns2.vercel-dns.com (so DNS
+  records live in Vercel now, not Namecheap; Namecheap email forwarding no
+  longer applies). Vercel team iand-me, project portfolio: apex primary,
+  www → apex 308. SITE_URL, canonical, og/twitter image, robots, sitemap
+  switched; GitHub repo homepage = https://melvinchirag.com. Verified:
+  https 200 on /, /about, /og.jpg; www 308 → apex; vercel.app still 200.
+  🔴 Melvin must click Namecheap's registrant verification email sent to
+  mkarupat@emich.edu within 15 days or the domain is suspended (ICANN).
