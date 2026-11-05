@@ -8,7 +8,7 @@
  * running any JavaScript.
  * ========================================================================= */
 
-export const SITE_URL = 'https://melvinchirag.vercel.app'
+export const SITE_URL = 'https://melvinchirag.com'
 export const SITE_NAME = 'Melvin Chirag Karupati'
 export const DEFAULT_DESCRIPTION =
   "Melvin Chirag Karupati. Computer science student at Eastern Michigan University building computer-vision and machine-learning systems. Vice president of Hack The Nest, EMU's first hackathon."
