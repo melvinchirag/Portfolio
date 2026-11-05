@@ -1010,3 +1010,14 @@ html.has-cursor.cursor-hover .cursor-dot {
     display: none;
   }
 }
+
+/* THE DETECTION DOCK's scan line (Nav.tsx): one sweep top to bottom through
+ * the bounding box each time it locks onto a new page. Reduced motion never
+ * renders it. */
+.dock-scan {
+  animation: dock-scan 520ms var(--ease-out-expo) forwards;
+}
+@keyframes dock-scan {
+  from { transform: translateY(0); opacity: 0.9; }
+  to { transform: translateY(calc(2.1rem)); opacity: 0; }
+}

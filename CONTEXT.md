@@ -4065,3 +4065,20 @@ domain name · sound in/out.
   bypass). **Not reachable here** — this is a client-only SPA with no server
   actions. The fix is a breaking downgrade, so it is knowingly deferred.
 - `/resume.pdf` is linked from the nav but not yet present — it 404s.
+
+- ✅ 2026-11-05 NAV: Melvin picked option A from the board ("but think of
+  something more unique ... surprise me"). Built THE DETECTION DOCK
+  (`Nav.tsx`): a capsule of Home / Work / Vision / About where the
+  indicator is a computer-vision bounding box (four corner brackets) that
+  locks onto the current page; hover/focus re-targets it, a scan line sweeps
+  through (`.dock-scan` in index.css) and a tag reads "WORK 0.97" with the
+  confidence counting up (fixed per page). Laptop: top-centre, brand alone
+  top-left (brand hides on scroll down, dock never does). Phone: thumb bar
+  at the bottom, hamburger and mobile menu removed. Reduced motion: box
+  jumps, no scan, no count-up. Verified at 767px in Chrome; the md+ top
+  position is the same component with md: classes (window could not be
+  resized while the laptop was locked).
+- 🔴 CONTACT DELIVERY STILL UNVERIFIED (2026-11-05): FormSubmit returned
+  Cloudflare 522 on every probe including a re-probe after the nav build.
+  The mailto fallback covers visitors. Recommended fix: Web3Forms access key
+  from Melvin.
