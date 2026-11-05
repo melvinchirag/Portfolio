@@ -4082,3 +4082,13 @@ domain name · sound in/out.
   Cloudflare 522 on every probe including a re-probe after the nav build.
   The mailto fallback covers visitors. Recommended fix: Web3Forms access key
   from Melvin.
+- ✅ Task 3 partial (2026-11-05, bea5e97): ADE marked Winner (Melvin
+  confirmed; prize name still to come, no award line yet). Spidey deleted
+  from work.ts (never built). Melvin's decisions the same message:
+  Web3Forms key is his, at the end; he buys the domain; résumé = update the
+  2026-07-29 PDF (missing ADE, the site itself, inflated wording); About
+  becomes an ASCII portrait + short paragraph, click to reveal the real
+  photo (needs his photo); phone gets its own vertical layout (smaller
+  mask, beats run top to bottom); second mask is pulled forward to today;
+  camera stays parked. Pick-boards owed per LESSONS #1 before the phone,
+  About and second-mask builds.
