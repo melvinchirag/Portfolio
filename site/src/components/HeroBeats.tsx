@@ -233,7 +233,7 @@ function IdentityFrame({ index }: { index: number }) {
 
         <p className="mt-7 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/75 sm:text-[15.5px]">
           I build computer-vision and machine-learning systems that work outside the screen, and I
-          co-lead Hack The Nest, EMU's first hackathon. This site can{' '}
+          am vice president of Hack The Nest, EMU's first hackathon. This site can{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
             see further
           </Link>

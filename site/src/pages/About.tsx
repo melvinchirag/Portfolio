@@ -31,7 +31,7 @@ const MILESTONES = [
     year: 'Fall 2025 — Present',
     title: 'Eastern Michigan University',
     description:
-      'Transferred in as a junior, concentrating in AI/ML. Vice president of GDG on Campus, co-lead and finance lead of Hack The Nest (EMU’s first hackathon), and founder of SPARC, a student society for building and research.',
+      'Transferred in as a junior, concentrating in AI/ML. Vice president of GDG on Campus, vice president and finance lead of Hack The Nest (EMU’s first hackathon), and founder of SPARC, a student society for building and research.',
   },
 ]
 
@@ -119,7 +119,7 @@ export function About() {
   usePageMeta(
     'About',
     '/about',
-    'Who Melvin Chirag Karupati is: born in Hyderabad, raised in Kuwait, now studying computer science at Eastern Michigan University and co-leading Hack The Nest.',
+    'Who Melvin Chirag Karupati is: born in Hyderabad, raised in Kuwait, now studying computer science at Eastern Michigan University and helping run Hack The Nest as its vice president.',
   )
   useEffect(() => {
     window.scrollTo(0, 0)

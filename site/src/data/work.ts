@@ -253,9 +253,10 @@ export const WORK_PROJECTS: WorkProject[] = [
     id: 'ade',
     name: 'ADE',
     category: 'hackathon',
-    // Melvin confirmed the win on 2026-11-05. Prize name not given yet, so no
-    // `award` line; add it when he says which prize.
+    // Prizes from Melvin's LinkedIn post (read 2026-11-05). He also applied to
+    // Y Combinator with ADE; he asked for that to be shown.
     status: 'Winner',
+    award: 'Main Track (Ideation Matrix), Best Use of ElevenLabs, and the CTF. Applied to Y Combinator with it',
     blurb:
       'Agentique Desktop Ecosystem. A team of AI agents that lives on your desktop as six small 3D animals on the taskbar. You talk to one; it hands the work to specialists, and a rule-based warden approves every action before it happens.',
     tags: ['cs', 'aiml', 'agents', 'electron', 'react', 'typescript', 'threejs', 'hackathon'],

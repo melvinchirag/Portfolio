@@ -36,7 +36,7 @@ import { usePageMeta } from '../hooks/usePageMeta'
 // Current roles, from Otto's `context/uni.md` (2026-10-29). Newest first.
 const LEADERSHIP = [
   {
-    role: 'Co-lead and finance lead',
+    role: 'Vice president and finance lead',
     org: 'Hack The Nest, EMU’s first hackathon · November 14–15, 2026',
     note: 'Sponsorship, budget and partnerships for a 24-hour event for students from across the Midwest, run by GDG on Campus.',
   },
