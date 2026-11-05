@@ -192,6 +192,26 @@ running locally, logged here, committed.
   until the pointer has moved; cursor interaction actually works now.
   NOTE for task 6: on a 767px-wide viewport the free glyphs read as a dense
   starfield; consider halving FREE_MAX / rates below md.
+- 🟡 Task 2 + hero notes (2026-11-05, Melvin from his phone). CONTACT: both
+  forms now POST to FormSubmit's JSON endpoint for `PROFILE.email`
+  (melvinchirag@gmail.com, which he confirmed as the official inbox), with
+  a `_honey` honeypot, a "Sending…" state, "Sent. It is in my inbox." on
+  success, and the old mailto: as the fallback if the request fails, so a
+  message is never dropped. UNVERIFIED: formsubmit.co answered Cloudflare
+  522 (origin down) during every probe, so the fallback is what was
+  exercised. First successful submission triggers a one-time activation
+  email to that inbox. If the service stays flaky, the robust path is
+  Web3Forms (Melvin requests an access key at web3forms.com with his email,
+  pastes it here) or a Vercel function + Resend key. HERO: top meta row
+  removed ("Computer science · EMU" gone, he didn't like it); GitHub /
+  LinkedIn / Résumé now sit inside the name lockup, right-aligned so they
+  end above the N of MELVIN; "Chirag Karupati" is bigger (5vw, cap 3.4rem)
+  and letter-spaced by measurement to EXACTLY MELVIN's width (effect in
+  IdentityFrame; verified 545/545/545px). WIP NOTE (`WipNote.tsx`): "Work
+  in progress. Things here still move, break and glow." in the Footer and
+  under Contact's Return to Start. NAV: he called the menu bar "really
+  bad"; per LESSONS #1 a three-option pick-board goes to him before any
+  rebuild.
 
 **Still owed by Melvin:** current résumé, Devpost/GitHub links (Lingo, EventOS,
 Manas), Vision text choice, Spidey (hide or two lines), contact email, domain

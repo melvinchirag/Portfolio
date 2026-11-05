@@ -11,6 +11,7 @@
 import { Link } from 'react-router-dom'
 import { PROFILE, SOCIALS } from '../data/profile'
 import { Reveal } from './Reveal'
+import { WipNote } from './WipNote'
 
 export function Footer() {
   const link =
@@ -26,6 +27,7 @@ export function Footer() {
         <a href={`mailto:${PROFILE.email}`} className={link}>
           {PROFILE.email}
         </a>
+        <WipNote />
       </div>
       <nav aria-label="Footer" className="label flex flex-wrap items-center gap-x-5 gap-y-2">
         {SOCIALS.filter((s) => s.href).map((s) => (

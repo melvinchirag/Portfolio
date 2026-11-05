@@ -141,9 +141,36 @@ function IdentityFrame({ index }: { index: number }) {
   const [nameShown, setNameShown] = useState(false)
   const reveal = useCallback(() => setNameShown(true), [])
 
-  const linkRow = 'label flex items-center gap-5'
   const link =
     'ease-out-expo text-sand-dim transition-colors duration-300 hover:text-sand focus-visible:text-sand focus-visible:outline-none'
+
+  // "Chirag Karupati" is tracked out to EXACTLY the width of MELVIN (Melvin,
+  // 2026-11-05: "it should be a little bigger ... and as long as the word
+  // Melvin"). Measured, not guessed: letter-spacing = (first-name width −
+  // surname natural width) / characters, re-measured on resize and once the
+  // fonts are in. The trailing letter-space is pulled back with a negative
+  // margin so the last glyph lands on the N's right edge.
+  const surnameRef = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    const first = firstNameRef.current
+    const sub = surnameRef.current
+    if (!first || !sub) return
+    const fit = () => {
+      sub.style.letterSpacing = '0px'
+      sub.style.marginRight = '0px'
+      const target = first.getBoundingClientRect().width
+      const natural = sub.getBoundingClientRect().width
+      const n = (sub.textContent ?? '').length
+      const ls = Math.max(0, (target - natural) / n)
+      sub.style.letterSpacing = `${ls}px`
+      sub.style.marginRight = `${-ls}px`
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(first)
+    document.fonts?.ready.then(fit)
+    return () => ro.disconnect()
+  }, [])
 
   return (
     // data-pan marks this as a panned root — the rAF loop writes its transform.
@@ -157,49 +184,52 @@ function IdentityFrame({ index }: { index: number }) {
     >
       <NameAssembly rootRef={rootRef} targetRef={firstNameRef} onDone={reveal} />
 
-      {/* Top meta row: who/where on the left, the three links recruiters want
-          on the right. Sits under the nav, in the nav's own gutter. */}
-      <div
-        className="frame-item absolute inset-x-6 top-[11vh] flex items-center justify-between gap-6 md:left-10 md:right-[100px] lg:left-14 lg:right-[110px]"
-        style={FI(0.1)}
-      >
-        <span className="label hidden sm:inline">Computer science · Eastern Michigan University</span>
-        <div className={linkRow}>
-          <a href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
-            GitHub
-          </a>
-          <a
-            href="https://linkedin.com/in/melvin-chirag-karupati-a34452380"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={link}
-          >
-            LinkedIn
-          </a>
-          <a href="/resume.pdf" target="_blank" rel="noopener noreferrer" className={link}>
-            Résumé ↗
-          </a>
-        </div>
-      </div>
+      {/* The name block: right half on laptops, full width on phones.
 
-      {/* The name block: right half on laptops, full width on phones. */}
+          2026-11-05 (Melvin): the top meta row is gone. "Computer science ·
+          Eastern Michigan University" was clutter he didn't like, and the
+          three links fought the nav in the top-right corner. The links now
+          sit inside the name lockup, right-aligned so they end exactly above
+          the N of MELVIN, and the surname is tracked out to MELVIN's width
+          (see the effect above), so the whole lockup is one aligned block. */}
       <div className="frame-item relative col-span-12 md:col-span-7 md:col-start-6" style={FI(0)}>
-        <h1 className="flex flex-col">
-          <span
-            ref={firstNameRef}
-            // Opacity transition length = NameAssembly's SOLIDIFY_SECS, so the
-            // text comes up at exactly the pace the dust thins out.
-            style={{ transitionDuration: `${SOLIDIFY_SECS}s`, transitionTimingFunction: 'ease-in-out' }}
-            className={`name-gold display-wide font-display text-[clamp(4rem,15vw,9rem)] leading-[0.86] font-extrabold tracking-[-0.03em] uppercase transition-opacity md:text-[clamp(5rem,9.4vw,12rem)] ${
-              nameShown ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            Melvin
-          </span>
-          <span className="display-narrow mt-3 font-display text-[clamp(1.1rem,3.2vw,2rem)] leading-none font-normal tracking-[0.01em] text-sand-dim">
-            Chirag Karupati
-          </span>
-        </h1>
+        <div className="w-fit">
+          <div className="label mb-4 flex items-center justify-end gap-5">
+            <a href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
+              GitHub
+            </a>
+            <a
+              href="https://linkedin.com/in/melvin-chirag-karupati-a34452380"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={link}
+            >
+              LinkedIn
+            </a>
+            <a href="/resume.pdf" target="_blank" rel="noopener noreferrer" className={link}>
+              Résumé ↗
+            </a>
+          </div>
+          <h1 className="flex flex-col">
+            <span
+              ref={firstNameRef}
+              // Opacity transition length = NameAssembly's SOLIDIFY_SECS, so the
+              // text comes up at exactly the pace the dust thins out.
+              style={{ transitionDuration: `${SOLIDIFY_SECS}s`, transitionTimingFunction: 'ease-in-out' }}
+              className={`name-gold display-wide w-fit font-display text-[clamp(4rem,15vw,9rem)] leading-[0.86] font-extrabold tracking-[-0.03em] uppercase transition-opacity md:text-[clamp(5rem,9.4vw,12rem)] ${
+                nameShown ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              Melvin
+            </span>
+            <span
+              ref={surnameRef}
+              className="display-narrow mt-3 self-start font-display text-[clamp(1.5rem,5vw,3.4rem)] leading-none font-medium whitespace-nowrap text-sand-dim"
+            >
+              Chirag Karupati
+            </span>
+          </h1>
+        </div>
 
         <p className="mt-7 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/75 sm:text-[15.5px]">
           I build computer-vision and machine-learning systems that work outside the screen, and I

@@ -33,6 +33,7 @@ import { heroScrollToTop } from '../hooks/useLenis'
 import { PROFILE, SOCIALS } from '../data/profile'
 import { ICON_PATHS } from '../components/SocialLinks'
 import { Reveal } from '../components/Reveal'
+import { WipNote } from '../components/WipNote'
 
 /** What brings people to the contact form. Doubles as the email subject line.
  *  The last two are Melvin's own joke additions (2026-08-10) — verbatim, not
@@ -46,6 +47,34 @@ const REASONS = [
   'You have immeasurable resentment for me',
   'Something else',
 ]
+
+/* ---------------------------------------------------------------------------
+ * DELIVERY (task 2 of the finishing list, 2026-11-05). Melvin: "when they say
+ * contact us, it should directly come to my email." Both forms POST to
+ * FormSubmit's JSON endpoint for PROFILE.email, which forwards the message to
+ * that inbox; no backend, no account, nothing to run. First submission ever
+ * triggers a one-time activation email to that inbox (click the link once).
+ * `_honey` is a hidden honeypot: bots fill it, humans can't see it, and a
+ * filled one is quietly "sent" without going anywhere. If the request fails
+ * (offline, endpoint down, not yet activated) the form falls back to the old
+ * mailto: so a message is never silently dropped.
+ * ------------------------------------------------------------------------ */
+type SendStatus = 'idle' | 'sending' | 'sent' | 'fallback'
+
+async function deliver(fields: Record<string, string>, subject: string): Promise<boolean> {
+  try {
+    const r = await fetch(`https://formsubmit.co/ajax/${PROFILE.email}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ ...fields, _subject: subject, _template: 'table', _captcha: 'false' }),
+    })
+    if (!r.ok) return false
+    const j = (await r.json()) as { success?: string | boolean }
+    return j.success === true || j.success === 'true'
+  } catch {
+    return false
+  }
+}
 
 /** How a testimonial-writer knows Melvin. Shown back on the published card later
  *  as a small metadata signal (per the testimonials addendum). */
@@ -193,20 +222,27 @@ function FindMeHere() {
  * Contact view: the message form + quiet icon row.
  * ------------------------------------------------------------------------ */
 function ContactView() {
-  const [composed, setComposed] = useState(false)
+  const [status, setStatus] = useState<SendStatus>('idle')
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
     const name = String(data.get('name') ?? '')
     const email = String(data.get('email') ?? '')
     const reason = String(data.get('reason') ?? '')
     const message = String(data.get('message') ?? '')
+    if (String(data.get('_honey') ?? '')) { setStatus('sent'); return } // bot
 
-    const subject = encodeURIComponent(`${reason}, from ${name}`)
+    setStatus('sending')
+    const subjectText = `${reason}, from ${name}`
+    if (await deliver({ name, email, reason, message }, subjectText)) {
+      setStatus('sent')
+      return
+    }
+    const subject = encodeURIComponent(subjectText)
     const body = encodeURIComponent(`${message}\n\n${name}\n${email}`)
     window.location.href = `mailto:${PROFILE.email}?subject=${subject}&body=${body}`
-    setComposed(true)
+    setStatus('fallback')
   }
 
   return (
@@ -227,15 +263,18 @@ function ContactView() {
             Send a message
           </h2>
 
-          {composed ? (
+          {status === 'sent' || status === 'fallback' ? (
             <div
               aria-live="polite"
               className="rounded-2xl p-8 text-[14px] leading-relaxed text-white/80 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.075)]"
             >
-              <p className="font-display text-2xl text-white">Your message is ready to send.</p>
+              <p className="font-display text-2xl text-white">
+                {status === 'sent' ? 'Sent. It is in my inbox.' : 'Your message is ready to send.'}
+              </p>
               <p className="mt-4">
-                Your mail app should have opened with everything filled in. Hit send there and it
-                comes straight to me.
+                {status === 'sent'
+                  ? 'I read everything myself and I will write back to the address you gave.'
+                  : 'Your mail app should have opened with everything filled in. Hit send there and it comes straight to me.'}
               </p>
               <p className="mt-4 text-white/60">
                 Nothing opened? Write to{' '}
@@ -249,7 +288,7 @@ function ContactView() {
               </p>
               <button
                 type="button"
-                onClick={() => setComposed(false)}
+                onClick={() => setStatus('idle')}
                 className="mt-7 text-[13px] tracking-wide text-white/60 transition-colors hover:text-white"
               >
                 Write another <span aria-hidden>→</span>
@@ -257,6 +296,7 @@ function ContactView() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <input type="text" name="_honey" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <label htmlFor="name" className="text-[11px] tracking-[0.2em] text-white/45 uppercase">
@@ -301,10 +341,14 @@ function ContactView() {
               </div>
 
               <div className="mt-2 flex flex-wrap items-center gap-5">
-                <button type="submit" className="glass-cta rounded-full px-7 py-2.5 text-sm tracking-wide">
-                  Send message
+                <button
+                  type="submit"
+                  disabled={status === 'sending'}
+                  className="glass-cta rounded-full px-7 py-2.5 text-sm tracking-wide disabled:opacity-60"
+                >
+                  {status === 'sending' ? 'Sending…' : 'Send message'}
                 </button>
-                <p className="text-[12px] text-white/40">Opens in your mail app.</p>
+                <p className="text-[12px] text-white/40">Goes straight to my inbox.</p>
               </div>
             </form>
           )}
@@ -353,9 +397,9 @@ function ContactView() {
  * approved testimonials is a separate, later build (see file header).
  * ------------------------------------------------------------------------ */
 function TestimonialsView() {
-  const [composed, setComposed] = useState(false)
+  const [status, setStatus] = useState<SendStatus>('idle')
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
     const name = String(data.get('name') ?? '')
@@ -363,13 +407,20 @@ function TestimonialsView() {
     const relationship = String(data.get('relationship') ?? '')
     const organization = String(data.get('organization') ?? '')
     const testimonial = String(data.get('testimonial') ?? '')
+    if (String(data.get('_honey') ?? '')) { setStatus('sent'); return } // bot
 
-    const subject = encodeURIComponent(`Testimonial from ${name}`)
+    setStatus('sending')
+    const subjectText = `Testimonial from ${name}`
+    if (await deliver({ name, email, relationship, organization, testimonial }, subjectText)) {
+      setStatus('sent')
+      return
+    }
+    const subject = encodeURIComponent(subjectText)
     const body = encodeURIComponent(
       `${testimonial}\n\n${name}\n${relationship}${organization ? ` at ${organization}` : ''}\n${email}`,
     )
     window.location.href = `mailto:${PROFILE.email}?subject=${subject}&body=${body}`
-    setComposed(true)
+    setStatus('fallback')
   }
 
   return (
@@ -385,19 +436,22 @@ function TestimonialsView() {
       </Reveal>
 
       <Reveal delay={120} className="mt-16 max-w-xl">
-        {composed ? (
+        {status === 'sent' || status === 'fallback' ? (
           <div
             aria-live="polite"
             className="rounded-2xl p-8 text-[14px] leading-relaxed text-white/80 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.075)]"
           >
-            <p className="font-display text-2xl text-white">Your testimonial is ready to send.</p>
+            <p className="font-display text-2xl text-white">
+              {status === 'sent' ? 'Sent. Thank you.' : 'Your testimonial is ready to send.'}
+            </p>
             <p className="mt-4">
-              Your mail app should have opened with everything filled in. I read every one myself,
-              and I'll only publish it after that.
+              {status === 'sent'
+                ? 'I read every one myself, and I will only publish it after that.'
+                : 'Your mail app should have opened with everything filled in. I read every one myself, and I will only publish it after that.'}
             </p>
             <button
               type="button"
-              onClick={() => setComposed(false)}
+              onClick={() => setStatus('idle')}
               className="mt-7 text-[13px] tracking-wide text-white/60 transition-colors hover:text-white"
             >
               Write another <span aria-hidden>→</span>
@@ -405,6 +459,7 @@ function TestimonialsView() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <input type="text" name="_honey" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <label htmlFor="t-name" className="text-[11px] tracking-[0.2em] text-white/45 uppercase">
@@ -471,10 +526,14 @@ function TestimonialsView() {
             </p>
 
             <div className="mt-1 flex flex-wrap items-center gap-5">
-              <button type="submit" className="glass-cta rounded-full px-7 py-2.5 text-sm tracking-wide">
-                Submit testimonial
+              <button
+                type="submit"
+                disabled={status === 'sending'}
+                className="glass-cta rounded-full px-7 py-2.5 text-sm tracking-wide disabled:opacity-60"
+              >
+                {status === 'sending' ? 'Sending…' : 'Submit testimonial'}
               </button>
-              <p className="text-[12px] text-white/40">Opens in your mail app.</p>
+              <p className="text-[12px] text-white/40">Goes straight to my inbox.</p>
             </div>
           </form>
         )}
@@ -504,6 +563,9 @@ export function Contact() {
         >
           Return to Start
         </button>
+      </Reveal>
+      <Reveal className="mt-10 flex justify-center">
+        <WipNote />
       </Reveal>
     </div>
   )
