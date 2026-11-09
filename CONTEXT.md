@@ -4105,6 +4105,21 @@ domain name · sound in/out.
   Photo (Drive 1M53pah7..., 1247x1261 jpg) in scratchpad/photo; styles A
   density / B name / C mask glyphs, reveals 1 scan / 2 dissolve, drafted
   3-paragraph intro. Waiting on his pick.
+- 🟡 MENU FORM second board (2026-11-09): Melvin picked the MERCURY liquid
+  (option A of the liquid board) but "I dont like the menu itself ... it
+  does not look as good as it is supposed to." Diagnosis given: the capsule
+  is a borrowed app component (border, translucent fill, mono uppercase,
+  focus-ring indicator) floating above a lockup it shares no rules with.
+  Fix in all options: no container, display face (wide Archivo), aligned to
+  the name, liquid as the only decoration. Board (live, same shader with
+  generalised radii/axis/body uniforms): A Open row (words across the top,
+  drop behind the current one), B Mercury island (at rest one drop holding
+  the current page name, hover stretches it into a bar revealing the
+  others, click closes it around the new word), C Right stack (pages
+  stacked top-right on the lockup's edge, drop flows vertically). Verified
+  on 127.0.0.1: all three draw and travel; island expands (label opacity
+  follows e). Waiting on his pick. The bracket DetectionDock in Nav.tsx is
+  to be replaced, not tuned.
 - 🟡 LIQUID DOCK pick-board sent (2026-11-09): https://claude.ai/artifact/Fih1v6k3GBihSDFpK7TFUn
   Melvin: "retain the liquid ray marching thing. Can we use it on my menu
   tab?" Answer: yes. The board runs three LIVE raymarched liquid docks
