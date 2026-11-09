@@ -4105,6 +4105,20 @@ domain name · sound in/out.
   Photo (Drive 1M53pah7..., 1247x1261 jpg) in scratchpad/photo; styles A
   density / B name / C mask glyphs, reveals 1 scan / 2 dissolve, drafted
   3-paragraph intro. Waiting on his pick.
+- 🟡 LIQUID DOCK pick-board sent (2026-11-09): https://claude.ai/artifact/Fih1v6k3GBihSDFpK7TFUn
+  Melvin: "retain the liquid ray marching thing. Can we use it on my menu
+  tab?" Answer: yes. The board runs three LIVE raymarched liquid docks
+  (raw WebGL, 360x88 canvas, 40 steps, ellipsoid + rounded-box SDFs with
+  polynomial smooth-min, sand-only shading: compressed diffuse, Blinn-Phong
+  36, fresnel rim; alpha edge from the min distance; premultiplied output).
+  A Mercury pill (indicator is a drop that stretches between items), B
+  Liquid capsule (whole bar is liquid, bulges toward hover), C Meniscus
+  (keeps the brackets, a film + drip clings under the active page). Verified
+  on 127.0.0.1: all three draw sand (avg rgb 187,167,126), the drop travels
+  on hover. Build plan when picked: a small standalone WebGL canvas inside
+  Nav.tsx (not in the R3F scene), labels stay DOM, reduced motion jumps, no
+  WebGL = today's bracket dock. Study notes that led here live in Otto:
+  `.claude/skills/creative-ui-techniques/` (five Codrops repos read).
 - ✅ Task 7 GO PUBLIC (2026-11-05, f12251a): melvinchirag.com bought on
   Namecheap (account mkarupat; domain auto-renew ON, privacy ON, expires
   2027-11-05). Nameservers = Custom DNS ns1/ns2.vercel-dns.com (so DNS
