@@ -4105,6 +4105,11 @@ domain name · sound in/out.
   Photo (Drive 1M53pah7..., 1247x1261 jpg) in scratchpad/photo; styles A
   density / B name / C mask glyphs, reveals 1 scan / 2 dissolve, drafted
   3-paragraph intro. Waiting on his pick.
+- ✅ MERCURY MENU, two forms (2026-11-09, later): Melvin: "only use 2
+  different styles, for Home and about let's use the same style and then
+  for work and vision let's use one style." Now Home + About = ROW, Work +
+  Vision = ISLAND, phone = ROW. The STACK form stays in Nav.tsx unused
+  (formFor no longer returns it).
 - ✅ MERCURY MENU BUILT (2026-11-09). Melvin, on the second board: "Let's
   use all 3 ... when we're in home we use stack A, and then the other 2
   when we're on the other pages." Mapping chosen: Home = ROW (words across

@@ -14,10 +14,11 @@ import { createMercury, type Mercury } from './mercury'
  * page ("when we're in home we use stack A, and then the other 2 when we're
  * on the other pages"):
  *
- *   Home            ROW     four words across the top, no container
- *   Work            ISLAND  one drop holding the current page; hover opens it
- *   Vision, About   STACK   words stacked top-right on the lockup's edge
+ *   Home, About     ROW     four words across the top, no container
+ *   Work, Vision    ISLAND  one drop holding the current page; hover opens it
  *   Phone (any)     ROW     at the bottom, thumb reach
+ *   (STACK, words top-right on the lockup's edge, is built but unused since
+ *   his 2026-11-09 "only use 2 different styles" note.)
  *
  * Same drop, same canvas; when the route changes the labels move to the new
  * form and the drop blooms in place on the new active word. No border, no
@@ -42,11 +43,14 @@ function activeIndex(pathname: string) {
   return i < 0 ? 0 : i
 }
 
+// Melvin, 2026-11-09 (second change): "only use 2 different styles, for
+// Home and about let's use the same style and then for work and vision let's
+// use one style." Home + About = row, Work + Vision = island. The stack form
+// stays in the code (the phone pass may want it) but no route uses it.
 function formFor(pathname: string, wide: boolean): Form {
   if (!wide) return 'row'
-  if (pathname === '/') return 'row'
-  if (pathname.startsWith('/work')) return 'island'
-  return 'stack'
+  if (pathname.startsWith('/work') || pathname.startsWith('/vision')) return 'island'
+  return 'row'
 }
 
 function useWide() {
