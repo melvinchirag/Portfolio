@@ -4105,6 +4105,30 @@ domain name · sound in/out.
   Photo (Drive 1M53pah7..., 1247x1261 jpg) in scratchpad/photo; styles A
   density / B name / C mask glyphs, reveals 1 scan / 2 dissolve, drafted
   3-paragraph intro. Waiting on his pick.
+- ✅ MERCURY MENU BUILT (2026-11-09). Melvin, on the second board: "Let's
+  use all 3 ... when we're in home we use stack A, and then the other 2
+  when we're on the other pages." Mapping chosen: Home = ROW (words across
+  the top, no container), Work = ISLAND (one drop holding the page name,
+  hover opens it; the cards need the width), Vision + About = STACK (top
+  right on the lockup's edge), phone = ROW at the bottom on every page.
+  Files: `components/mercury.ts` (raw WebGL raymarcher: two ellipsoids +
+  smooth-min, optional island body, 40 steps, sand-only shading, AA edge,
+  premultiplied; context-loss guarded; dispose must NOT loseContext because
+  StrictMode remounts on the same canvas) and `components/Nav.tsx`
+  (MercuryMenu replaces DetectionDock; form from route + md media query;
+  labels are NavLinks in the display cut; rAF loop measures the labels each
+  frame, `b` leads at 0.16, `a` lags at 0.085, island open amount `e` at
+  0.14, bloom `grow` at 0.12 after a form change; `.is-under` turns the
+  covered word graphite; reduced motion = all lerps 1 and still surface; no
+  WebGL = CSS sand pill). `.dock-scan` CSS removed. Verified on 127.0.0.1
+  (window could not be resized, laptop locked; phone checked through a
+  390px iframe): row/island/stack all draw sand and the drop travels; the
+  island collapses to the centred active word (others opacity 0) and opens
+  on hover; no console errors on a fresh load. Phone row items padded
+  px-3 so four words fit 94vw. tsc clean, build clean.
+  KNOWN: when the route changes the drop blooms in place on the new word
+  rather than gliding across the screen (the canvas is only the menu's
+  box). A full-screen glide would cost 60x the pixels; parked.
 - 🟡 MENU FORM second board (2026-11-09): Melvin picked the MERCURY liquid
   (option A of the liquid board) but "I dont like the menu itself ... it
   does not look as good as it is supposed to." Diagnosis given: the capsule
