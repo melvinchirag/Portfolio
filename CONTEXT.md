@@ -4173,3 +4173,6 @@ domain name · sound in/out.
   https 200 on /, /about, /og.jpg; www 308 → apex; vercel.app still 200.
   🔴 Melvin must click Namecheap's registrant verification email sent to
   mkarupat@emich.edu within 15 days or the domain is suspended (ICANN).
+
+## 2026-11-17 DOMAIN REDIRECT
+melvinchirag.vercel.app served a duplicate of melvinchirag.com (www already 308s). Added a host-matched permanent redirect in site/vercel.json (exact host only, so preview URLs still work). Canonical tag already points to melvinchirag.com.
