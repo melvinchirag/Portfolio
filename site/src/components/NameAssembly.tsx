@@ -30,13 +30,16 @@ import { expectName, heroIntro, markNameDone } from '../hooks/heroIntro'
 
 const DOT_COLOR = '205, 183, 138' // sand, as an rgb triple for rgba()
 const MAX_DOTS = 5200
-const FLY_SECS = 1.4 // one dot's journey
-const STAGGER_SECS = 0.6 // spread of start times across dots
-const HOLD_SECS = 0.4 // fully formed, before the handoff begins
+const FLY_SECS = 0.7 // one dot's journey
+const STAGGER_SECS = 0.3 // spread of start times across dots (name formed at FLY+STAGGER = 1.0s)
+const HOLD_SECS = 0 // text starts crossfading the moment the name is formed
+/** The mask is released this long after the name has formed (Melvin, 2026-11-18:
+ *  name within 1s, mask 1s after that). */
+const MASK_AFTER_NAME_SECS = 1.0
 /** Dust → solid is a SLOW crossfade (Melvin, 2026-10-29: "it should be a fade,
  *  it should look real"). The DOM text's own transition in HeroBeats must
  *  match this number. */
-export const SOLIDIFY_SECS = 2.6
+export const SOLIDIFY_SECS = 0.5
 const FADE_SECS = SOLIDIFY_SECS
 
 type Dot = { x0: number; y0: number; x1: number; y1: number; d: number; r: number }
@@ -175,10 +178,10 @@ export function NameAssembly({
         doneFired = true
         onDone()
       }
-      if (t < fadeStart + FADE_SECS) raf = requestAnimationFrame(draw)
+      if (t >= fadeStart + FADE_SECS) ctx.clearRect(0, 0, canvas.width, canvas.height)
+      if (t < formedAt + MASK_AFTER_NAME_SECS) raf = requestAnimationFrame(draw)
       else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        // The name is solid now; release the mask.
+        // One second after the name formed: release the mask.
         markNameDone()
       }
     }

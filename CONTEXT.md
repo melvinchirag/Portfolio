@@ -4176,3 +4176,6 @@ domain name · sound in/out.
 
 ## 2026-11-17 DOMAIN REDIRECT
 melvinchirag.vercel.app served a duplicate of melvinchirag.com (www already 308s). Added a host-matched permanent redirect in site/vercel.json (exact host only, so preview URLs still work). Canonical tag already points to melvinchirag.com.
+
+## 2026-11-18 FASTER INTRO
+Name assembly was ~5s before the mask even began. Now: dots fly 0.7s + 0.3s stagger (name formed at 1.0s), text crossfade 0.5s (was 2.6s), mask released 1.0s after the name forms (t=2.0s), mask fly-in 1.0s (was 1.2s). Files: NameAssembly.tsx (FLY/STAGGER/HOLD/SOLIDIFY/MASK_AFTER_NAME_SECS), MaskField.tsx INTRO_SECS. Reduced motion unchanged (still, no canvas).

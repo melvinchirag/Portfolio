@@ -203,7 +203,7 @@ const ndcVec = new THREE.Vector2()
 // so -9 is well into the black behind the scene, and easing it to 0 makes the
 // mask rush toward the viewer out of the deep. 2.2→1.2 (Melvin: "exactly one
 // second faster"). The fly-in does not START until the Loader is gone (heroIntro).
-const INTRO_SECS = 1.2
+const INTRO_SECS = 1.0
 const INTRO_Z_DEEP = -9
 
 // LEAVE FADE threshold, in `contactHandoff.t` units (see contactVisibility.ts
