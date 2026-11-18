@@ -30,16 +30,16 @@ import { expectName, heroIntro, markNameDone } from '../hooks/heroIntro'
 
 const DOT_COLOR = '205, 183, 138' // sand, as an rgb triple for rgba()
 const MAX_DOTS = 5200
-const FLY_SECS = 0.7 // one dot's journey
-const STAGGER_SECS = 0.3 // spread of start times across dots (name formed at FLY+STAGGER = 1.0s)
+const FLY_SECS = 0.5 // one dot's journey
+const STAGGER_SECS = 0.2 // spread of start times across dots (name formed at FLY+STAGGER = 0.7s)
 const HOLD_SECS = 0 // text starts crossfading the moment the name is formed
 /** The mask is released this long after the name has formed (Melvin, 2026-11-18:
  *  name within 1s, mask 1s after that). */
-const MASK_AFTER_NAME_SECS = 1.0
+const MASK_AFTER_NAME_SECS = 0.6
 /** Dust → solid is a SLOW crossfade (Melvin, 2026-10-29: "it should be a fade,
  *  it should look real"). The DOM text's own transition in HeroBeats must
  *  match this number. */
-export const SOLIDIFY_SECS = 0.5
+export const SOLIDIFY_SECS = 0.35
 const FADE_SECS = SOLIDIFY_SECS
 
 type Dot = { x0: number; y0: number; x1: number; y1: number; d: number; r: number }
@@ -190,7 +190,7 @@ export function NameAssembly({
     /** Wait for the Loader to leave, then build and run. */
     const waitForIntro = () => {
       if (cancelled) return
-      if (!heroIntro.ready) {
+      if (!heroIntro.ready && !heroIntro.leaving) {
         raf = requestAnimationFrame(waitForIntro)
         return
       }

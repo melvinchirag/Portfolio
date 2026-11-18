@@ -18,6 +18,9 @@ export const heroIntro = {
   /** True once the Loader has fully left the screen. The mask waits for this
    *  before beginning its fly-in, so the neurons finish first, then the mask. */
   ready: false,
+  /** True as soon as the Loader starts its exit fade. The name starts forming
+   *  then, under the dissolve, instead of waiting for the loader to be gone. */
+  leaving: false,
   /** True while a NameAssembly is mounted on the page (the Home hero). Tells
    *  the mask there IS a name to wait for. Off Home it stays false. */
   nameExpected: false,
@@ -25,6 +28,11 @@ export const heroIntro = {
    *  mask's fly-in starts only after this, so the order is always: neurons →
    *  name → mask from far. (Melvin, 2026-10-29.) */
   nameDone: false,
+}
+
+/** Called by the Loader when its exit fade begins. Idempotent. */
+export function markIntroLeaving() {
+  heroIntro.leaving = true
 }
 
 /** Called by the Loader when its sequence is completely gone. Idempotent. */

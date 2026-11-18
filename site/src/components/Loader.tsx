@@ -46,7 +46,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
-import { markIntroReady } from '../hooks/heroIntro'
+import { markIntroLeaving, markIntroReady } from '../hooks/heroIntro'
 
 const SESSION_KEY = 'melvin:seen-intro'
 
@@ -667,6 +667,7 @@ export function Loader() {
   // every path to 'gone': normal finish, skip, reduced motion, and the
   // already-seen-this-session case (initial phase is 'gone' → this runs on mount).
   useEffect(() => {
+    if (phase === 'leaving') markIntroLeaving()
     if (phase === 'gone') markIntroReady()
   }, [phase])
 

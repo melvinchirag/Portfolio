@@ -4179,3 +4179,6 @@ melvinchirag.vercel.app served a duplicate of melvinchirag.com (www already 308s
 
 ## 2026-11-18 FASTER INTRO
 Name assembly was ~5s before the mask even began. Now: dots fly 0.7s + 0.3s stagger (name formed at 1.0s), text crossfade 0.5s (was 2.6s), mask released 1.0s after the name forms (t=2.0s), mask fly-in 1.0s (was 1.2s). Files: NameAssembly.tsx (FLY/STAGGER/HOLD/SOLIDIFY/MASK_AFTER_NAME_SECS), MaskField.tsx INTRO_SECS. Reduced motion unchanged (still, no canvas).
+
+## 2026-11-18 INTRO FASTER AGAIN
+Melvin: still a bit slow. Name now starts while the Loader is fading out (heroIntro.leaving), dots 0.5s + 0.2s stagger (formed 0.7s), text crossfade 0.35s, mask released 0.6s after the name, mask fly-in 0.8s. Remaining fixed cost: the 5.2s neuron Loader (first visit per session only).
