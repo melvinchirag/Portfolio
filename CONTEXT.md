@@ -4194,3 +4194,6 @@ Melvin: footage is last, structure and UI first; phone version needs a real reth
 
 ## 2026-11-19 STAGE 1b: RESUME rewritten (site/public/resume.pdf)
 One page, plain text (ATS safe), built from LinkedIn (read only): SPARC Founder and President Aug 2026-, HTN Vice President and Finance Lead Aug 2026-, GDG VP (Treasurer May-Aug 2026), CATE Lab Apr 2026- (old PDF said Aug 2024; LinkedIn wins), ADE (Hack Dearborn: Main Track Ideation Matrix, Best Use of ElevenLabs, CTF; YC applied), EventOS, Lingo, Osiris (details kept private on purpose, matches the Work page), Manas, OttoSys. Correct LinkedIn, both emails, phone. Source HTML in parked/resume/resume-source.html (print with Chrome headless); old PDF parked. No sponsor names or amounts (rules 13, 42).
+
+## 2026-11-19 PLAN: two Phase 1 additions
+Melvin: (1) liquid effect on ALL hero buttons, fluid; (2) Contact as a fifth menu word. Plan now has 1.4 Liquid hero buttons (board A pool / B bridge / C press ripple, then build in tiers: CTAs, rail arrows and frame dots, text links) and 1.5 Contact page + fifth menu word (needs a real /contact route, which 404s today).

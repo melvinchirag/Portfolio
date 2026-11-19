@@ -12,6 +12,7 @@ still state. **Any new look gets a live pick-board before it is built**
 - Résumé facts: Hack The Nest = Vice President and Finance Lead. SPARC = Founder and President. GDG = Vice President. Dates come from his LinkedIn. ADE won at Hack Dearborn (two awards: one main track, which he called "Ideation Matrix", and Best Use of ElevenLabs). ADE is also applied to YC, no answer yet, still working on it.
 - Analytics = who visited, from which countries, which pages, how they arrived (counts, not named people). Wants a private address like stats.melvinchirag.com that opens it.
 - Footage for projects is LAST.
+- (2026-11-19, later) Liquid effect goes on ALL hero buttons and must feel fluid. Contact becomes a fifth menu word ("not a bad idea, it might be wise indeed").
 - The phone version needs a serious rethink, not a patch. The big mask may be the wrong idea on a phone.
 
 ## What the live site looks like today (audited 2026-11-19, desktop 1440 and phone 390)
@@ -48,6 +49,26 @@ The form already posts to FormSubmit and forwards to melvinchirag@gmail.com. The
 3. Private stats address: add `stats.melvinchirag.com` to the Vercel project (DNS already lives in Vercel) and add a host redirect in `site/vercel.json` that sends it to the analytics dashboard. The dashboard needs his Vercel login, so only he can see numbers. I make the code change; he or I (with his yes) add the domain in Vercel.
 4. Check: the script loads on the live site and his own visit appears.
 Note: Vercel shows aggregate counts and countries. It cannot name individual visitors, by design.
+
+### 1.4 Liquid hero buttons (half a day; pick-board first, then build)
+Melvin: apply the liquid effect to all buttons on the hero, and it must be fluid.
+Hero elements that act as buttons today (HeroBeats.tsx): the two CTAs "See the work" and "Contact" (`glass-cta`), the round project-rail arrows, the frame dots at the bottom, and the text links GitHub, LinkedIn, Resume and "Read the full story".
+1. Pick-board (live, real shader, real button sizes) showing 3 behaviours on the two CTAs. A) Pool: a sand drop follows the cursor inside the pill and swells to fill it on hover, retracts on leave. B) Bridge: two drops (leader and lagger, like the menu) stretch a bridge from where the cursor entered to where it sits. C) Press ripple: pill is a calm liquid surface, hover tilts the highlight, click sends a ring through it. Each shows hover, leave and press.
+2. Fluid means: springs not fixed lerps (so motion overshoots a little and settles), pointer-following with lag, a squash on press, and never a hard cut between states. 60 fps with only the hovered button running its loop.
+3. Build the pick on every hero button, in tiers: CTAs get the full liquid pill; rail arrows and frame dots get a small drop that swells; text links get a thin liquid underline that flows toward the cursor.
+4. Implementation: reuse `mercury.ts` with generalised radii. One small canvas per button, created on first hover or focus and released after it settles, so at most two or three WebGL contexts exist at once next to the menu. Resting look stays the current CSS pill, so nothing loads or runs until someone touches it.
+5. Fallbacks: no WebGL gives today's `glass-cta` hover. Reduced motion gives an instant fill and colour change, no morph. Keyboard focus shows the same liquid state as hover. Touch: tap shows the press ripple only.
+6. Rules: Graphite + Sand only, no glow, no second colour, keep text readable over the liquid (label turns graphite where the drop covers it, same trick as the menu).
+Done when: every hero button reacts fluidly on desktop, still works by keyboard and on touch, console clean, no frame-rate drop on the hero.
+Commit: "Hero: liquid buttons".
+
+### 1.5 Contact as the fifth menu word (2 to 3 hours)
+Melvin: yes, add it. It needs a real page first, because `/contact` 404s today.
+1. Build the `/contact` route and page: the form (same delivery as 1.1), direct email, LinkedIn, GitHub, résumé link, one line on what he is open to. Uses the page skeleton from 2.1 (build the skeleton first, or use the same heading and spacing values now and fold into 2.1).
+2. Menu: five words. Row form widens (about 540 px) and Contact joins Home and About in the open row. Island form lists five words. Phone row tightens padding so five words fit inside 94 vw at 360 and 390.
+3. Home hero "Contact" button keeps scrolling to the Home contact slide (part of the scroll story); the menu word goes to the page. Both deliver to the same inbox.
+4. Update sitemap, the 404 text, and CONTEXT.md. Check all five words on desktop and phone.
+Commit: "Contact page and fifth menu word".
 
 ---
 
@@ -90,8 +111,7 @@ Job: the human story in under a minute, readable.
 
 ### 2.6 Vision and a real Contact page
 1. Vision: break the wall into three blocks (Now, Next, Underneath) with one strong line each, supporting paragraph below. Board with 2 layouts, then build.
-2. Contact: create the real `/contact` route (today it 404s). Contents: the form, direct email, LinkedIn, GitHub, résumé link, a short "what I'm open to" line. Add it to the menu only if the menu stays four words wide; otherwise it is reachable from Home, Work and the footer. Decision for Melvin: Contact in the menu or not.
-3. Update sitemap and the 404 text.
+2. Contact page and the fifth menu word moved to Phase 1, step 1.5. Here: only restyle it with the finished page skeleton.
 
 ### 2.7 Page-by-page review and close
 Desktop and phone screenshots of every page, Lighthouse on each, console clean, CONTEXT.md updated, a before and after table to Melvin.
@@ -103,7 +123,7 @@ Desktop and phone screenshots of every page, Lighthouse on each, console clean, 
 - Second mask, ASCII About extras, full-screen menu glide, Lighthouse and Awwwards pass.
 
 ## Order for the /goal run
-1.1 (starts the wait on his inbox) then 1.3 then 1.2 then 2.1 then 2.2 (phone) then 2.3, 2.4, 2.5, 2.6 each as pick-board then build, then 2.7.
+1.1 (starts the wait on his inbox), 1.3 and 1.2 (both done on the code side), then 1.4 (board, then build), 1.5, then 2.1 then 2.2 (phone) then 2.3, 2.4, 2.5, 2.6 each as pick-board then build, then 2.7.
 Pick-boards pause the run until Melvin chooses; I batch them so several boards are ready at once.
 
 ## Stop points (I will not do these alone)
