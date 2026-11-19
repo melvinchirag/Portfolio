@@ -58,9 +58,10 @@ const REASONS = [
  * `_honey` is a hidden honeypot: bots fill it, humans can't see it, and a
  * filled one is quietly "sent" without going anywhere. If the request fails
  * (offline, endpoint down, not yet activated) the form falls back to the old
- * mailto: so a message is never silently dropped.
+
+ * (2026-11-19: the automatic mailto fallback was removed. A failed send now shows an inline notice and keeps the typed text.)
  * ------------------------------------------------------------------------ */
-type SendStatus = 'idle' | 'sending' | 'sent' | 'fallback'
+type SendStatus = 'idle' | 'sending' | 'sent' | 'failed'
 
 async function deliver(fields: Record<string, string>, subject: string): Promise<boolean> {
   try {
@@ -240,10 +241,8 @@ function ContactView() {
       setStatus('sent')
       return
     }
-    const subject = encodeURIComponent(subjectText)
-    const body = encodeURIComponent(`${message}\n\n${name}\n${email}`)
-    window.location.href = `mailto:${PROFILE.email}?subject=${subject}&body=${body}`
-    setStatus('fallback')
+    // Never open the visitor's mail app on their behalf: say it failed and keep what they typed.
+    setStatus('failed')
   }
 
   return (
@@ -264,28 +263,14 @@ function ContactView() {
             Send a message
           </h2>
 
-          {status === 'sent' || status === 'fallback' ? (
+          {status === 'sent' ? (
             <div
               aria-live="polite"
               className="rounded-2xl p-8 text-[14px] leading-relaxed text-white/80 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.075)]"
             >
-              <p className="font-display text-2xl text-white">
-                {status === 'sent' ? 'Sent. It is in my inbox.' : 'Your message is ready to send.'}
-              </p>
+              <p className="font-display text-2xl text-white">Sent. It is in my inbox.</p>
               <p className="mt-4">
-                {status === 'sent'
-                  ? 'I read everything myself and I will write back to the address you gave.'
-                  : 'Your mail app should have opened with everything filled in. Hit send there and it comes straight to me.'}
-              </p>
-              <p className="mt-4 text-white/60">
-                Nothing opened? Write to{' '}
-                <a
-                  href={`mailto:${PROFILE.email}`}
-                  className="text-white/85 underline underline-offset-4 hover:text-white"
-                >
-                  {PROFILE.email}
-                </a>{' '}
-                and I'll get it.
+                I read everything myself and I will write back to the address you gave.
               </p>
               <button
                 type="button"
@@ -341,6 +326,15 @@ function ContactView() {
                 />
               </div>
 
+              {status === 'failed' && (
+                <p role="alert" className="text-[13px] leading-relaxed text-white/80">
+                  That did not send, and what you typed is still here. Try again in a moment, or write to{' '}
+                  <a href={`mailto:${PROFILE.email}`} className="text-white underline underline-offset-4">
+                    {PROFILE.email}
+                  </a>
+                  .
+                </p>
+              )}
               <div className="mt-2 flex flex-wrap items-center gap-5">
                 <button
                   type="submit"
@@ -416,12 +410,8 @@ function TestimonialsView() {
       setStatus('sent')
       return
     }
-    const subject = encodeURIComponent(subjectText)
-    const body = encodeURIComponent(
-      `${testimonial}\n\n${name}\n${relationship}${organization ? ` at ${organization}` : ''}\n${email}`,
-    )
-    window.location.href = `mailto:${PROFILE.email}?subject=${subject}&body=${body}`
-    setStatus('fallback')
+    // Never open the visitor's mail app on their behalf: say it failed and keep what they typed.
+    setStatus('failed')
   }
 
   return (
@@ -437,19 +427,13 @@ function TestimonialsView() {
       </Reveal>
 
       <Reveal delay={120} className="mt-16 max-w-xl">
-        {status === 'sent' || status === 'fallback' ? (
+        {status === 'sent' ? (
           <div
             aria-live="polite"
             className="rounded-2xl p-8 text-[14px] leading-relaxed text-white/80 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.075)]"
           >
-            <p className="font-display text-2xl text-white">
-              {status === 'sent' ? 'Sent. Thank you.' : 'Your testimonial is ready to send.'}
-            </p>
-            <p className="mt-4">
-              {status === 'sent'
-                ? 'I read every one myself, and I will only publish it after that.'
-                : 'Your mail app should have opened with everything filled in. I read every one myself, and I will only publish it after that.'}
-            </p>
+            <p className="font-display text-2xl text-white">Sent. Thank you.</p>
+            <p className="mt-4">I read every one myself, and I will only publish it after that.</p>
             <button
               type="button"
               onClick={() => setStatus('idle')}
@@ -526,7 +510,16 @@ function TestimonialsView() {
               with that.
             </p>
 
-            <div className="mt-1 flex flex-wrap items-center gap-5">
+            {status === 'failed' && (
+                <p role="alert" className="text-[13px] leading-relaxed text-white/80">
+                  That did not send, and what you typed is still here. Try again in a moment, or write to{' '}
+                  <a href={`mailto:${PROFILE.email}`} className="text-white underline underline-offset-4">
+                    {PROFILE.email}
+                  </a>
+                  .
+                </p>
+              )}
+              <div className="mt-1 flex flex-wrap items-center gap-5">
               <button
                 type="submit"
                 disabled={status === 'sending'}
