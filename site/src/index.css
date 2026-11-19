@@ -738,6 +738,36 @@ body {
   outline: none;
 }
 
+/* While the slime (components/slime.ts) is up it IS the fill: every big button
+ * becomes an outline and the slime sits behind whichever one it is on. The class
+ * is only added once the shader compiled, so no-WebGL keeps the solid button. */
+.glass-cta.slime-on,
+.glass-cta.slime-on:hover,
+.glass-cta.slime-on:focus-visible,
+.glass-cta.is-secondary.slime-on:hover {
+  background: transparent;
+  color: var(--color-sand);
+  box-shadow: inset 0 0 0 1px var(--color-sand-deep);
+}
+.glass-cta.slime-on.is-under,
+.glass-cta.slime-on.is-under:hover {
+  color: var(--color-void);
+  box-shadow: none;
+}
+.project-rail-arrow.slime-on.is-under {
+  color: var(--color-void);
+}
+/* Frame dots sit above the slime canvas, so while it is up they draw as a disc
+ * from an inset shadow instead of a background. */
+.frame-dot.slime-on,
+.frame-dot.slime-on:hover {
+  background-color: transparent !important;
+  box-shadow: inset 0 0 0 4.5px rgba(205, 183, 138, 0.25);
+}
+.frame-dot.slime-on:hover {
+  box-shadow: inset 0 0 0 4.5px rgba(205, 183, 138, 0.5);
+}
+
 /* Secondary action: outline only. Same shape, same type, quieter. */
 .glass-cta.is-secondary {
   background: transparent;

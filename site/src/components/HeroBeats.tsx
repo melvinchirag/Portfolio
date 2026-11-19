@@ -35,6 +35,7 @@ import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
 import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
 import { NameAssembly, SOLIDIFY_SECS } from './NameAssembly'
+import { slime } from './slime'
 import { TagThread } from './TagThread'
 
 /** Inline `--k` for a `.frame-item`: how late (0..0.3) it arrives after the
@@ -99,15 +100,16 @@ const PROSE_STACK =
 function FrameDots({ active }: { active: number }) {
   return (
     // bottom-3: low, out of the way of the name block and the fact snakes.
-    <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
+    <div ref={slime.dots} className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
       {FRAMES.map((f, i) => (
         <button
           key={f.id}
+          data-slime
           type="button"
           onClick={() => heroScrollToFrame(i)}
           aria-label={`Go to ${f.label}`}
           aria-current={i === active}
-          className={`ease-out-expo block rounded-full transition-all duration-500 ${
+          className={`frame-dot ease-out-expo block rounded-full transition-all duration-500 ${
             i === active
               ? 'h-[9px] w-[9px] bg-sand'
               : 'h-[7px] w-[7px] bg-sand/25 hover:bg-sand/50'
@@ -194,11 +196,12 @@ function IdentityFrame({ index }: { index: number }) {
           (see the effect above), so the whole lockup is one aligned block. */}
       <div className="frame-item relative col-span-12 md:col-span-7 md:col-start-6" style={FI(0)}>
         <div className="w-fit">
-          <div className="label mb-4 flex items-center justify-end gap-5">
-            <a href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
+          <div ref={slime.links} className="label mb-4 flex items-center justify-end gap-5">
+            <a data-slime href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
               GitHub
             </a>
             <a
+              data-slime
               href="https://linkedin.com/in/melvin-chirag-karupati-a34452380"
               target="_blank"
               rel="noopener noreferrer"
@@ -206,7 +209,7 @@ function IdentityFrame({ index }: { index: number }) {
             >
               LinkedIn
             </a>
-            <a href="/resume.pdf" target="_blank" rel="noopener noreferrer" className={link}>
+            <a data-slime href="/resume.pdf" target="_blank" rel="noopener noreferrer" className={link}>
               Résumé ↗
             </a>
           </div>
@@ -240,11 +243,12 @@ function IdentityFrame({ index }: { index: number }) {
           .
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link to="/work" className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide">
+        <div ref={slime.cta} className="mt-8 flex flex-wrap items-center gap-3">
+          <Link data-slime data-slime-home to="/work" className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide">
             See the work
           </Link>
           <button
+            data-slime
             type="button"
             onClick={() => heroScrollTo('contact')}
             className="glass-cta is-secondary rounded-full px-6 py-2.5 text-sm tracking-wide"
@@ -286,6 +290,8 @@ function PastFrame({ index }: { index: number }) {
           </p>
         </div>
         <Link
+          ref={slime.line}
+          data-slime
           to="/about"
           className="arrow-link frame-item mt-7 inline-block text-[13px] tracking-wide"
           style={FI(0.24)}
@@ -482,6 +488,8 @@ function ProjectRail() {
           vanishing. The cards are sized to overflow (see .project-rail in
           index.css) so there is always something to scroll to. */}
       <button
+        ref={slime.arrow}
+        data-slime
         type="button"
         onClick={() => scrollByCard(-1)}
         disabled={!canLeft}
@@ -491,6 +499,8 @@ function ProjectRail() {
         <span aria-hidden>‹</span>
       </button>
       <button
+        ref={slime.arrow}
+        data-slime
         type="button"
         onClick={() => scrollByCard(1)}
         disabled={!canRight}
