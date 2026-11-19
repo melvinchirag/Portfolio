@@ -4191,3 +4191,6 @@ Melvin: footage is last, structure and UI first; phone version needs a real reth
 
 ## 2026-11-19 STAGE 1a: analytics + stats redirect
 @vercel/analytics installed (--legacy-peer-deps; plain npm i hits an existing peer conflict, lockfile is in sync, npm ci dry run OK) and mounted in main.tsx. vercel.json: host stats.melvinchirag.com redirects (307) to https://vercel.com/iand-me/portfolio/analytics. Melvin still has to: enable Web Analytics in Vercel, add the stats.melvinchirag.com domain to the project.
+
+## 2026-11-19 STAGE 1b: RESUME rewritten (site/public/resume.pdf)
+One page, plain text (ATS safe), built from LinkedIn (read only): SPARC Founder and President Aug 2026-, HTN Vice President and Finance Lead Aug 2026-, GDG VP (Treasurer May-Aug 2026), CATE Lab Apr 2026- (old PDF said Aug 2024; LinkedIn wins), ADE (Hack Dearborn: Main Track Ideation Matrix, Best Use of ElevenLabs, CTF; YC applied), EventOS, Lingo, Osiris (details kept private on purpose, matches the Work page), Manas, OttoSys. Correct LinkedIn, both emails, phone. Source HTML in parked/resume/resume-source.html (print with Chrome headless); old PDF parked. No sponsor names or amounts (rules 13, 42).
