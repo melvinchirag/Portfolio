@@ -4185,3 +4185,6 @@ Melvin: still a bit slow. Name now starts while the Loader is fading out (heroIn
 
 ## 2026-11-19 PLAN written: Phase 1 and 2
 docs/PLAN-phase-1-2.md. Findings: contact form is FormSubmit (not Web3Forms) and activation status unknown; resume.pdf is the 2026-07-29 copy with the wrong LinkedIn and no ADE/HTN; phone mask offset is a fixed -0.62 x; no analytics; zero project media (player already supports video). Next: Melvin runs /goal on the plan.
+
+## 2026-11-19 PLAN v2 (docs/PLAN-phase-1-2.md rewritten)
+Melvin: footage is last, structure and UI first; phone version needs a real rethink (mask may not belong on phone); analytics wants a private stats.melvinchirag.com; resume facts given (HTN VP and Finance Lead, SPARC Founder and President, GDG VP, ADE won Hack Dearborn x2 + applied to YC, phone stays on PDF). Audit: /contact 404s (contact is only a Home slide + footer), mask cut off at left edge on phone, snake glyph rails cross text on Work/Vision/About, About cards overlap the video, no shared page skeleton.
