@@ -57,8 +57,7 @@ const REASONS = [
  * triggers a one-time activation email to that inbox (click the link once).
  * `_honey` is a hidden honeypot: bots fill it, humans can't see it, and a
  * filled one is quietly "sent" without going anywhere. If the request fails
- * (offline, endpoint down, not yet activated) the form falls back to the old
-
+ * (offline, endpoint down, not yet activated) the form shows an inline error.
  * (2026-11-19: the automatic mailto fallback was removed. A failed send now shows an inline notice and keeps the typed text.)
  * ------------------------------------------------------------------------ */
 type SendStatus = 'idle' | 'sending' | 'sent' | 'failed'
