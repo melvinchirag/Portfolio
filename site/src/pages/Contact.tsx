@@ -71,9 +71,7 @@ async function deliver(fields: Record<string, string>, subject: string): Promise
       const { name = '', email = '', ...rest } = fields
       const message = Object.entries(rest)
         .map(([k, v]) => `${k}: ${v}`)
-        .join('
-
-')
+        .join('\n\n')
       const r = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
