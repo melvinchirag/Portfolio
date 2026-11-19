@@ -4197,3 +4197,6 @@ One page, plain text (ATS safe), built from LinkedIn (read only): SPARC Founder 
 
 ## 2026-11-19 PLAN: two Phase 1 additions
 Melvin: (1) liquid effect on ALL hero buttons, fluid; (2) Contact as a fifth menu word. Plan now has 1.4 Liquid hero buttons (board A pool / B bridge / C press ripple, then build in tiers: CTAs, rail arrows and frame dots, text links) and 1.5 Contact page + fifth menu word (needs a real /contact route, which 404s today).
+
+## 2026-11-19 STAGE 1c: CONTACT PAGE + FIFTH MENU WORD (plan step 1.5)
+New /contact route (ContactPage in pages/Contact.tsx: same ContactView/TestimonialsView + toggle as the Home slide, no scroll hand-off, own title/canonical, footer follows). Menu now Home, Work, Vision, About, Contact. Contact uses the island form (like Work and Vision; Home and About stay open row). Row/island box widened 440 to 560 (min 97vw on phone), phone label 10px tracking 0.04em, desktop unchanged 12px. Footer Contact link now /contact; sitemap has /contact. Home hero Contact button still scrolls to the Home slide. Verified on 127.0.0.1: five words fit at 360 and 390 widths and at 1280; no tsc errors; dev server stopped.

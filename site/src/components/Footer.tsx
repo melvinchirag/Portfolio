@@ -38,7 +38,7 @@ export function Footer() {
         <a href={PROFILE.resume} target="_blank" rel="noopener noreferrer" className={link}>
           Résumé ↗
         </a>
-        <Link to="/#contact" className={link}>
+        <Link to="/contact" className={link}>
           Contact
         </Link>
       </nav>

@@ -10,6 +10,7 @@ import { Home } from './pages/Home'
 import { About } from './pages/About'
 import { Work } from './pages/Work'
 import { Vision } from './pages/Vision'
+import { ContactPage } from './pages/Contact'
 import { NotFound } from './pages/NotFound'
 import { useLenis } from './hooks/useLenis'
 import { GlobalScene } from './components/scene/GlobalScene'
@@ -43,6 +44,7 @@ function Shell() {
                 <Route path="/about" element={<About />} />
                 <Route path="/work" element={<Work />} />
                 <Route path="/vision" element={<Vision />} />
+                <Route path="/contact" element={<ContactPage />} />
                 {/* Catch-all: Vercel rewrites every path here, so this is the 404. */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

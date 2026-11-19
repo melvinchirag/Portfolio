@@ -34,6 +34,7 @@ const pages = [
   { to: '/work', label: 'Work' },
   { to: '/vision', label: 'Vision' },
   { to: '/about', label: 'About' },
+  { to: '/contact', label: 'Contact' },
 ]
 
 type Form = 'row' | 'island' | 'stack'
@@ -49,7 +50,7 @@ function activeIndex(pathname: string) {
 // stays in the code (the phone pass may want it) but no route uses it.
 function formFor(pathname: string, wide: boolean): Form {
   if (!wide) return 'row'
-  if (pathname.startsWith('/work') || pathname.startsWith('/vision')) return 'island'
+  if (pathname.startsWith('/work') || pathname.startsWith('/vision') || pathname.startsWith('/contact')) return 'island'
   return 'row'
 }
 
@@ -67,8 +68,8 @@ function useWide() {
 /* Placement per form. The box is the canvas; labels sit inside it with room
    around them so the drop's soft edge is never clipped. */
 const BOX: Record<Form, string> = {
-  row: 'left-1/2 -translate-x-1/2 bottom-[calc(10px+env(safe-area-inset-bottom,0px))] h-[60px] w-[min(440px,94vw)] md:top-4 md:bottom-auto',
-  island: 'left-1/2 -translate-x-1/2 top-4 h-[60px] w-[440px]',
+  row: 'left-1/2 -translate-x-1/2 bottom-[calc(10px+env(safe-area-inset-bottom,0px))] h-[60px] w-[min(560px,97vw)] md:top-4 md:bottom-auto',
+  island: 'left-1/2 -translate-x-1/2 top-4 h-[60px] w-[560px]',
   stack: 'top-4 right-10 h-[140px] w-[170px]',
 }
 const ITEMS: Record<Form, string> = {
@@ -77,8 +78,8 @@ const ITEMS: Record<Form, string> = {
   stack: 'inset-x-0 top-2 bottom-2 flex-col items-end justify-between',
 }
 const ITEM: Record<Form, string> = {
-  // Four words must fit a 94vw bar on a 360px phone, so the row pads less there.
-  row: 'h-8 px-3 md:px-5',
+  // Five words must fit a 97vw bar on a 360px phone, so the row pads less there.
+  row: 'h-8 px-2 md:px-5',
   island: 'h-8 px-5',
   stack: 'h-[26px] px-4',
 }
@@ -257,7 +258,7 @@ function MercuryMenu() {
             onMouseEnter={() => setHover(i)}
             onFocus={() => setHover(i)}
             className={({ isActive }) =>
-              `mercury-item display-wide relative z-10 flex items-center justify-center rounded-full font-display text-[12px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase transition-colors duration-300 ${ITEM[form]} ${
+              `mercury-item display-wide relative z-10 flex items-center justify-center rounded-full font-display text-[10px] font-semibold tracking-[0.04em] md:text-[12px] md:tracking-[0.08em] whitespace-nowrap uppercase transition-colors duration-300 ${ITEM[form]} ${
                 isActive ? 'text-sand' : 'text-sand-dim hover:text-sand'
               } ${fallback && i === (hover ?? active) ? 'is-under' : ''}`
             }

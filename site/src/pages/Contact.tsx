@@ -28,12 +28,13 @@
  * of which exist yet either. Faking a difference now would just mean redoing it.
  * ========================================================================= */
 
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { heroScrollToTop } from '../hooks/useLenis'
 import { PROFILE, SOCIALS } from '../data/profile'
 import { ICON_PATHS } from '../components/SocialLinks'
 import { Reveal } from '../components/Reveal'
 import { WipNote } from '../components/WipNote'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 /** What brings people to the contact form. Doubles as the email subject line.
  *  The last two are Melvin's own joke additions (2026-08-10) — verbatim, not
@@ -567,6 +568,30 @@ export function Contact() {
       <Reveal className="mt-10 flex justify-center">
         <WipNote />
       </Reveal>
+    </div>
+  )
+}
+
+/** The standalone /contact page (the fifth menu word). Same form, same delivery
+ *  and the same Contact / Kind Words toggle as the Home slide, but as its own
+ *  address: no scroll hand-off, no "Return to Start", the footer follows. */
+export function ContactPage() {
+  usePageMeta(
+    'Contact',
+    '/contact',
+    'Send Melvin Chirag Karupati a message about internships, jobs, research or projects. It goes straight to his inbox.',
+  )
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+  const [view, setView] = useState<View>('contact')
+
+  return (
+    <div className="relative z-10 mx-auto w-full max-w-5xl px-6 pt-32 pb-24 md:px-10">
+      <Reveal className="mb-14 flex justify-center">
+        <ViewToggle view={view} onChange={setView} />
+      </Reveal>
+      {view === 'contact' ? <ContactView /> : <TestimonialsView />}
     </div>
   )
 }
