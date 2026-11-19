@@ -4182,3 +4182,6 @@ Name assembly was ~5s before the mask even began. Now: dots fly 0.7s + 0.3s stag
 
 ## 2026-11-18 INTRO FASTER AGAIN
 Melvin: still a bit slow. Name now starts while the Loader is fading out (heroIntro.leaving), dots 0.5s + 0.2s stagger (formed 0.7s), text crossfade 0.35s, mask released 0.6s after the name, mask fly-in 0.8s. Remaining fixed cost: the 5.2s neuron Loader (first visit per session only).
+
+## 2026-11-19 PLAN written: Phase 1 and 2
+docs/PLAN-phase-1-2.md. Findings: contact form is FormSubmit (not Web3Forms) and activation status unknown; resume.pdf is the 2026-07-29 copy with the wrong LinkedIn and no ADE/HTN; phone mask offset is a fixed -0.62 x; no analytics; zero project media (player already supports video). Next: Melvin runs /goal on the plan.
