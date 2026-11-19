@@ -4188,3 +4188,6 @@ docs/PLAN-phase-1-2.md. Findings: contact form is FormSubmit (not Web3Forms) and
 
 ## 2026-11-19 PLAN v2 (docs/PLAN-phase-1-2.md rewritten)
 Melvin: footage is last, structure and UI first; phone version needs a real rethink (mask may not belong on phone); analytics wants a private stats.melvinchirag.com; resume facts given (HTN VP and Finance Lead, SPARC Founder and President, GDG VP, ADE won Hack Dearborn x2 + applied to YC, phone stays on PDF). Audit: /contact 404s (contact is only a Home slide + footer), mask cut off at left edge on phone, snake glyph rails cross text on Work/Vision/About, About cards overlap the video, no shared page skeleton.
+
+## 2026-11-19 STAGE 1a: analytics + stats redirect
+@vercel/analytics installed (--legacy-peer-deps; plain npm i hits an existing peer conflict, lockfile is in sync, npm ci dry run OK) and mounted in main.tsx. vercel.json: host stats.melvinchirag.com redirects (307) to https://vercel.com/iand-me/portfolio/analytics. Melvin still has to: enable Web Analytics in Vercel, add the stats.melvinchirag.com domain to the project.

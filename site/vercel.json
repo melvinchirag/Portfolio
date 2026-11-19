@@ -2,12 +2,31 @@
   "redirects": [
     {
       "source": "/(.*)",
-      "has": [{ "type": "host", "value": "melvinchirag.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "stats.melvinchirag.com"
+        }
+      ],
+      "destination": "https://vercel.com/iand-me/portfolio/analytics",
+      "permanent": false
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "melvinchirag.vercel.app"
+        }
+      ],
       "destination": "https://melvinchirag.com/$1",
       "permanent": true
     }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
