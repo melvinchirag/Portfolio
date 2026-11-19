@@ -31,6 +31,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { heroScrollToTop } from '../hooks/useLenis'
 import { PROFILE, SOCIALS } from '../data/profile'
+import { WEB3FORMS_KEY } from '../data/site'
 import { ICON_PATHS } from '../components/SocialLinks'
 import { Reveal } from '../components/Reveal'
 import { WipNote } from '../components/WipNote'
@@ -64,6 +65,23 @@ type SendStatus = 'idle' | 'sending' | 'sent' | 'failed'
 
 async function deliver(fields: Record<string, string>, subject: string): Promise<boolean> {
   try {
+    // Web3Forms: one POST, no activation links, nothing opens on the visitor's side.
+    // Used as soon as WEB3FORMS_KEY is set. FormSubmit stays as the fallback until then.
+    if (WEB3FORMS_KEY) {
+      const { name = '', email = '', ...rest } = fields
+      const message = Object.entries(rest)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join('
+
+')
+      const r = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ access_key: WEB3FORMS_KEY, subject, from_name: name, name, email, message }),
+      })
+      const j = (await r.json()) as { success?: boolean }
+      return r.ok && j.success === true
+    }
     const r = await fetch(`https://formsubmit.co/ajax/${PROFILE.email}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
