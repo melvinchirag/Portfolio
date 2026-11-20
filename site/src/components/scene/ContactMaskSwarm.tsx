@@ -82,6 +82,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
 import { swarmExit } from '../../hooks/contactVisibility'
+import { lightHex } from '../../velvet'
 
 // A field of small faces, not the hero focal point, but bigger/denser than
 // round 1 (which read as "too blurry"). 84*84 = 7056 particles per face.
@@ -599,7 +600,7 @@ export function ContactMaskSwarm() {
             uVelocityTexture: { value: null },
             uParticleSize: { value: 0.65 },
             // Sand (2026-10-29), the site's one light colour. Was teal '#80fff0'.
-          uColor: { value: new THREE.Color('#c4a56c') },
+          uColor: { value: new THREE.Color(lightHex('#c4a56c')) },
             uMinAlpha: { value: 0.05 },
             uMaxAlpha: { value: 0.8 },
             uFeatureFloor: { value: 0.34 },
@@ -644,7 +645,7 @@ export function ContactMaskSwarm() {
             uAtlas: { value: atlas.texture },
             uCols: { value: atlas.cols },
             uFade: { value: 0 },
-            uColor: { value: new THREE.Color('#e6d2a4').multiplyScalar(1.7) },
+            uColor: { value: new THREE.Color(lightHex('#e6d2a4')).multiplyScalar(1.7) },
           },
           vertexShader: glyphVertex,
           fragmentShader: glyphFragment,

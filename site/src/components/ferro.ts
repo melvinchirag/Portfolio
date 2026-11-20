@@ -43,6 +43,7 @@
  */
 
 import { spikeSpring } from './spikes'
+import { FLUID } from '../velvet'
 
 export const TUNING = {
   /** Radius of the hole under the pointer, in ems of the name's font size. */
@@ -206,8 +207,8 @@ vec3 shade(vec3 n, vec3 V){
   float nh = max(dot(n, H), 0.0);
   float spec = pow(nh, 36.0) * 0.4 + pow(nh, 160.0) * 0.5;
   float fre = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.45;
-  vec3 deep = vec3(0.40, 0.35, 0.25); vec3 sand = vec3(0.804, 0.718, 0.541); vec3 light = vec3(0.90, 0.83, 0.66);
-  return min(mix(deep, sand, dif) + light * spec + light * fre, vec3(0.93, 0.86, 0.70));
+  vec3 deep = ${FLUID.deep}; vec3 sand = ${FLUID.body}; vec3 light = ${FLUID.light};
+  return min(mix(deep, sand, dif) + light * spec + light * fre, ${FLUID.cap});
 }
 void main(){
   // gl_FragCoord is in device px; the hi-res mask has the canvas's own size.

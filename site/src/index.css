@@ -112,6 +112,23 @@
   backdrop-filter: var(--glass-frost);
 }
 
+/* VELVET PREVIEW (2026-11-20): /?velvet=1|2|3 swaps graphite and sand for deep wine
+ * and cream across every token. See src/velvet.ts. Off unless the address asks. */
+html[data-velvet] {
+  --color-void: var(--velvet-void, #12050a);
+  --color-deep: #1d0a10;
+  --color-line: #3b1a23;
+  --color-sand: #f3e9d2;
+  --color-sand-dim: #c4b294;
+  --color-sand-deep: #6e4b4a;
+  --color-accent: #f3e9d2;
+  --color-white: #f3e9d2;
+  background: var(--velvet-void, #12050a);
+}
+html[data-velvet] body {
+  background: var(--velvet-void, #12050a);
+}
+
 /* Style the root <html> element. */
 html {
   /* Set the background here as well as on <body> so that "overscroll" areas —

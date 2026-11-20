@@ -27,8 +27,9 @@
 
 import { useEffect, useRef, type RefObject } from 'react'
 import { expectName, heroIntro, markNameDone } from '../hooks/heroIntro'
+import { lightRgb } from '../velvet'
 
-const DOT_COLOR = '205, 183, 138' // sand, as an rgb triple for rgba()
+const DOT_COLOR = lightRgb // sand, as an rgb triple for rgba()
 const MAX_DOTS = 5200
 const FLY_SECS = 0.5 // one dot's journey
 const STAGGER_SECS = 0.2 // spread of start times across dots (name formed at FLY+STAGGER = 0.7s)

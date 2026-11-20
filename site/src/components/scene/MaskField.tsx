@@ -24,6 +24,7 @@ import { SNAKE_SLOTS, snakeField } from '../../hooks/snakeField'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { heroScroll } from '../../hooks/heroScroll'
+import { lightHex } from '../../velvet'
 import { heroIntro } from '../../hooks/heroIntro'
 import { contactHandoff } from '../../hooks/contactVisibility'
 import { desktopBreak, stepDesktopBreak, installBreakKick } from '../../hooks/desktopBreak'
@@ -918,7 +919,7 @@ export function MaskParticles() {
           // Sand (2026-10-29), the site's one light colour. Was teal '#80fff0'.
           // Lifted 1.15x and the resting alpha 0.04→0.06 (Melvin, 2026-11-01:
           // "make the face mask a little brighter").
-          uColor: { value: new THREE.Color('#c4a56c').multiplyScalar(1.15) },
+          uColor: { value: new THREE.Color(lightHex('#c4a56c')).multiplyScalar(1.15) },
           uMinAlpha: { value: 0.06 },
           uMaxAlpha: { value: 0.85 },
           // Shared with the glyph layer so a dot converts into its glyph in sync.
@@ -998,7 +999,7 @@ export function MaskParticles() {
           // shared Bloom intensity (which would also brighten the base dot layer,
           // not just the glyphs Melvin asked about). Same hue, 1.7x intensity
           // (1.5→1.7, 2026-08-01: "a bit more prominent").
-          uColor: { value: new THREE.Color('#e6d2a4').multiplyScalar(1.7) },
+          uColor: { value: new THREE.Color(lightHex('#e6d2a4')).multiplyScalar(1.7) },
         },
         vertexShader: glyphVertex,
         fragmentShader: glyphFragment,
@@ -1028,7 +1029,7 @@ export function MaskParticles() {
           uGlyphSize: { value: 17 },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
-          uColor: { value: new THREE.Color('#e6d2a4').multiplyScalar(1.7) },
+          uColor: { value: new THREE.Color(lightHex('#e6d2a4')).multiplyScalar(1.7) },
           uFade: { value: 0 },
           uGlow: { value: 0 },
         },
@@ -1050,7 +1051,7 @@ export function MaskParticles() {
         uniforms: {
           uSize: { value: PUPIL_PX },
           uScale: { value: 1 },
-          uColor: { value: new THREE.Color('#e6d2a4') },
+          uColor: { value: new THREE.Color(lightHex('#e6d2a4')) },
           uFade: { value: 0 },
           uEyeOpen: { value: 1 },
           uGlow: { value: 0 },

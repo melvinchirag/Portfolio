@@ -44,13 +44,14 @@ import { contactHandoff } from '../hooks/contactVisibility'
 import { SNAKE_SLOTS, snakeField } from '../hooks/snakeField'
 import { onReadingColumn, readingColumn } from '../hooks/readingColumn'
 import FACTS from '../data/facts.json'
+import { lightRgb } from '../velvet'
 
 const FONT = '500 11px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace'
 /** Sand, like everything else that is light. A slate-blue version was tried
  *  for one commit (2026-10-29) as "the one cool colour" and Melvin killed it
  *  on sight ("the colour is bad, so bad"). The second colour the site has is
  *  not a hue: it is the mask reacting to the snakes (see snakeField.ts). */
-const SAND = '205, 183, 138'
+const SAND = lightRgb
 /** CSS px per second. A sentence crosses a laptop screen in ~9s. */
 const SPEED_MIN = 60
 const SPEED_MAX = 84

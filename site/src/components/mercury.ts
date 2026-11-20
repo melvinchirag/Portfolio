@@ -19,6 +19,7 @@
  */
 
 import { SPIKE_GLSL, SPIKE_UNIFORMS, spikeSpring } from './spikes'
+import { FLUID } from '../velvet'
 
 export type MercuryFrame = {
   time: number
@@ -98,8 +99,8 @@ void main(){
   float spec = pow(max(dot(n, H), 0.0), 36.0) * 0.4 + pow(max(dot(n, H), 0.0), 160.0) * 0.5;
   float fre = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.45;
   // Sand #cdb78a, its deep shade and its lit shade. One hue; depth from shading only.
-  vec3 deep = vec3(0.40, 0.35, 0.25); vec3 sand = vec3(0.804, 0.718, 0.541); vec3 light = vec3(0.90, 0.83, 0.66);
-  vec3 col = min(mix(deep, sand, dif) + light * spec + light * fre, vec3(0.93, 0.86, 0.70));
+  vec3 deep = ${FLUID.deep}; vec3 sand = ${FLUID.body}; vec3 light = ${FLUID.light};
+  vec3 col = min(mix(deep, sand, dif) + light * spec + light * fre, ${FLUID.cap});
   gl_FragColor = vec4(col * alpha, alpha);
 }
 `

@@ -10,6 +10,8 @@ import { LiquidGlassField } from './LiquidGlassField'
 import { VideoPlane } from './VideoBackground'
 import { useSwarmMounted } from '../../hooks/contactVisibility'
 import { useIsPhone } from '../../hooks/useIsPhone'
+import { groundHex, velvet } from '../../velvet'
+import { RibbonBackdrop } from './RibbonBackdrop'
 
 /**
  * Creates the looping VideoTexture for the About background. Lives OUTSIDE the
@@ -143,6 +145,8 @@ function SceneContents({
   return (
     <>
       {isAbout && aboutTex && <VideoPlane texture={aboutTex} />}
+      {/* Velvet preview: the twisting ribbons, bright in the hero and quiet on reading pages. */}
+      {velvet > 0 && !isAbout && <RibbonBackdrop gain={isHome ? 0.9 : 0.55} />}
 
       {/* TWO LAYERS ACROSS THE HERO → CONTACT BOUNDARY, both driven off the
           one shared `contactHandoff.t` in contactVisibility.ts so they can't
@@ -206,7 +210,7 @@ export function GlobalScene() {
   const showSwarm = useSwarmMounted()
 
   return (
-    <div className="fixed inset-0 z-0 bg-[#0f1012]">
+    <div className="fixed inset-0 z-0" style={{ background: groundHex }}>
       <Canvas
         camera={{ position: [0, 0, 1.5], fov: 50, near: 0.1, far: 1000 }}
         gl={{ antialias: true, alpha: false }}
@@ -214,7 +218,7 @@ export function GlobalScene() {
           gl.toneMapping = THREE.ACESFilmicToneMapping
         }}
       >
-        <color attach="background" args={['#0f1012']} />
+        <color attach="background" args={[groundHex]} />
         <SceneContents isHome={isHome} isAbout={isAbout} isPhone={isPhone} aboutTex={aboutTex} showSwarm={showSwarm} />
       </Canvas>
     </div>
