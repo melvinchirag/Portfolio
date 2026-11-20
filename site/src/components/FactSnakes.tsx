@@ -145,6 +145,11 @@ export function FactSnakes() {
       // CONTENT PAGES (a reading column is published): only vertical snakes, only
       // in the margins either side of the text, never crossing it. A margin too
       // narrow (laptops with a wide column, phones) gets no snake on that side.
+      // PHONE HOME: no snakes at all (Melvin: the phone looked cluttered and cramped).
+      if (W < MD && readingColumn.half === 0) {
+        snakes = []
+        return
+      }
       const colHalf = readingColumn.half
       if (colHalf > 0) {
         const mid = W / 2

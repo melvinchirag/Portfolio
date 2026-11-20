@@ -76,18 +76,21 @@ function noseWeight(x: number, y: number): number {
 /* Twelve starting places as fractions of the viewport. `keeper` = never breaks. */
 type Slot = { fx: number; fy: number; scale: number; keeper?: boolean }
 const SLOTS: Slot[] = [
-  { fx: 0.12, fy: 0.1, scale: 1.0, keeper: true },
-  { fx: 0.38, fy: 0.07, scale: 0.8 },
-  { fx: 0.64, fy: 0.12, scale: 1.1 },
-  { fx: 0.88, fy: 0.08, scale: 0.9 },
-  { fx: 0.07, fy: 0.34, scale: 0.9 },
-  { fx: 0.92, fy: 0.3, scale: 1.0, keeper: true },
-  { fx: 0.06, fy: 0.56, scale: 0.8 },
-  { fx: 0.94, fy: 0.53, scale: 0.85 },
-  { fx: 0.14, fy: 0.76, scale: 1.0, keeper: true },
-  { fx: 0.52, fy: 0.74, scale: 0.7 },
-  { fx: 0.87, fy: 0.75, scale: 1.1 },
-  { fx: 0.36, fy: 0.84, scale: 0.75 },
+  // Top band: clear of the copy.
+  { fx: 0.14, fy: 0.08, scale: 1.0, keeper: true },
+  { fx: 0.4, fy: 0.06, scale: 0.8 },
+  { fx: 0.66, fy: 0.1, scale: 1.0 },
+  { fx: 0.88, fy: 0.07, scale: 0.85 },
+  // Second row.
+  { fx: 0.24, fy: 0.2, scale: 0.8 },
+  { fx: 0.52, fy: 0.21, scale: 0.9 },
+  { fx: 0.84, fy: 0.2, scale: 1.0, keeper: true },
+  // The edges beside the copy.
+  { fx: 0.09, fy: 0.45, scale: 0.7 },
+  { fx: 0.91, fy: 0.43, scale: 0.7 },
+  { fx: 0.09, fy: 0.64, scale: 0.75, keeper: true },
+  { fx: 0.91, fy: 0.66, scale: 0.75 },
+  { fx: 0.09, fy: 0.82, scale: 0.7 },
 ]
 
 const FACE_PX = 56 // on-screen width of a scale-1 face, CSS px
@@ -108,7 +111,7 @@ const CIRCLE_SECS = 4.5 // circle first, then dance
 const BINARY = ['0', '1']
 const TELUGU = ['అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', 'న', 'మ', 'ర', 'ల', 'వ', 'స', 'హ']
 const GLYPH_CHARS = [...BINARY, ...TELUGU]
-const GLYPH_POOL_FRACTION = 0.14
+const GLYPH_POOL_FRACTION = 0.07 // fewer roving glyphs on a phone: a cleaner screen
 const GLYPH_ON_FRAC = 0.06
 const GLYPH_ROVE_SPEED = 0.0024
 const GLYPH_RISE_EXP = 1.6
@@ -297,6 +300,40 @@ const burstVertex = /* glsl */ `
     gl_Position = projectionMatrix * mv;
   }
 `
+// THE ATMOSPHERE: glyphs that left the faces stay in the air for good. Each one drifts
+// from where its face was to a random place on the screen, then wanders and twinkles
+// there, on its own clock (uTime - uStart), whatever the faces do afterwards.
+const atmosVertex = /* glsl */ `
+  attribute vec2 aHome;
+  attribute vec2 aTarget;
+  attribute float aSeed;
+  attribute float aDelay;
+  uniform float uTime;
+  uniform float uStart;
+  uniform float uAtmos;
+  uniform float uGlyphSize;
+  uniform vec2 uWorld;
+  varying float vGlyph;
+  varying float vAlpha;
+  float hash(float x) { return fract(sin(x * 127.1) * 43758.5453); }
+  void main() {
+    float t = uTime - uStart - aDelay;
+    float on = step(0.0, t) * step(0.0, uStart);
+    float travel = smoothstep(0.0, 6.0, t);
+    vec2 f = mix(aHome, aTarget, travel);
+    float s = aSeed * 6.2831;
+    f += 0.035 * vec2(sin(t * 0.33 + s), cos(t * 0.27 + s * 1.7)) * travel;
+    f += 0.012 * vec2(sin(t * 0.9 + s * 3.1), cos(t * 0.8 + s * 2.3));
+    vec3 pos = vec3((f.x - 0.5) * uWorld.x, -(f.y - 0.5) * uWorld.y, 0.0);
+    float tw = 0.5 + 0.5 * sin(t * 1.2 + s * 2.0);
+    vAlpha = on * smoothstep(0.0, 1.5, t) * (0.35 + 0.65 * tw) * uAtmos;
+    vGlyph = floor(hash(aSeed * 7.3 + floor(t * 0.45 + aSeed * 9.0)) * ${GLYPH_CHARS.length}.0);
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+    gl_PointSize = (uGlyphSize / -mv.z) * step(0.002, vAlpha);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+const ATMOS_COUNT = 560
 const glyphFragment = /* glsl */ `
   precision highp float;
   uniform sampler2D uAtlas;
@@ -360,6 +397,8 @@ export function PhoneSwarm() {
     geometry: THREE.BufferGeometry
     roveGeo: THREE.BufferGeometry
     burstGeo: THREE.BufferGeometry
+    atmosGeo: THREE.BufferGeometry
+    atmosMat: THREE.ShaderMaterial
     faceMats: THREE.ShaderMaterial[]
     roveMats: THREE.ShaderMaterial[]
     burstMats: THREE.ShaderMaterial[]
@@ -467,6 +506,28 @@ export function PhoneSwarm() {
       burstGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array(bSeeds), 1))
       burstGeo.setAttribute('aRand', new THREE.BufferAttribute(new Float32Array(bRand), 1))
 
+      // The atmosphere: homes are the nine dissolving faces' places (as viewport fractions).
+      const homes = SLOTS.filter((sl) => !sl.keeper)
+      const aHome = new Float32Array(ATMOS_COUNT * 2)
+      const aTarget = new Float32Array(ATMOS_COUNT * 2)
+      const aSeed = new Float32Array(ATMOS_COUNT)
+      const aDelay = new Float32Array(ATMOS_COUNT)
+      for (let k = 0; k < ATMOS_COUNT; k++) {
+        const h = homes[k % homes.length]
+        aHome[k * 2] = h.fx + (Math.random() - 0.5) * 0.07
+        aHome[k * 2 + 1] = h.fy + (Math.random() - 0.5) * 0.09
+        aTarget[k * 2] = 0.04 + Math.random() * 0.92
+        aTarget[k * 2 + 1] = 0.04 + Math.random() * 0.86
+        aSeed[k] = Math.random()
+        aDelay[k] = Math.random() * 1.6
+      }
+      const atmosGeo = new THREE.BufferGeometry()
+      atmosGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ATMOS_COUNT * 3), 3))
+      atmosGeo.setAttribute('aHome', new THREE.BufferAttribute(aHome, 2))
+      atmosGeo.setAttribute('aTarget', new THREE.BufferAttribute(aTarget, 2))
+      atmosGeo.setAttribute('aSeed', new THREE.BufferAttribute(aSeed, 1))
+      atmosGeo.setAttribute('aDelay', new THREE.BufferAttribute(aDelay, 1))
+
       const atlas = makeGlyphAtlas()
       const mk = (vs: string, fs: string, uniforms: Record<string, { value: unknown }>) =>
         new THREE.ShaderMaterial({
@@ -482,11 +543,11 @@ export function PhoneSwarm() {
         mk(renderVertex, renderFragment, {
           uPositionTexture: { value: null },
           uVelocityTexture: { value: null },
-          uParticleSize: { value: 0.65 },
-          uColor: { value: new THREE.Color('#c4a56c') },
-          uMinAlpha: { value: 0.05 },
-          uMaxAlpha: { value: 0.8 },
-          uFeatureFloor: { value: 0.34 },
+          uParticleSize: { value: 0.95 },
+          uColor: { value: new THREE.Color('#d9bb7c') },
+          uMinAlpha: { value: 0.17 },
+          uMaxAlpha: { value: 1.0 },
+          uFeatureFloor: { value: 0.8 },
           uEyeOpen: { value: 1 },
           uFade: { value: 0 },
           uForm: { value: 1 },
@@ -529,7 +590,18 @@ export function PhoneSwarm() {
           uColor: { value: new THREE.Color('#e6d2a4').multiplyScalar(1.0) },
         }),
       )
-      if (!cancelled) setSim({ gpu, posVar, velVar, geometry, roveGeo, burstGeo, faceMats, roveMats, burstMats })
+      const atmosMat = mk(atmosVertex, glyphFragment, {
+        uTime: { value: 0 },
+        uStart: { value: -1 },
+        uAtmos: { value: 0 },
+        uGlyphSize: { value: GLYPH_SIZE * 0.8 },
+        uWorld: { value: new THREE.Vector2(1, 1) },
+        uAtlas: { value: atlas.texture },
+        uCols: { value: atlas.cols },
+        uFade: { value: 1 },
+        uColor: { value: new THREE.Color('#ecd9ab').multiplyScalar(1.15) },
+      })
+      if (!cancelled) setSim({ gpu, posVar, velVar, geometry, roveGeo, burstGeo, atmosGeo, atmosMat, faceMats, roveMats, burstMats })
     }
     build()
     return () => {
@@ -546,7 +618,7 @@ export function PhoneSwarm() {
   const pitch = useMemo<number[]>(() => SLOTS.map(() => 0), [])
   const faces = useMemo<Face[]>(() => SLOTS.map(() => ({ form: 1, formT: 1, formAt: 0, breakT: -1 })), [])
   const dancers = useRef<Dancer[]>([])
-  const clock = useRef({ t: 0, dance: 0, lastP: 0, speed: 0, kick: 0, broken: false, brkAt: 0, brkW: 0 })
+  const clock = useRef({ t: 0, dance: 0, lastP: 0, speed: 0, kick: 0, broken: false, brkAt: 0, brkW: 0, atmosStart: -1, atmos: 0 })
   const pointer = useRef({ x: -9999, y: -9999, at: -99 })
 
   useEffect(() => {
@@ -612,6 +684,7 @@ export function PhoneSwarm() {
       if (!c.broken && p > BREAK_AT) {
         c.broken = true
         c.brkAt = nowT
+        if (c.atmosStart < 0) c.atmosStart = nowT
         let r = 0
         SLOTS.forEach((s, i) => {
           if (s.keeper) return
@@ -633,6 +706,13 @@ export function PhoneSwarm() {
     }
     c.brkW += ((c.broken ? 1 : 0) - c.brkW) * (1 - Math.exp(-dt * 2.2))
     const tb = c.broken ? nowT - c.brkAt : 0
+    // Atmosphere strength: full while broken, a fair share kept once the faces re-form.
+    c.atmos += ((c.broken ? 1 : 0.45) - c.atmos) * (1 - Math.exp(-dt * 0.8))
+    const am = sim.atmosMat.uniforms
+    am.uTime.value = nowT
+    am.uStart.value = c.atmosStart
+    am.uAtmos.value = reduced ? 0 : c.atmos * (c.atmosStart >= 0 ? 1 : 0)
+    ;(am.uWorld.value as THREE.Vector2).set(worldW, worldH)
 
     const now = performance.now() / 1000
     const lookActive = !reduced && now - pointer.current.at < 3
@@ -777,6 +857,8 @@ export function PhoneSwarm() {
       sim.geometry.dispose()
       sim.roveGeo.dispose()
       sim.burstGeo.dispose()
+      sim.atmosGeo.dispose()
+      sim.atmosMat.dispose()
       sim.faceMats.forEach((m) => m.dispose())
       sim.roveMats.forEach((m) => m.dispose())
       sim.burstMats.forEach((m) => m.dispose())
@@ -786,6 +868,7 @@ export function PhoneSwarm() {
   if (!sim) return null
   return (
     <>
+      <points geometry={sim.atmosGeo} material={sim.atmosMat} frustumCulled={false} />
       {SLOTS.map((_, i) => (
         <group key={i} ref={(el) => { groups.current[i] = el }}>
           <points geometry={sim.geometry} material={sim.faceMats[i]} frustumCulled={false} />

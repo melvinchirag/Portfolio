@@ -203,7 +203,7 @@ function IdentityFrame({ index }: { index: number }) {
             buttons, the name and the sentence can be reordered: the buttons sit ABOVE
             the name (Melvin, 2026-11-20) and stay clear of the bottom menu. */}
         <div className="contents md:relative md:block md:w-fit">
-          <div ref={slime.links} className="label order-1 mb-4 flex items-center justify-end gap-5">
+          <div ref={slime.links} className="label order-2 mb-5 flex items-center justify-end gap-5">
             <a data-slime href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
               GitHub
             </a>
@@ -255,7 +255,7 @@ function IdentityFrame({ index }: { index: number }) {
           .
         </p>
 
-        <div ref={slime.cta} className="order-2 mb-7 flex flex-wrap items-center gap-3 md:mt-8 md:mb-0">
+        <div ref={slime.cta} className="order-1 mb-6 flex flex-wrap items-center gap-3 md:order-none md:mt-8 md:mb-0">
           <Link data-slime data-slime-home to="/work" className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide">
             See the work
           </Link>
