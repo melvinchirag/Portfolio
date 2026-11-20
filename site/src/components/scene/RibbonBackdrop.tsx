@@ -24,6 +24,21 @@ const fragment = /* glsl */ `
     vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
   }
+  // One layer of motes: a jittered soft disc per cell, each with its own size,
+  // brightness (a few bright, most faint) and a slow smooth twinkle.
+  float motesWarm = 0.0;
+  float motes(vec2 q, float dens, float seed){
+    vec2 id = floor(q); vec2 f = fract(q);
+    float h = hash(id + seed);
+    vec2 c = 0.3 + 0.4 * vec2(hash(id + seed + 3.1), hash(id + seed + 7.7));
+    float r = mix(0.13, 0.3, hash(id + seed + 11.3));
+    float on = smoothstep(1.0 - dens - 0.06, 1.0 - dens + 0.06, h);
+    float b = 0.3 + 0.7 * pow(hash(id + seed + 5.3), 2.2);
+    float tw = 0.65 + 0.35 * sin(uT * (0.6 + 1.8 * hash(id + seed + 9.9)) + h * 40.0);
+    float v = on * b * tw * smoothstep(r, r * 0.3, length(f - c));
+    motesWarm += v * step(0.9, hash(id + seed + 2.2));
+    return v;
+  }
   // THE LIGHT SHEET (after Melvin's reel 4): one bright crest crossing the screen,
   // and a curtain of fine particles falling away below it into black.
   float crest(float x, float t){
@@ -45,14 +60,19 @@ const fragment = /* glsl */ `
     float spray = (1.0 - under) * exp(-above * 30.0) * 0.55;
     float dens = sheet + spray;
 
-    // Particles: one possible dot per cell, each on its own twinkle clock.
-    vec2 cell = floor(gl_FragCoord.xy / (1.15 * uDpr));
-    float h = hash(cell);
-    float tw = hash(cell + floor(uT * 1.6 + h * 9.0) * 7.13);
-    float dotOn = step(1.0 - dens * 0.5, tw);
-    float dotB = 0.35 + 0.65 * hash(cell.yx + 1.7);
+    // PARTICLES. Three depths of soft round motes living in the SHEET's own space
+    // (along the crest, distance from it), so they ride the wave and drift away from
+    // the crest instead of blinking on a fixed screen grid.
+    float px = uRes.y / uDpr;                       // screen height in CSS pixels
+    vec2 sp = vec2(x, d);
+    float fine = motes(vec2(sp.x + uT * 0.004, sp.y + uT * 0.010) * px / 2.6, dens * 0.95, 0.0);
+    float fine2 = motes(vec2(sp.x - uT * 0.003, sp.y + uT * 0.013) * px / 3.7 + 19.5, dens * 0.7, 71.0);
+    float mid = motes(vec2(sp.x - uT * 0.006, sp.y + uT * 0.016) * px / 6.5, dens * 0.34, 17.0);
+    float far = motes(vec2(sp.x + uT * 0.009, sp.y + uT * 0.024) * px / 15.0, dens * 0.16, 41.0);
+    float dotOn = fine * 1.15 + fine2 + mid * 1.25 + far * 0.55;
+    float warm = motesWarm;
+    float dotB = 1.0;
 
-    // The crest: a white-hot line inside a coloured glow, plus a second fainter streak.
     // A slow pulse of brightness travels along the crest, and its width breathes.
     float travel = 0.62 + 0.38 * sin(x * 2.2 - uT * 0.5);
     float wide = 62.0 + 26.0 * sin(x * 1.7 + uT * 0.2);
@@ -64,7 +84,8 @@ const fragment = /* glsl */ `
     vec3 hot = uC + vec3(0.08, 0.06, 0.0) * sin(x * 1.5 + uT * 0.1);
     vec3 sheetCol = mix(hot, uB, smoothstep(0.0, 0.45, below));
     vec3 col = uA;
-    col += sheetCol * dotOn * dotB * 1.05;
+    col += sheetCol * dotOn * dotB * 1.5;
+    col += uD * warm * 0.7;   // one mote in ten glints cream
     col += sheetCol * sheet * 0.05;
     col += hot * (glow + second);
     col += uD * core * 1.05;
