@@ -34,6 +34,7 @@ import { BEAT_COUNT, heroScroll, useHeroFrame } from '../hooks/heroScroll'
 import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
 import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
+import { FerroName } from './FerroName'
 import { NameAssembly, SOLIDIFY_SECS } from './NameAssembly'
 import { slime } from './slime'
 import { TagThread } from './TagThread'
@@ -142,6 +143,9 @@ function IdentityFrame({ index }: { index: number }) {
   // once, so the name is simply there.
   const [nameShown, setNameShown] = useState(false)
   const reveal = useCallback(() => setNameShown(true), [])
+  // FerroName (the liquid word) reports true once WebGL is up; the DOM text then
+  // goes transparent (kept for screen readers, selection, SEO). False = DOM text.
+  const [ferro, setFerro] = useState(false)
 
   const link =
     'ease-out-expo text-sand-dim transition-colors duration-300 hover:text-sand focus-visible:text-sand focus-visible:outline-none'
@@ -195,7 +199,7 @@ function IdentityFrame({ index }: { index: number }) {
           the N of MELVIN, and the surname is tracked out to MELVIN's width
           (see the effect above), so the whole lockup is one aligned block. */}
       <div className="frame-item relative col-span-12 md:col-span-7 md:col-start-6" style={FI(0)}>
-        <div className="w-fit">
+        <div className="relative w-fit">
           <div ref={slime.links} className="label mb-4 flex items-center justify-end gap-5">
             <a data-slime href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
               GitHub
@@ -218,7 +222,11 @@ function IdentityFrame({ index }: { index: number }) {
               ref={firstNameRef}
               // Opacity transition length = NameAssembly's SOLIDIFY_SECS, so the
               // text comes up at exactly the pace the dust thins out.
-              style={{ transitionDuration: `${SOLIDIFY_SECS}s`, transitionTimingFunction: 'ease-in-out' }}
+              style={{
+                transitionDuration: `${SOLIDIFY_SECS}s`,
+                transitionTimingFunction: 'ease-in-out',
+                color: ferro ? 'transparent' : undefined,
+              }}
               className={`name-gold display-wide w-fit font-display text-[clamp(4rem,15vw,9rem)] leading-[0.86] font-extrabold tracking-[-0.03em] uppercase transition-opacity md:text-[clamp(5rem,9.4vw,12rem)] ${
                 nameShown ? 'opacity-100' : 'opacity-0'
               }`}
@@ -232,6 +240,7 @@ function IdentityFrame({ index }: { index: number }) {
               Chirag Karupati
             </span>
           </h1>
+          <FerroName targetRef={firstNameRef} shown={nameShown} onActive={setFerro} />
         </div>
 
         <p className="mt-7 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/75 sm:text-[15.5px]">
