@@ -216,7 +216,7 @@ function MercuryMenu() {
       const amp = Math.min(1.2, Math.min(1, sep * 3.2) + (hover != null ? 0.25 : 0))
       m.frame({
         time: now / 1000, a: s.a, b: s.b, ra, rb, k, body, bodyOn, axis, still: reduced,
-        spike: { amp, at: [s.b[0], s.b[1]], spacing: 6.5 / unit, height: 4.8 / unit },
+        spike: { amp, at: [s.b[0], s.b[1]], spacing: 8 / unit, height: 13 / unit, zone: 40 / unit },
       })
     }
     raf = requestAnimationFrame(frame)

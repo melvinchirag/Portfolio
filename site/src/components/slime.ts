@@ -31,46 +31,50 @@
  * the end state with no wobble and no spikes.
  */
 
+import { SPIKE_GLSL, SPIKE_UNIFORMS, spikeSpring } from './spikes'
+
 type Shape = 'pill' | 'round' | 'dot' | 'line'
-type Cfg = { shape: Shape; spikes: boolean; pad: number; spS: number; spH: number; hov: number }
+type Cfg = { shape: Shape; spikes: boolean; pad: number; spS: number; spH: number; spR: number; hov: number }
 
 const VS = 'attribute vec2 p; void main(){ gl_Position = vec4(p,0.0,1.0); }'
 
 const FS = /* glsl */ `
 precision highp float;
 uniform vec2 u_res; uniform float u_time; uniform vec2 u_a; uniform vec2 u_b; uniform vec3 u_ra; uniform vec3 u_rb; uniform float u_k;
-uniform vec2 u_sp; uniform float u_spk; uniform float u_spS; uniform float u_spH; uniform float u_still;
+uniform float u_still;
 float sdEll(vec3 p, vec3 r){ if (r.x < 0.003 || r.y < 0.003) return 10.0; float k0 = length(p/r); float k1 = length(p/(r*r)); return k0*(k0-1.0)/k1; }
 float smin(float a, float b, float k){ float h = max(k-abs(a-b),0.0)/k; return min(a,b) - h*h*k*0.25; }
+float ellZ(vec2 q, vec2 c, vec3 r){ vec2 w = (q - c) / max(r.xy, vec2(0.001)); return r.z * sqrt(max(0.0, 1.0 - dot(w, w))); }
+float bodyZ(vec2 q){ return max(ellZ(q, u_a, u_ra), ellZ(q, u_b, u_rb)); }
+${SPIKE_GLSL}
+float body(vec3 p, vec3 off){
+  return smin(sdEll(p - vec3(u_a,0.0) - off, u_ra), sdEll(p - vec3(u_b,0.0) + off, u_rb), u_k);
+}
 float map(vec3 p){
   float t = u_time; float live = 1.0 - u_still;
   float wob = (sin(p.x*1.9 + t*1.5)*0.022 + sin(p.x*3.7 - t*1.1)*0.011) * live;
   vec3 off = vec3(0.0, wob, 0.0);
-  float d = smin(sdEll(p - vec3(u_a,0.0) - off, u_ra), sdEll(p - vec3(u_b,0.0) + off, u_rb), u_k);
-  if (u_spk > 0.001) {
-    vec2 q = p.xy - u_sp;
-    float w = exp(-dot(q,q) / (u_spS*u_spS*7.0));
-    float kk = 6.2832 / u_spS;
-    float v = (cos(kk*q.x) + cos(kk*(q.x*0.5 + q.y*0.866)) + cos(kk*(q.x*0.5 - q.y*0.866)) + 1.5) / 4.5;
-    float h = pow(max(v,0.0), 5.0);
-    d -= u_spk * u_spH * w * h * (1.0 - smoothstep(0.0, 0.3, max(d,0.0)));
-  }
+  float d = body(p, off);
+  if (u_spk > 0.005) d = spikes(p, d, body(vec3(p.xy, 0.0), off));
   return d;
 }
-vec3 nrm(vec3 p){ vec2 h = vec2(0.003,0.0); return normalize(vec3(map(p+h.xyy)-map(p-h.xyy), map(p+h.yxy)-map(p-h.yxy), map(p+h.yyx)-map(p-h.yyx))); }
+vec3 nrm(vec3 p){
+  vec2 k = vec2(1.0, -1.0); float h = 0.0025;
+  return normalize(k.xyy*map(p + k.xyy*h) + k.yyx*map(p + k.yyx*h) + k.yxy*map(p + k.yxy*h) + k.xxx*map(p + k.xxx*h));
+}
 void main(){
   float asp = u_res.x/u_res.y;
   vec2 uv = (gl_FragCoord.xy/u_res - 0.5)*2.0*vec2(asp,1.0);
-  vec3 ro = vec3(uv,-2.5); vec3 rd = vec3(0.0,0.0,1.0);
+  vec3 ro = vec3(uv,-1.6); vec3 rd = vec3(0.0,0.0,1.0);
   float t = 0.0; float minD = 10.0; bool hit = false; vec3 p = ro;
-  for (int i=0;i<44;i++){ p = ro + rd*t; float d = map(p); minD = min(minD,d); if (d<0.002){hit=true;break;} t += d*0.8; if (t>5.0) break; }
+  for (int i=0;i<48;i++){ p = ro + rd*t; float d = map(p); minD = min(minD,d); if (d<0.002){hit=true;break;} t += d*0.75; if (t>3.4) break; }
   float px = 2.0/u_res.y;
   float alpha = hit ? 1.0 : 1.0 - smoothstep(0.0, px*1.6, minD);
   if (alpha <= 0.001){ gl_FragColor = vec4(0.0); return; }
   vec3 n = nrm(p);
   vec3 L = normalize(vec3(0.35,0.75,-0.6)); vec3 V = vec3(0.0,0.0,-1.0); vec3 H = normalize(L+V);
   float dif = max(dot(n,L),0.0)*0.6 + 0.4;
-  float spec = pow(max(dot(n,H),0.0), 36.0)*0.4;
+  float spec = pow(max(dot(n,H),0.0), 36.0)*0.4 + pow(max(dot(n,H),0.0), 160.0)*0.5;
   float fre = pow(1.0 - max(dot(n,V),0.0), 3.0)*0.45;
   vec3 deep = vec3(0.40,0.35,0.25); vec3 sand = vec3(0.804,0.718,0.541); vec3 light = vec3(0.90,0.83,0.66);
   vec3 col = min(mix(deep,sand,dif) + light*spec + light*fre, vec3(0.93,0.86,0.70));
@@ -78,7 +82,7 @@ void main(){
 }
 `
 
-const UN = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_sp', 'u_spk', 'u_spS', 'u_spH', 'u_still'] as const
+const UN = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_still', ...SPIKE_UNIFORMS] as const
 type UName = (typeof UN)[number]
 type GL = { gl: WebGLRenderingContext; U: Record<UName, WebGLUniformLocation | null>; free: () => void }
 
@@ -165,7 +169,7 @@ class Slime {
   private rb: V3 = [0, 0, 0.3]
   private press = { x: 0, v: 0 }
   private pressT = 0
-  private spk = 0
+  private spk = { x: 0, v: 0 }
   private pulse = 0
   private fresh = true
   private ccx = 0
@@ -407,7 +411,8 @@ class Slime {
       this.b = [tc[0], tc[1]]
       this.ra = cp(tra)
       this.rb = cp(trb)
-      this.spk = 0
+      this.spk.x = 0
+      this.spk.v = 0
       this.press.x = this.pressT
     } else {
       const kb = 1 - Math.exp(-10.5 * dt)
@@ -428,7 +433,7 @@ class Slime {
       // Ferrofluid spikes: strongest while the head is pulling away from the tail.
       const sep = Math.hypot(this.b[0] - this.a[0], this.b[1] - this.a[1])
       const want = this.cfg.spikes ? Math.min(1, sep * 4.5) + this.pulse * 0.6 + (hov ? this.cfg.hov : 0) : 0
-      this.spk += (Math.min(1.2, want) - this.spk) * (1 - Math.exp(-9 * dt))
+      spikeSpring(this.spk, Math.min(1.2, want), dt)
     }
 
     // Which labels sit under the slime (they turn graphite).
@@ -448,10 +453,16 @@ class Slime {
     gl.uniform3f(U.u_ra, this.ra[0], this.ra[1], this.ra[2])
     gl.uniform3f(U.u_rb, this.rb[0], this.rb[1], this.rb[2])
     gl.uniform1f(U.u_k, this.cfg.shape === 'line' ? 0.16 : this.cfg.shape === 'dot' ? 0.3 : 0.5)
+    // Ferrofluid spikes (spikes.ts): the head is the magnet, the lagging drop a weaker second pole.
     gl.uniform2f(U.u_sp, this.b[0], this.b[1])
-    gl.uniform1f(U.u_spk, this.spk)
+    gl.uniform2f(U.u_sp2, this.a[0], this.a[1])
+    gl.uniform1f(U.u_spk, Math.min(1.4, this.spk.x))
+    gl.uniform1f(U.u_spA, 0.6)
     gl.uniform1f(U.u_spS, px / this.unit)
     gl.uniform1f(U.u_spH, this.cfg.spH / this.unit)
+    gl.uniform1f(U.u_spR, this.cfg.spR / this.unit)
+    gl.uniform1f(U.u_spW, Math.min(1.2 * px / this.unit, 0.6 * Math.min(this.rb[0], this.rb[1])))
+    gl.uniform1f(U.u_px, 2 / canvas.height)
     gl.uniform1f(U.u_still, rm ? 1 : 0)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
@@ -475,9 +486,9 @@ function group(cfg: Cfg) {
 
 export const slime = {
   // Everything is ferrofluid now (Melvin, 2026-11-20): spikes on every group, tuned to the size of the thing.
-  cta: group({ shape: 'pill', spikes: true, pad: 26, spS: 6.5, spH: 5, hov: 0 }),
-  links: group({ shape: 'line', spikes: true, pad: 14, spS: 5, spH: 4.2, hov: 0.55 }),
-  line: group({ shape: 'line', spikes: true, pad: 14, spS: 5, spH: 4.2, hov: 0.55 }),
-  dots: group({ shape: 'dot', spikes: true, pad: 12, spS: 3.2, spH: 3, hov: 0.45 }),
-  arrow: group({ shape: 'round', spikes: true, pad: 12, spS: 5.5, spH: 5, hov: 0.25 }),
+  cta: group({ shape: 'pill', spikes: true, pad: 34, spS: 9, spH: 15, spR: 46, hov: 0.3 }),
+  links: group({ shape: 'line', spikes: true, pad: 16, spS: 4, spH: 7.5, spR: 20, hov: 0.7 }),
+  line: group({ shape: 'line', spikes: true, pad: 16, spS: 4, spH: 7.5, spR: 20, hov: 0.7 }),
+  dots: group({ shape: 'dot', spikes: true, pad: 14, spS: 3.2, spH: 5.5, spR: 12, hov: 0.7 }),
+  arrow: group({ shape: 'round', spikes: true, pad: 14, spS: 5.5, spH: 10, spR: 22, hov: 0.55 }),
 }

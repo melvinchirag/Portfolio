@@ -24,10 +24,17 @@
  *   leaves, so the word flows back together. The maps compose, so the liquid
  *   never tears or overlaps.
  *
+ * SPIKES (Rosensweig instability, see spikes.ts for the reference notes): each dent
+ * is also a magnet whose strength springs up with overshoot and sags back smoothly.
+ * The summed field (texture alpha) decides which cells of a hex cone lattice exist
+ * and how tall; a gradient pass gives the field-line direction so cones lean toward
+ * the magnet. The cones are rendered as a height field seen through an oblique
+ * camera (screen y = y + k z, ray-marched 16 steps, only where the field is on), so
+ * tips rise above the letters and the silhouette really spikes, with true normals.
+ *
  * DRAW: the warped coverage is rendered at a low-res (sim) size, blurred by two
  * 13-tap passes into a soft dome, and the surface normal comes from that dome
- * (taller where the liquid is squeezed) plus a hex lattice of cone spikes scaled
- * by a magnet field around each dent. Shading is the site's: Blinn-Phong 36,
+ * (taller where the liquid is squeezed) plus the cones. Shading is the site's: Blinn-Phong 36,
  * fresnel, one hue (deep, sand, light), see mercury.ts and slime.ts. Spikes also
  * push the silhouette outward at the rim so they poke out. Premultiplied alpha.
  *
@@ -35,9 +42,11 @@
  * size for sizes, so the look does not depend on screen size.
  */
 
+import { spikeSpring } from './spikes'
+
 export const TUNING = {
   /** Radius of the hole under the pointer, in ems of the name's font size. */
-  holeRadiusEm: 0.36,
+  holeRadiusEm: 0.26,
   /** Distance the pointer travels before the current dent is left behind. */
   trailSpacingEm: 0.1,
   /** Opening spring (fast, stiff) while the pointer is near. */
@@ -48,11 +57,13 @@ export const TUNING = {
   closeStiffness: 20,
   closeDamping: 7.2,
   /** Radius of the spike zone around each dent, in ems. */
-  spikeZoneEm: 0.75,
+  spikeZoneEm: 0.85,
   /** Spike height as a fraction of the font size. */
-  spikeHeightEm: 0.13,
+  spikeHeightEm: 0.15,
   /** Hex spike spacing as a fraction of the font size. */
-  spikePitchEm: 0.15,
+  spikePitchEm: 0.11,
+  /** Oblique camera: how far a spike tip rises up the screen per unit of height. */
+  spikeTilt: 0.6,
   /** Dome height of the letters as a fraction of the font size. */
   domeEm: 0.16,
   /** Sim (low-res field) width in cells: desktop, and coarse pointer (phone). */
@@ -123,7 +134,7 @@ void main(){
   float c = hole > 0.5 ? 0.0 : texture(uT, q0 / uCss).r;
   float A = 0.0;
   for (int i = 0; i < ND; i++) {
-    if (uD[i].z < 0.4) continue;
+    if (uD[i].w < 0.005) continue;
     vec2 d = q - uD[i].xy;
     A += uD[i].w * exp(-dot(d, d) / (uZone * uZone) * 1.1);
   }
@@ -142,31 +153,61 @@ void main(){
   o = vec4(acc / ws, 0.0, 0.0, 1.0);
 }`
 
+const FS_GRAD = `${HEAD}
+uniform sampler2D uSrc;
+void main(){
+  vec2 px = 1.0 / vec2(textureSize(uSrc, 0)); vec2 uv = gl_FragCoord.xy * px;
+  float l = texture(uSrc, uv - vec2(px.x * 3.0, 0.0)).a; float r = texture(uSrc, uv + vec2(px.x * 3.0, 0.0)).a;
+  float d = texture(uSrc, uv - vec2(0.0, px.y * 3.0)).a; float t = texture(uSrc, uv + vec2(0.0, px.y * 3.0)).a;
+  o = vec4((r - l) / 6.0, (t - d) / 6.0, 0.0, 1.0);
+}`
+
 const FS_DRAW = `${HEAD}
-uniform sampler2D uS; uniform sampler2D uB; uniform sampler2D uThi;
+uniform sampler2D uS; uniform sampler2D uB; uniform sampler2D uThi; uniform sampler2D uL;
 uniform vec2 uCss; uniform float uTime; uniform float uStill;
-uniform float uDome; uniform float uSpH; uniform float uPitch;
+uniform float uDome; uniform float uSpH; uniform float uPitch; uniform float uK;
 ${WARP}
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-// hex lattice of cones: returns 0..1 height at a point (css px)
-float spikeH(vec2 q){
-  vec2 p = q / uPitch;
-  const vec2 r = vec2(1.0, 1.7320508); vec2 h2 = r * 0.5;
-  vec2 a = mod(p, r) - h2; vec2 b = mod(p - h2, r) - h2;
-  vec2 gv = dot(a, a) < dot(b, b) ? a : b; vec2 id = p - gv;
-  float rnd = hash(floor(id * 2.0 + 0.5));
-  float sway = 1.0 + (1.0 - uStill) * 0.12 * sin(uTime * 2.6 + rnd * 6.2832);
-  float s = max(0.0, 1.0 - length(gv) / 0.56);
-  return pow(s, 1.15) * (0.72 + 0.28 * rnd) * sway;
+// Height (css px) of the hex cone array at x. Lattice fixed to the canvas, so spikes
+// stay put while the pointer moves; the field (texture A) decides which cones exist.
+float coneH(vec2 x){
+  float P = uPitch;
+  float b = x.y / (P * 0.8660254); float a = x.x / P - 0.5 * b;
+  vec2 base = floor(vec2(a, b));
+  float best = 0.0; float rb = 0.32 * P;
+  for (int i = 0; i < 4; i++) {
+    vec2 cell = base + vec2(mod(float(i), 2.0), floor(float(i) / 2.0));
+    vec2 c = vec2(cell.x + 0.5 * cell.y, cell.y * 0.8660254) * P;
+    vec2 cuv = c / uCss;
+    float s = texture(uS, cuv).a;
+    float th = smoothstep(0.16, 0.62, s) * smoothstep(0.35, 0.6, texture(uB, cuv).r);
+    if (th < 0.01) continue;
+    float H = uSpH * th * (0.86 + 0.14 * hash(cell));
+    vec2 g = texture(uL, cuv).rg; float gl = length(g);
+    vec2 lean = g / max(gl, 1e-5) * smoothstep(0.0003, 0.003, gl);   // field lines bend toward the magnet
+    float t0 = max(0.0, 1.0 - length(x - c) / rb);
+    float r = length(x - c - lean * H * 0.16 * t0);
+    best = max(best, H * max(0.0, 1.0 - r / rb));
+  }
+  return best;
 }
-float height(vec2 uv){
+float domeH(vec2 uv){
   vec4 st = texture(uS, uv);
   float b = texture(uB, uv).r;
   vec2 q = uv * uCss;
-  float wet = smoothstep(0.02, 0.25, b);
   float dome = pow(clamp(b, 0.0, 1.0), 0.8) * uDome * st.g;
   float rip = (1.0 - uStill) * 1.1 * sin(q.x * 0.05 + uTime * 1.2) * sin(q.y * 0.07 - uTime * 0.9) * b;
-  return dome + rip + st.a * (1.0 - uStill) * wet * spikeH(q) * uSpH;
+  return dome + rip;
+}
+float totalH(vec2 q, float spikesOn){ return domeH(q / uCss) + spikesOn * coneH(q); }
+vec3 shade(vec3 n, vec3 V){
+  vec3 L = normalize(vec3(0.35, 0.75, 0.6)); vec3 H = normalize(L + V);
+  float dif = max(dot(n, L), 0.0) * 0.6 + 0.4;
+  float nh = max(dot(n, H), 0.0);
+  float spec = pow(nh, 36.0) * 0.4 + pow(nh, 160.0) * 0.5;
+  float fre = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.45;
+  vec3 deep = vec3(0.40, 0.35, 0.25); vec3 sand = vec3(0.804, 0.718, 0.541); vec3 light = vec3(0.90, 0.83, 0.66);
+  return min(mix(deep, sand, dif) + light * spec + light * fre, vec3(0.93, 0.86, 0.70));
 }
 void main(){
   // gl_FragCoord is in device px; the hi-res mask has the canvas's own size.
@@ -174,30 +215,57 @@ void main(){
   vec2 q = uv * uCss;
   float gain; float hole; vec2 q0 = invWarp(q, gain, hole);
   float F = hole > 0.5 ? 0.0 : texture(uThi, q0 / uCss).r;
-  vec4 st = texture(uS, uv);
-  float A = st.a * (1.0 - uStill);
-  float b = texture(uB, uv).r;
-  float pw = smoothstep(0.08, 0.3, b);
-  float sil = F + A * pw * spikeH(q) * 0.6 * step(0.001, uSpH);
-  float fw = max(fwidth(sil), 0.05);
-  float al = clamp((sil - 0.5) / fw + 0.5, 0.0, 1.0);
+  float fw = max(fwidth(F), 0.05);
+  float alF = clamp((F - 0.5) / fw + 0.5, 0.0, 1.0);
+
+  // Spike layer: oblique camera (screen y = y + k z). March down from the top of the
+  // tallest possible spike until the pixel's ray meets a cone.
+  float zHit = 0.0; vec2 pHit = q; bool hit = false;
+  float on = 1.0 - uStill;
+  float aMax = max(texture(uS, uv).a, texture(uS, uv - vec2(0.0, uK * uSpH / uCss.y)).a);
+  aMax = max(aMax, texture(uS, uv - vec2(0.0, 0.5 * uK * uSpH / uCss.y)).a);
+  if (on > 0.5 && aMax > 0.12) {
+    const int N = 16;
+    float prevZ = uSpH; float prevD = -1.0;
+    for (int i = 0; i < N; i++) {
+      float z = uSpH * (1.0 - float(i) / float(N));
+      vec2 p = vec2(q.x, q.y - uK * z);
+      float d = coneH(p) - z;
+      if (d >= 0.0) {
+        float w = (i == 0) ? 1.0 : clamp(-prevD / max(d - prevD, 1e-4), 0.0, 1.0);
+        zHit = mix(prevZ, z, w);
+        pHit = vec2(q.x, q.y - uK * zHit);
+        hit = true;
+        break;
+      }
+      prevZ = z; prevD = d;
+    }
+  }
+
+  vec3 colF = vec3(0.0);
+  if (alF > 0.001) {
+    float e = 1.4; vec2 dx = vec2(e, 0.0); vec2 dy = vec2(0.0, e);
+    float gx = (totalH(q + dx, 0.0) - totalH(q - dx, 0.0)) / (2.0 * e);
+    float gy = (totalH(q + dy, 0.0) - totalH(q - dy, 0.0)) / (2.0 * e);
+    colF = shade(normalize(vec3(-gx, -gy, 1.0)), vec3(0.0, 0.0, 1.0));
+  }
+  float al = alF; vec3 col = colF;
+  if (hit) {
+    float e = 0.6; vec2 dx = vec2(e, 0.0); vec2 dy = vec2(0.0, e);
+    float gx = (totalH(pHit + dx, 1.0) - totalH(pHit - dx, 1.0)) / (2.0 * e);
+    float gy = (totalH(pHit + dy, 1.0) - totalH(pHit - dy, 1.0)) / (2.0 * e);
+    vec3 colC = shade(normalize(vec3(-gx, -gy, 1.0)), normalize(vec3(0.0, -uK, 1.0)));
+    float w = smoothstep(0.15, 1.2, zHit);
+    col = alF > 0.001 ? mix(colF, colC, w) : colC;
+    al = max(alF, w);
+  }
   if (al <= 0.001) { o = vec4(0.0); return; }
-  float e = 1.4; vec2 dx = vec2(e, 0.0) / uCss; vec2 dy = vec2(0.0, e) / uCss;
-  float gx = (height(uv + dx) - height(uv - dx)) / (2.0 * e);
-  float gy = (height(uv + dy) - height(uv - dy)) / (2.0 * e);
-  vec3 n = normalize(vec3(-gx, -gy, 1.0));
-  vec3 L = normalize(vec3(0.35, 0.75, 0.6)); vec3 V = vec3(0.0, 0.0, 1.0); vec3 H = normalize(L + V);
-  float dif = max(dot(n, L), 0.0) * 0.6 + 0.4;
-  float spec = pow(max(dot(n, H), 0.0), 36.0) * 0.4;
-  float fre = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.45;
-  vec3 deep = vec3(0.40, 0.35, 0.25); vec3 sand = vec3(0.804, 0.718, 0.541); vec3 light = vec3(0.90, 0.83, 0.66);
-  vec3 col = min(mix(deep, sand, dif) + light * spec + light * fre, vec3(0.93, 0.86, 0.70));
   o = vec4(col * al, al);
 }`
 
 type Tex = { t: WebGLTexture; w: number; h: number }
 type Prog = { p: WebGLProgram; u: Record<string, WebGLUniformLocation | null> }
-type Dent = { x: number; y: number; s: number; v: number; open: boolean }
+type Dent = { x: number; y: number; s: number; v: number; m: number; mv: number; open: boolean }
 
 /** Returns null when WebGL2 or float render targets are unavailable. */
 export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
@@ -212,12 +280,13 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
   if (!gl.getExtension('EXT_color_buffer_float') && !gl.getExtension('EXT_color_buffer_half_float')) return null
 
   let lost = false
-  let progs: { warp: Prog; blur: Prog; draw: Prog } | null = null
+  let progs: { warp: Prog; blur: Prog; grad: Prog; draw: Prog } | null = null
   let vao: WebGLVertexArrayObject | null = null
   let fbo: WebGLFramebuffer | null = null
   let field: Tex | null = null
   let blurTmp: Tex | null = null
   let blurOut: Tex | null = null
+  let lean: Tex | null = null
   let tSim: Tex | null = null
   let tHi: Tex | null = null
   let simW = 0
@@ -309,9 +378,10 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
   const buildPrograms = () => {
     const warp = program(FS_WARP, ['uT', 'uRes', 'uCss', 'uZone', 'uD'])
     const blur = program(FS_BLUR, ['uSrc', 'uStep'])
-    const draw = program(FS_DRAW, ['uS', 'uB', 'uThi', 'uCss', 'uTime', 'uStill', 'uDome', 'uSpH', 'uPitch', 'uD'])
-    if (!warp || !blur || !draw) return false
-    progs = { warp, blur, draw }
+    const grad = program(FS_GRAD, ['uSrc'])
+    const draw = program(FS_DRAW, ['uS', 'uB', 'uThi', 'uL', 'uCss', 'uTime', 'uStill', 'uDome', 'uSpH', 'uPitch', 'uK', 'uD'])
+    if (!warp || !blur || !grad || !draw) return false
+    progs = { warp, blur, grad, draw }
     vao = gl.createVertexArray()
     fbo = gl.createFramebuffer()
     return true
@@ -321,9 +391,10 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
     free(field)
     free(blurTmp)
     free(blurOut)
+    free(lean)
     free(tSim)
     free(tHi)
-    field = blurTmp = blurOut = tSim = tHi = null
+    field = blurTmp = blurOut = lean = tSim = tHi = null
   }
 
   let lastMask: HTMLCanvasElement | null = null
@@ -355,7 +426,8 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
     field = makeFloatTex(simW, simH)
     blurTmp = makeFloatTex(simW, simH)
     blurOut = makeFloatTex(simW, simH)
-    if (!tSim || !tHi || !field || !blurTmp || !blurOut) return false
+    lean = makeFloatTex(simW, simH)
+    if (!tSim || !tHi || !field || !blurTmp || !blurOut || !lean) return false
     gl.bindVertexArray(vao)
     buildField()
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
@@ -375,14 +447,14 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
       uD[i * 4] = d.x
       uD[i * 4 + 1] = cssH - d.y
       uD[i * 4 + 2] = d.s > 0.003 ? aMax * Math.min(1, d.s) : 0
-      uD[i * 4 + 3] = Math.min(1, d.s)
+      uD[i * 4 + 3] = Math.min(1.4, d.m)
     }
     gl.uniform4fv(loc, uD)
   }
 
   /** Warp pass at sim res, then two blur passes. */
   const buildField = () => {
-    if (!progs || !field || !blurTmp || !blurOut || !tSim) return
+    if (!progs || !field || !blurTmp || !blurOut || !lean || !tSim) return
     const W = progs.warp
     gl.useProgram(W.p)
     target(field)
@@ -392,6 +464,12 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
     gl.uniform2f(W.u.uCss, cssW, cssH)
     gl.uniform1f(W.u.uZone, TUNING.spikeZoneEm * em)
     uploadDents(W.u.uD)
+    tri()
+    const G = progs.grad
+    gl.useProgram(G.p)
+    target(lean)
+    bind(0, field)
+    gl.uniform1i(G.u.uSrc, 0)
     tri()
     const B = progs.blur
     gl.useProgram(B.p)
@@ -408,7 +486,7 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
   }
 
   const drawToScreen = (time: number, still: boolean) => {
-    if (!progs || !field || !blurOut || !tHi) return
+    if (!progs || !field || !blurOut || !lean || !tHi) return
     const P = progs.draw
     gl.bindVertexArray(vao)
     gl.useProgram(P.p)
@@ -419,6 +497,8 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
     bind(0, field)
     bind(1, blurOut)
     bind(2, tHi)
+    bind(3, lean)
+    gl.uniform1i(P.u.uL, 3)
     gl.uniform1i(P.u.uS, 0)
     gl.uniform1i(P.u.uB, 1)
     gl.uniform1i(P.u.uThi, 2)
@@ -428,6 +508,7 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
     gl.uniform1f(P.u.uDome, TUNING.domeEm * em)
     gl.uniform1f(P.u.uSpH, TUNING.spikeHeightEm * em)
     gl.uniform1f(P.u.uPitch, TUNING.spikePitchEm * em)
+    gl.uniform1f(P.u.uK, TUNING.spikeTilt)
     uploadDents(P.u.uD)
     tri()
   }
@@ -464,7 +545,7 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
     const head = dents[dents.length - 1]
     if (p.active) {
       if (!head || !head.open) {
-        dents.push({ x: p.x, y: p.y, s: 0, v: 0, open: true })
+        dents.push({ x: p.x, y: p.y, s: 0, v: 0, m: 0, mv: 0, open: true })
         spawnX = p.x
         spawnY = p.y
       } else {
@@ -475,7 +556,7 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
         const dy = p.y - spawnY
         if (Math.hypot(dx, dy) > TUNING.trailSpacingEm * em) {
           head.open = false
-          dents.push({ x: p.x, y: p.y, s: head.s, v: head.v * 0.4, open: true })
+          dents.push({ x: p.x, y: p.y, s: head.s, v: head.v * 0.4, m: head.m, mv: head.mv, open: true })
           spawnX = p.x
           spawnY = p.y
         }
@@ -496,8 +577,14 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
         }
       }
     }
+    for (const d of dents) {
+      const ms = { x: d.m, v: d.mv }
+      spikeSpring(ms, d.open ? 1.15 : 0, dt)
+      d.m = ms.x
+      d.mv = ms.v
+    }
     // Drop the dead, and the oldest if there are too many.
-    dents = dents.filter((d) => d.open || d.s > 0.004 || d.v > 0.01)
+    dents = dents.filter((d) => d.open || d.s > 0.004 || d.v > 0.01 || d.m > 0.01)
     if (dents.length > ND) dents.splice(0, dents.length - ND)
   }
 
@@ -506,7 +593,7 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
     frame(dt, time, pointer) {
       if (lost || !progs) return
       gl.bindVertexArray(vao)
-      stepDents(Math.min(0.05, dt), pointer)
+      stepDents(Math.min(0.1, dt), pointer)
       buildField()
       drawToScreen(time, false)
     },
