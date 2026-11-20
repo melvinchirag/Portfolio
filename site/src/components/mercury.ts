@@ -18,6 +18,8 @@
  * Study notes: Otto `.claude/skills/creative-ui-techniques/techniques/03-raymarching-sdf-liquid.md`.
  */
 
+import { SPIKE_GLSL, SPIKE_UNIFORMS, spikeSpring } from './spikes'
+
 export type MercuryFrame = {
   time: number
   /** Lagging drop centre and leading drop centre, in canvas units. */
@@ -36,7 +38,7 @@ export type MercuryFrame = {
   /** Reduced motion: no surface wobble. */
   still: boolean
   /** Ferrofluid spikes at the head: amplitude 0..1.2, centre, lattice spacing and height in canvas units. */
-  spike?: { amp: number; at: [number, number]; spacing: number; height: number }
+  spike?: { amp: number; at: [number, number]; spacing: number; height: number; zone: number }
 }
 
 export type Mercury = {
@@ -51,39 +53,41 @@ const FS = /* glsl */ `
 precision highp float;
 uniform vec2 u_res; uniform float u_time; uniform vec2 u_a; uniform vec2 u_b; uniform vec3 u_ra; uniform vec3 u_rb; uniform float u_k;
 uniform vec4 u_body; uniform float u_bodyOn; uniform float u_axis; uniform float u_still;
-uniform vec2 u_sp; uniform float u_spk; uniform float u_spS; uniform float u_spH;
 
 float sdEll(vec3 p, vec3 r){ float k0 = length(p / r); float k1 = length(p / (r * r)); return k0 * (k0 - 1.0) / k1; }
 float smin(float a, float b, float k){ float h = max(k - abs(a - b), 0.0) / k; return min(a, b) - h * h * k * 0.25; }
-
+float ellZ(vec2 q, vec2 c, vec3 r){ vec2 w = (q - c) / max(r.xy, vec2(0.001)); return r.z * sqrt(max(0.0, 1.0 - dot(w, w))); }
+float bodyZ(vec2 q){ float z = max(ellZ(q, u_a, u_ra), ellZ(q, u_b, u_rb)); if (u_bodyOn > 0.5) z = max(z, ellZ(q, u_body.xy, vec3(u_body.zw, u_rb.z))); return z; }
+${SPIKE_GLSL}
+float bodyD(vec3 p, vec3 off){
+  vec3 pa = p - vec3(u_a, 0.0) - off; vec3 pb = p - vec3(u_b, 0.0) + off;
+  float d = smin(sdEll(pa, u_ra), sdEll(pb, u_rb), u_k);
+  if (u_bodyOn > 0.5) { float db = sdEll(p - vec3(u_body.xy, 0.0) + off * 0.5, vec3(u_body.z, u_body.w, u_rb.z)); d = smin(d, db, u_k); }
+  return d;
+}
 float map(vec3 p){
   float t = u_time; float live = 1.0 - u_still;
   float along = mix(p.x, p.y, u_axis);
   float wob = (sin(along * 1.9 + t * 1.5) * 0.026 + sin(along * 3.7 - t * 1.1) * 0.013) * live;
   vec3 off = mix(vec3(0.0, wob, 0.0), vec3(wob, 0.0, 0.0), u_axis);
-  vec3 pa = p - vec3(u_a, 0.0) - off; vec3 pb = p - vec3(u_b, 0.0) + off;
-  float d = smin(sdEll(pa, u_ra), sdEll(pb, u_rb), u_k);
-  if (u_bodyOn > 0.5) { float db = sdEll(p - vec3(u_body.xy, 0.0) + off * 0.5, vec3(u_body.z, u_body.w, u_rb.z)); d = smin(d, db, u_k); }
-  if (u_spk > 0.001) {
-    vec2 q = p.xy - u_sp;
-    float w = exp(-dot(q,q) / (u_spS*u_spS*7.0));
-    float kk = 6.2832 / u_spS;
-    float v = (cos(kk*q.x) + cos(kk*(q.x*0.5 + q.y*0.866)) + cos(kk*(q.x*0.5 - q.y*0.866)) + 1.5) / 4.5;
-    d -= u_spk * u_spH * w * pow(max(v,0.0), 5.0) * (1.0 - smoothstep(0.0, 0.3, max(d,0.0)));
-  }
+  float d = bodyD(p, off);
+  if (u_spk > 0.005) d = spikes(p, d, bodyD(vec3(p.xy, 0.0), off));
   return d;
 }
-vec3 nrm(vec3 p){ vec2 h = vec2(0.003, 0.0); return normalize(vec3(map(p + h.xyy) - map(p - h.xyy), map(p + h.yxy) - map(p - h.yxy), map(p + h.yyx) - map(p - h.yyx))); }
+vec3 nrm(vec3 p){
+  vec2 k = vec2(1.0, -1.0); float h = 0.0025;
+  return normalize(k.xyy * map(p + k.xyy * h) + k.yyx * map(p + k.yyx * h) + k.yxy * map(p + k.yxy * h) + k.xxx * map(p + k.xxx * h));
+}
 
 void main(){
   float asp = u_res.x / u_res.y;
   vec2 uv = (gl_FragCoord.xy / u_res - 0.5) * 2.0 * vec2(asp, 1.0);
-  vec3 ro = vec3(uv, -2.5); vec3 rd = vec3(0.0, 0.0, 1.0);
+  vec3 ro = vec3(uv, -1.6); vec3 rd = vec3(0.0, 0.0, 1.0);
   float t = 0.0; float minD = 10.0; bool hit = false; vec3 p = ro;
-  for (int i = 0; i < 44; i++) {
+  for (int i = 0; i < 48; i++) {
     p = ro + rd * t; float d = map(p); minD = min(minD, d);
     if (d < 0.002) { hit = true; break; }
-    t += d * 0.8; if (t > 5.0) break;
+    t += d * 0.75; if (t > 3.4) break;
   }
   float px = 2.0 / u_res.y;
   float alpha = hit ? 1.0 : 1.0 - smoothstep(0.0, px * 1.6, minD);
@@ -91,7 +95,7 @@ void main(){
   vec3 n = nrm(p);
   vec3 L = normalize(vec3(0.35, 0.75, -0.6)); vec3 V = vec3(0.0, 0.0, -1.0); vec3 H = normalize(L + V);
   float dif = max(dot(n, L), 0.0) * 0.6 + 0.4;
-  float spec = pow(max(dot(n, H), 0.0), 36.0) * 0.4;
+  float spec = pow(max(dot(n, H), 0.0), 36.0) * 0.4 + pow(max(dot(n, H), 0.0), 160.0) * 0.5;
   float fre = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.45;
   // Sand #cdb78a, its deep shade and its lit shade. One hue; depth from shading only.
   vec3 deep = vec3(0.40, 0.35, 0.25); vec3 sand = vec3(0.804, 0.718, 0.541); vec3 light = vec3(0.90, 0.83, 0.66);
@@ -100,7 +104,7 @@ void main(){
 }
 `
 
-const UNIFORMS = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_body', 'u_bodyOn', 'u_axis', 'u_still', 'u_sp', 'u_spk', 'u_spS', 'u_spH'] as const
+const UNIFORMS = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_body', 'u_bodyOn', 'u_axis', 'u_still', ...SPIKE_UNIFORMS] as const
 
 function compile(gl: WebGLRenderingContext, type: number, src: string) {
   const s = gl.createShader(type)
@@ -143,6 +147,8 @@ export function createMercury(canvas: HTMLCanvasElement): Mercury | null {
   gl.clearColor(0, 0, 0, 0)
 
   let lost = false
+  let lastT = 0
+  const amp = { x: 0, v: 0 }
   const onLost = (e: Event) => { e.preventDefault(); lost = true }
   const onRestored = () => { lost = false }
   canvas.addEventListener('webglcontextlost', onLost)
@@ -172,11 +178,20 @@ export function createMercury(canvas: HTMLCanvasElement): Mercury | null {
       gl.uniform1f(U.u_bodyOn, f.bodyOn ? 1 : 0)
       gl.uniform1f(U.u_axis, f.axis)
       gl.uniform1f(U.u_still, f.still ? 1 : 0)
+      // Ferrofluid spikes (spikes.ts): the head is the magnet, the lagging drop a weaker second pole.
       const sp = f.spike
+      const dt = lastT ? Math.min(0.05, Math.max(0, f.time - lastT)) : 0.016
+      lastT = f.time
+      if (f.still || !sp) { amp.x = 0; amp.v = 0 } else spikeSpring(amp, sp.amp, dt)
       gl.uniform2f(U.u_sp, sp ? sp.at[0] : 0, sp ? sp.at[1] : 0)
-      gl.uniform1f(U.u_spk, sp && !f.still ? sp.amp : 0)
+      gl.uniform2f(U.u_sp2, f.a[0], f.a[1])
+      gl.uniform1f(U.u_spk, Math.min(1.4, amp.x))
+      gl.uniform1f(U.u_spA, 0.6)
       gl.uniform1f(U.u_spS, sp ? sp.spacing : 0.2)
       gl.uniform1f(U.u_spH, sp ? sp.height : 0.1)
+      gl.uniform1f(U.u_spR, sp ? sp.zone : 0.5)
+      gl.uniform1f(U.u_spW, Math.min(1.2 * (sp ? sp.spacing : 0.2), 0.6 * Math.min(f.rb[0], f.rb[1])))
+      gl.uniform1f(U.u_px, 2 / canvas.height)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     },
