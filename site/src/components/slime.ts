@@ -32,7 +32,7 @@
  */
 
 type Shape = 'pill' | 'round' | 'dot' | 'line'
-type Cfg = { shape: Shape; spikes: boolean; pad: number }
+type Cfg = { shape: Shape; spikes: boolean; pad: number; spS: number; spH: number; hov: number }
 
 const VS = 'attribute vec2 p; void main(){ gl_Position = vec4(p,0.0,1.0); }'
 
@@ -427,7 +427,7 @@ class Slime {
       this.pulse = Math.max(0, this.pulse - dt * 2.2)
       // Ferrofluid spikes: strongest while the head is pulling away from the tail.
       const sep = Math.hypot(this.b[0] - this.a[0], this.b[1] - this.a[1])
-      const want = this.cfg.spikes ? Math.min(1, sep * 4.5) + this.pulse * 0.6 : 0
+      const want = this.cfg.spikes ? Math.min(1, sep * 4.5) + this.pulse * 0.6 + (hov ? this.cfg.hov : 0) : 0
       this.spk += (Math.min(1.2, want) - this.spk) * (1 - Math.exp(-9 * dt))
     }
 
@@ -438,7 +438,7 @@ class Slime {
       it.classList.toggle('is-under', under)
     }
 
-    const px = this.cfg.shape === 'round' ? 5.5 : 6.5
+    const px = this.cfg.spS
     const { gl, U } = g
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.uniform2f(U.u_res, canvas.width, canvas.height)
@@ -451,7 +451,7 @@ class Slime {
     gl.uniform2f(U.u_sp, this.b[0], this.b[1])
     gl.uniform1f(U.u_spk, this.spk)
     gl.uniform1f(U.u_spS, px / this.unit)
-    gl.uniform1f(U.u_spH, 5 / this.unit)
+    gl.uniform1f(U.u_spH, this.cfg.spH / this.unit)
     gl.uniform1f(U.u_still, rm ? 1 : 0)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
@@ -474,9 +474,10 @@ function group(cfg: Cfg) {
 }
 
 export const slime = {
-  cta: group({ shape: 'pill', spikes: true, pad: 26 }),
-  links: group({ shape: 'line', spikes: false, pad: 12 }),
-  line: group({ shape: 'line', spikes: false, pad: 12 }),
-  dots: group({ shape: 'dot', spikes: false, pad: 12 }),
-  arrow: group({ shape: 'round', spikes: true, pad: 12 }),
+  // Everything is ferrofluid now (Melvin, 2026-11-20): spikes on every group, tuned to the size of the thing.
+  cta: group({ shape: 'pill', spikes: true, pad: 26, spS: 6.5, spH: 5, hov: 0 }),
+  links: group({ shape: 'line', spikes: true, pad: 14, spS: 5, spH: 4.2, hov: 0.55 }),
+  line: group({ shape: 'line', spikes: true, pad: 14, spS: 5, spH: 4.2, hov: 0.55 }),
+  dots: group({ shape: 'dot', spikes: true, pad: 12, spS: 3.2, spH: 3, hov: 0.45 }),
+  arrow: group({ shape: 'round', spikes: true, pad: 12, spS: 5.5, spH: 5, hov: 0.25 }),
 }

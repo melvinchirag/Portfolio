@@ -100,7 +100,7 @@ const PROSE_STACK =
 function FrameDots({ active }: { active: number }) {
   return (
     // bottom-3: low, out of the way of the name block and the fact snakes.
-    <div ref={slime.dots} className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
+    <div ref={slime.dots} className="absolute bottom-[92px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 md:bottom-3">
       {FRAMES.map((f, i) => (
         <button
           key={f.id}
@@ -182,7 +182,7 @@ function IdentityFrame({ index }: { index: number }) {
       ref={rootRef}
       data-pan={index}
       // Right padding on md+ clears the fixed 76px clock rail (HeroClockRail).
-      className="relative grid h-full w-full grid-cols-12 items-end px-6 pb-[12vh] md:px-10 md:pr-[100px] lg:px-14 lg:pr-[110px]"
+      className="relative grid h-full w-full grid-cols-12 items-end px-6 pb-[19vh] md:px-10 md:pb-[12vh] md:pr-[100px] lg:px-14 lg:pr-[110px]"
     >
       <NameAssembly rootRef={rootRef} targetRef={firstNameRef} onDone={reveal} />
 
@@ -194,9 +194,12 @@ function IdentityFrame({ index }: { index: number }) {
           sit inside the name lockup, right-aligned so they end exactly above
           the N of MELVIN, and the surname is tracked out to MELVIN's width
           (see the effect above), so the whole lockup is one aligned block. */}
-      <div className="frame-item relative col-span-12 md:col-span-7 md:col-start-6" style={FI(0)}>
-        <div className="w-fit">
-          <div ref={slime.links} className="label mb-4 flex items-center justify-end gap-5">
+      <div className="frame-item relative col-span-12 flex flex-col md:col-span-7 md:col-start-6 md:block" style={FI(0)}>
+        {/* On a phone the wrapper below is display:contents so the links, the two
+            buttons, the name and the sentence can be reordered: the buttons sit ABOVE
+            the name (Melvin, 2026-11-20) and stay clear of the bottom menu. */}
+        <div className="contents md:block md:w-fit">
+          <div ref={slime.links} className="label order-1 mb-4 flex items-center justify-end gap-5">
             <a data-slime href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
               GitHub
             </a>
@@ -213,7 +216,7 @@ function IdentityFrame({ index }: { index: number }) {
               Résumé ↗
             </a>
           </div>
-          <h1 className="flex flex-col">
+          <h1 className="order-3 flex flex-col">
             <span
               ref={firstNameRef}
               // Opacity transition length = NameAssembly's SOLIDIFY_SECS, so the
@@ -234,7 +237,7 @@ function IdentityFrame({ index }: { index: number }) {
           </h1>
         </div>
 
-        <p className="mt-7 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/75 sm:text-[15.5px]">
+        <p className="order-4 mt-7 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/75 sm:text-[15.5px]">
           I build computer-vision and machine-learning systems that work outside the screen, and I
           am vice president of Hack The Nest, EMU's first hackathon. This site can{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
@@ -243,7 +246,7 @@ function IdentityFrame({ index }: { index: number }) {
           .
         </p>
 
-        <div ref={slime.cta} className="mt-8 flex flex-wrap items-center gap-3">
+        <div ref={slime.cta} className="order-2 mb-7 flex flex-wrap items-center gap-3 md:mt-8 md:mb-0">
           <Link data-slime data-slime-home to="/work" className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide">
             See the work
           </Link>

@@ -744,10 +744,12 @@ body {
 .glass-cta.slime-on,
 .glass-cta.slime-on:hover,
 .glass-cta.slime-on:focus-visible,
-.glass-cta.is-secondary.slime-on:hover {
+.glass-cta.is-secondary.slime-on,
+.glass-cta.is-secondary.slime-on:hover,
+.glass-cta.is-secondary.slime-on:focus-visible {
   background: transparent;
   color: var(--color-sand);
-  box-shadow: inset 0 0 0 1px var(--color-sand-deep);
+  box-shadow: none;
 }
 .glass-cta.slime-on.is-under,
 .glass-cta.slime-on.is-under:hover {

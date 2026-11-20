@@ -35,6 +35,8 @@ export type MercuryFrame = {
   axis: 0 | 1
   /** Reduced motion: no surface wobble. */
   still: boolean
+  /** Ferrofluid spikes at the head: amplitude 0..1.2, centre, lattice spacing and height in canvas units. */
+  spike?: { amp: number; at: [number, number]; spacing: number; height: number }
 }
 
 export type Mercury = {
@@ -49,6 +51,7 @@ const FS = /* glsl */ `
 precision highp float;
 uniform vec2 u_res; uniform float u_time; uniform vec2 u_a; uniform vec2 u_b; uniform vec3 u_ra; uniform vec3 u_rb; uniform float u_k;
 uniform vec4 u_body; uniform float u_bodyOn; uniform float u_axis; uniform float u_still;
+uniform vec2 u_sp; uniform float u_spk; uniform float u_spS; uniform float u_spH;
 
 float sdEll(vec3 p, vec3 r){ float k0 = length(p / r); float k1 = length(p / (r * r)); return k0 * (k0 - 1.0) / k1; }
 float smin(float a, float b, float k){ float h = max(k - abs(a - b), 0.0) / k; return min(a, b) - h * h * k * 0.25; }
@@ -61,6 +64,13 @@ float map(vec3 p){
   vec3 pa = p - vec3(u_a, 0.0) - off; vec3 pb = p - vec3(u_b, 0.0) + off;
   float d = smin(sdEll(pa, u_ra), sdEll(pb, u_rb), u_k);
   if (u_bodyOn > 0.5) { float db = sdEll(p - vec3(u_body.xy, 0.0) + off * 0.5, vec3(u_body.z, u_body.w, u_rb.z)); d = smin(d, db, u_k); }
+  if (u_spk > 0.001) {
+    vec2 q = p.xy - u_sp;
+    float w = exp(-dot(q,q) / (u_spS*u_spS*7.0));
+    float kk = 6.2832 / u_spS;
+    float v = (cos(kk*q.x) + cos(kk*(q.x*0.5 + q.y*0.866)) + cos(kk*(q.x*0.5 - q.y*0.866)) + 1.5) / 4.5;
+    d -= u_spk * u_spH * w * pow(max(v,0.0), 5.0) * (1.0 - smoothstep(0.0, 0.3, max(d,0.0)));
+  }
   return d;
 }
 vec3 nrm(vec3 p){ vec2 h = vec2(0.003, 0.0); return normalize(vec3(map(p + h.xyy) - map(p - h.xyy), map(p + h.yxy) - map(p - h.yxy), map(p + h.yyx) - map(p - h.yyx))); }
@@ -70,10 +80,10 @@ void main(){
   vec2 uv = (gl_FragCoord.xy / u_res - 0.5) * 2.0 * vec2(asp, 1.0);
   vec3 ro = vec3(uv, -2.5); vec3 rd = vec3(0.0, 0.0, 1.0);
   float t = 0.0; float minD = 10.0; bool hit = false; vec3 p = ro;
-  for (int i = 0; i < 40; i++) {
+  for (int i = 0; i < 44; i++) {
     p = ro + rd * t; float d = map(p); minD = min(minD, d);
     if (d < 0.002) { hit = true; break; }
-    t += d * 0.9; if (t > 5.0) break;
+    t += d * 0.8; if (t > 5.0) break;
   }
   float px = 2.0 / u_res.y;
   float alpha = hit ? 1.0 : 1.0 - smoothstep(0.0, px * 1.6, minD);
@@ -90,7 +100,7 @@ void main(){
 }
 `
 
-const UNIFORMS = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_body', 'u_bodyOn', 'u_axis', 'u_still'] as const
+const UNIFORMS = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_body', 'u_bodyOn', 'u_axis', 'u_still', 'u_sp', 'u_spk', 'u_spS', 'u_spH'] as const
 
 function compile(gl: WebGLRenderingContext, type: number, src: string) {
   const s = gl.createShader(type)
@@ -162,6 +172,11 @@ export function createMercury(canvas: HTMLCanvasElement): Mercury | null {
       gl.uniform1f(U.u_bodyOn, f.bodyOn ? 1 : 0)
       gl.uniform1f(U.u_axis, f.axis)
       gl.uniform1f(U.u_still, f.still ? 1 : 0)
+      const sp = f.spike
+      gl.uniform2f(U.u_sp, sp ? sp.at[0] : 0, sp ? sp.at[1] : 0)
+      gl.uniform1f(U.u_spk, sp && !f.still ? sp.amp : 0)
+      gl.uniform1f(U.u_spS, sp ? sp.spacing : 0.2)
+      gl.uniform1f(U.u_spH, sp ? sp.height : 0.1)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     },

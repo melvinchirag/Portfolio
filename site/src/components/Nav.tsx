@@ -210,7 +210,14 @@ function MercuryMenu() {
         ra = [hw * 0.8 * g, hh * 0.85 * g, 0.32]
       }
 
-      m.frame({ time: now / 1000, a: s.a, b: s.b, ra, rb, k, body, bodyOn, axis, still: reduced })
+      // Ferrofluid: the head sprouts spikes while the drop travels between words
+      // and a few while a word is hovered, relaxing once it has arrived.
+      const sep = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1])
+      const amp = Math.min(1.2, Math.min(1, sep * 3.2) + (hover != null ? 0.25 : 0))
+      m.frame({
+        time: now / 1000, a: s.a, b: s.b, ra, rb, k, body, bodyOn, axis, still: reduced,
+        spike: { amp, at: [s.b[0], s.b[1]], spacing: 6.5 / unit, height: 4.8 / unit },
+      })
     }
     raf = requestAnimationFrame(frame)
     return () => { cancelAnimationFrame(raf); m.dispose() }

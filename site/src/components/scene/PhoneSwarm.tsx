@@ -1,30 +1,27 @@
 /* ============================================================================
- * PhoneSwarm.tsx: the phone hero. Twelve small faces that dissolve into glyphs
- * as you scroll, leaving three that circle together and then dance.
+ * PhoneSwarm.tsx: the phone hero. Twelve small masks that BREAK into glyphs the
+ * moment you start scrolling, leaving three that circle together and dance.
  * ----------------------------------------------------------------------------
- * Melvin, 2026-11-20 (phone pick-board, variant A): "instead of one big mask,
- * small masks everywhere ... when I start scrolling only three remain and the
- * others dissipate into glyphs, almost like Star Trek ... those three should
- * dance, move together in a circle as I scroll, then bounce around the page."
+ * Melvin, 2026-11-20 (phone pick-board variant A, then his notes after trying
+ * it on a phone):
+ *  - The masks must look exactly like the desktop mask, only smaller: so this
+ *    now runs the SAME particle pipeline as ContactMaskSwarm / MaskField (a
+ *    shared GPGPU spring-to-home sim, 84x84 dots per face, the same face crop,
+ *    eye and nose weights, blink, speed-driven alpha, additive sand points and
+ *    the same rising binary/Telugu glyph layer), not a cheaper stand-in.
+ *  - The break is an EVENT, not a scrubbed animation. Cross a small scroll
+ *    threshold and the nine faces break up over time; stop scrolling halfway
+ *    and nothing is left half dissolved. Scroll back to the top and the faces
+ *    regenerate, while glyphs that already left keep flying until they fade.
+ *  - The three keepers circle together and then dance on their own clock, with
+ *    no scrolling needed (scroll speed, a finger and taps only add energy).
  *
- * Why a new file and not ContactMaskSwarm: that one is hand-composed for the
- * desktop Contact section, anchored to #contact's rect, and runs a GPGPU sim
- * for 17 faces of 7,056 dots. A phone cannot afford that. This one is the same
- * idea built for a phone: 12 faces of 1,600 dots each (about 19,000 dots in
- * total, versus about 147,000 for the big mask), no GPGPU (a cheap vertex
- * shimmer instead), one draw call per face, glyphs drawn by the SAME dots (a
- * dissolving dot turns into a character and rises; nothing extra is added).
+ * Cost: one sim of 84x84, twelve draws of 7,056 dots (about 85,000, versus about
+ * 147,000 for the big mask), plus glyph layers. Burst layers are hidden while
+ * idle. Dispose frees the geometry and materials.
  *
- * Scroll drives everything and runs both ways: the hero's own progress
- * (heroScroll.progress, 0 to 1 across the four-frame pan) staggers the nine
- * dissolving faces over about the first sixth of the pan; the keepers go home,
- * then into a circle, then dance; at Contact they park in the right margin and
- * calm down. A tap kicks them, a finger makes them look, a focused form field
- * freezes the dance. Reduced motion: three still faces parked in the margin.
- *
- * Face sampling matches ContactMaskSwarm (same crop and eye/nose weights, so
- * the faces read the same way); constants are copied rather than imported to
- * leave that tuned file untouched.
+ * Face crop, features and glyph vocabulary are copied from ContactMaskSwarm so
+ * that tuned file stays untouched.
  * ========================================================================= */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -32,16 +29,16 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
+import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
 import { heroScroll } from '../../hooks/heroScroll'
 import { contactHandoff } from '../../hooks/contactVisibility'
 import { heroIntro } from '../../hooks/heroIntro'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
-/** 40 x 40 = 1,600 dots per face. */
-const SIZE = 40
+const SIZE = 84 // 84 x 84 = 7,056 dots per face, the same as the desktop swarm
 
-// Face crop and features, copied from ContactMaskSwarm / MaskField.
+// Face crop and features (same values as ContactMaskSwarm / MaskField).
 const FRONT_FACING = 0.12
 const BACK_CLIP = -0.11
 const FACE_X_HALF = 0.32
@@ -76,9 +73,7 @@ function noseWeight(x: number, y: number): number {
   return Math.max(0, 1 - noseDist) * 0.85
 }
 
-/* Where the twelve faces start, as fractions of the viewport, with a size
- * factor. `keeper` marks the three that never dissolve. Spread around and
- * behind the hero copy; the dots are dim enough that text stays readable. */
+/* Twelve starting places as fractions of the viewport. `keeper` = never breaks. */
 type Slot = { fx: number; fy: number; scale: number; keeper?: boolean }
 const SLOTS: Slot[] = [
   { fx: 0.12, fy: 0.1, scale: 1.0, keeper: true },
@@ -95,22 +90,30 @@ const SLOTS: Slot[] = [
   { fx: 0.36, fy: 0.84, scale: 0.75 },
 ]
 
-const FACE_PX = 52 // on-screen width of a scale-1 face, CSS px
-const FACE_LOCAL_W = 0.64 // the crop is 0.64 local units wide
+const FACE_PX = 56 // on-screen width of a scale-1 face, CSS px
+const FACE_LOCAL_W = 0.64
 const INTRO_SECS = 1.2
 const INTRO_STAGGER = 0.07
 const INTRO_Z_DEEP = -3
 
-/* Dissolve: face rank r (0..8 among the nine non-keepers) starts at
- * DISSOLVE_START + r * DISSOLVE_STEP of hero progress and takes DISSOLVE_SPAN.
- * All done by about 17% of the pan, i.e. within the first half of frame one. */
-const DISSOLVE_START = 0.004
-const DISSOLVE_STEP = 0.011
-const DISSOLVE_SPAN = 0.075
+/* THE EVENT. Break above BREAK_AT of hero progress, re-form below FORM_AT. */
+const BREAK_AT = 0.012
+const FORM_AT = 0.004
+const BREAK_STAGGER = 0.07 // seconds between faces
+const BREAK_DUR = 1.1 // seconds for a face's dots to lift off
+const GLYPH_LIFE = 5.5 // seconds a released glyph keeps rising
+const CIRCLE_SECS = 4.5 // circle first, then dance
 
+// Roving glyphs (the ever-present ones, same mechanism and numbers as the desktop swarm).
 const BINARY = ['0', '1']
 const TELUGU = ['అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', 'న', 'మ', 'ర', 'ల', 'వ', 'స', 'హ']
 const GLYPH_CHARS = [...BINARY, ...TELUGU]
+const GLYPH_POOL_FRACTION = 0.14
+const GLYPH_ON_FRAC = 0.06
+const GLYPH_ROVE_SPEED = 0.0024
+const GLYPH_RISE_EXP = 1.6
+const GLYPH_SIZE = 10
+const BURST_STRIDE = 8 // one dot in eight becomes a burst glyph (about 880 per face)
 
 function makeGlyphAtlas() {
   const cols = Math.ceil(Math.sqrt(GLYPH_CHARS.length))
@@ -134,81 +137,187 @@ function makeGlyphAtlas() {
   return { texture: tex, cols }
 }
 
-const vertex = /* glsl */ `
-  uniform float uTime;
-  uniform float uDissolve;
-  uniform float uEyeOpen;
-  uniform float uDot;
-  uniform float uGlyph;
-  uniform float uPR;
-  uniform float uRise;
-  uniform float uStill;
-  attribute float aRand;
-  attribute float aSeed;
-  attribute float aEye;
-  attribute float aNose;
-  varying float vA;
-  varying float vGlyph;
-  varying float vIsGlyph;
-  varying float vFeat;
-
-  float hash(float x) { return fract(sin(x * 127.1) * 43758.5453); }
-
+const simPosition = /* glsl */ `
   void main() {
-    vec3 pos = position;
-    float live = 1.0 - uStill;
-    pos += live * 0.006 * vec3(sin(uTime * 0.9 + aSeed * 40.0), cos(uTime * 0.7 + aSeed * 31.0), sin(uTime * 0.5 + aSeed * 17.0));
-
-    // Each dot dissolves when the face's dissolve value passes its own threshold,
-    // then spends 0.25 of the range turning into a glyph that rises and fades.
-    float age = clamp((uDissolve - aRand * 0.75) / 0.25, 0.0, 1.0);
-    vIsGlyph = step(0.0001, age);
-    float rise = age * age * 0.6 + age * 0.4;
-    pos.y += rise * uRise;
-    pos.x += (hash(aSeed * 17.0) - 0.5) * rise * 2.4;
-    pos.z += rise * 0.6;
-
-    vFeat = max(aNose, aEye * uEyeOpen);
-    vA = 1.0 - age;
-    // The character keeps changing while it rises: the data-stream look.
-    vGlyph = floor(hash(aSeed * 7.3 + floor(uTime * 0.9 * live + aSeed * 5.0)) * ${GLYPH_CHARS.length}.0);
-
-    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-    gl_PointSize = mix(uDot * (1.0 + vFeat * 0.8), uGlyph, vIsGlyph) * uPR * step(0.002, vA);
-    gl_Position = projectionMatrix * mv;
+    vec2 uv = gl_FragCoord.xy / resolution.xy;
+    vec3 pos = texture2D(uCurrentPosition, uv).xyz;
+    vec3 vel = texture2D(uCurrentVelocity, uv).xyz;
+    pos += vel;
+    gl_FragColor = vec4(pos, 1.0);
+  }
+`
+const simVelocity = /* glsl */ `
+  uniform sampler2D uHome;
+  uniform float uTime;
+  void main() {
+    vec2 uv = gl_FragCoord.xy / resolution.xy;
+    vec3 pos  = texture2D(uCurrentPosition, uv).xyz;
+    vec3 home = texture2D(uHome, uv).xyz;
+    vec3 vel  = texture2D(uCurrentVelocity, uv).xyz;
+    vel *= 0.72;
+    vec3 toHome = home - pos;
+    float d = length(toHome);
+    if (d > 0.0001) vel += normalize(toHome) * d * 0.02;
+    float n = sin(uTime * 0.7 + uv.x * 40.0) * cos(uTime * 0.5 + uv.y * 40.0);
+    vel += vec3(n, -n, n * 0.4) * 0.00006;
+    gl_FragColor = vec4(vel, 1.0);
   }
 `
 
-const fragment = /* glsl */ `
+// The face dots: identical to the desktop swarm, plus `uForm` (dots lift off and
+// vanish as it falls, in a per-dot random order, and return as it rises).
+const renderVertex = /* glsl */ `
+  uniform sampler2D uPositionTexture;
+  uniform sampler2D uVelocityTexture;
+  uniform float uParticleSize;
+  uniform float uForm;
+  attribute vec2 aRef;
+  attribute float aGlyphSeed;
+  attribute float aEye;
+  attribute float aNose;
+  attribute float aRand;
+  uniform float uTime;
+  uniform float uRoveSpeed;
+  uniform float uOnFrac;
+  uniform float uEyeOpen;
+  varying float vSpeed;
+  varying float vGlyphFade;
+  varying float vFeature;
+  varying float vAlive;
+
+  void main() {
+    vec3 pos = texture2D(uPositionTexture, aRef).xyz;
+    vSpeed = length(texture2D(uVelocityTexture, aRef).xyz);
+    vFeature = max(aNose, aEye * uEyeOpen);
+    vGlyphFade = 0.0;
+    if (aGlyphSeed >= 0.0) {
+      float life = fract(aGlyphSeed * 31.7 + uTime * uRoveSpeed);
+      float edge = min(0.06, uOnFrac * 0.5);
+      vGlyphFade = clamp(smoothstep(0.0, edge, life) - smoothstep(uOnFrac - edge, uOnFrac, life), 0.0, 1.0);
+    }
+    float th = aRand * 0.8;
+    vAlive = smoothstep(th, th + 0.2, uForm);
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+    gl_PointSize = (uParticleSize / -mv.z) * step(0.002, vAlive);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+const renderFragment = /* glsl */ `
+  precision highp float;
+  uniform vec3 uColor;
+  uniform float uMinAlpha;
+  uniform float uMaxAlpha;
+  uniform float uFade;
+  uniform float uFeatureFloor;
+  varying float vSpeed;
+  varying float vGlyphFade;
+  varying float vFeature;
+  varying float vAlive;
+  void main() {
+    if (length(gl_PointCoord - 0.5) > 0.5) discard;
+    float a = clamp(vSpeed * 100.0, uMinAlpha, uMaxAlpha);
+    a = max(a, vFeature * uFeatureFloor);
+    a *= (1.0 - vGlyphFade);
+    a *= uFade * vAlive;
+    gl_FragColor = vec4(uColor, a);
+  }
+`
+
+// The ever-present roving glyphs (same as the desktop swarm).
+const roveVertex = /* glsl */ `
+  uniform sampler2D uPositionTexture;
+  uniform float uGlyphSize;
+  uniform float uTime;
+  uniform float uBinStart;
+  uniform float uTelStart;
+  uniform float uOnFrac;
+  uniform float uRoveSpeed;
+  uniform float uDriftUp;
+  uniform float uDriftOut;
+  uniform float uDriftSide;
+  uniform float uRiseExp;
+  attribute vec2 aRef;
+  attribute float aSeed;
+  varying float vGlyph;
+  varying float vAlpha;
+  float hash(float x) { return fract(sin(x * 127.1) * 43758.5453); }
+  void main() {
+    vec3 pos = texture2D(uPositionTexture, aRef).xyz;
+    float life = fract(aSeed * 31.7 + uTime * uRoveSpeed);
+    float edge = min(0.06, uOnFrac * 0.5);
+    float fade = smoothstep(0.0, edge, life) - smoothstep(uOnFrac - edge, uOnFrac, life);
+    vAlpha = clamp(fade, 0.0, 1.0);
+    float lp = clamp(life / uOnFrac, 0.0, 1.0);
+    float rise = pow(lp, uRiseExp);
+    pos.y += uDriftUp * rise;
+    pos.z += uDriftOut * rise;
+    pos.x += (hash(aSeed * 17.0) - 0.5) * uDriftSide * rise;
+    float relight = floor(aSeed * 31.7 + uTime * uRoveSpeed);
+    float cat = step(0.5, hash(aSeed * 3.1 + relight));
+    float start = cat < 0.5 ? uBinStart : uTelStart;
+    float cnt = cat < 0.5 ? 2.0 : 16.0;
+    float r = hash(aSeed * 7.0 + cat * 5.0 + relight);
+    vGlyph = start + floor(r * cnt);
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+    gl_PointSize = (uGlyphSize / -mv.z) * step(0.002, vAlpha);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+// The burst: when a face breaks, a third of its dots become glyphs that peel off
+// in the same random order, then rise and fade on their own clock (uTime - uBreakT),
+// so they keep flying whatever the face does afterwards.
+const burstVertex = /* glsl */ `
+  uniform sampler2D uPositionTexture;
+  uniform float uGlyphSize;
+  uniform float uTime;
+  uniform float uBreakT;
+  uniform float uBreakDur;
+  uniform float uLife;
+  uniform float uRise;
+  attribute vec2 aRef;
+  attribute float aSeed;
+  attribute float aRand;
+  varying float vGlyph;
+  varying float vAlpha;
+  float hash(float x) { return fract(sin(x * 127.1) * 43758.5453); }
+  void main() {
+    vec3 pos = texture2D(uPositionTexture, aRef).xyz;
+    float start = 0.8 * (1.0 - aRand) * uBreakDur;
+    float t = (uTime - uBreakT - start) / uLife;
+    float on = step(0.0, t) * step(t, 1.0) * step(0.0, uBreakT);
+    float tc = clamp(t, 0.0, 1.0);
+    float rise = pow(tc, 1.35);
+    pos.y += uRise * rise;
+    pos.x += (hash(aSeed * 17.0) - 0.5) * uRise * 0.22 * rise;
+    pos.z += uRise * 0.12 * rise;
+    vAlpha = on * smoothstep(0.0, 0.06, tc) * (1.0 - smoothstep(0.5, 1.0, tc));
+    vGlyph = floor(hash(aSeed * 7.3 + floor(uTime * 8.0 + aSeed * 5.0)) * ${GLYPH_CHARS.length}.0);
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+    gl_PointSize = (uGlyphSize / -mv.z) * step(0.002, vAlpha);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+const glyphFragment = /* glsl */ `
   precision highp float;
   uniform sampler2D uAtlas;
   uniform float uCols;
   uniform vec3 uColor;
-  uniform vec3 uGlyphColor;
   uniform float uFade;
-  varying float vA;
   varying float vGlyph;
-  varying float vIsGlyph;
-  varying float vFeat;
-
+  varying float vAlpha;
   void main() {
-    if (vA < 0.01) discard;
-    if (vIsGlyph > 0.5) {
-      float idx = floor(vGlyph + 0.5);
-      vec2 uv = (vec2(mod(idx, uCols), floor(idx / uCols)) + gl_PointCoord) / uCols;
-      vec4 g = texture2D(uAtlas, uv);
-      if (g.a < 0.15) discard;
-      gl_FragColor = vec4(uGlyphColor, g.a * vA * uFade);
-      return;
-    }
-    if (length(gl_PointCoord - 0.5) > 0.5) discard;
-    float a = mix(0.3, 1.0, vFeat) * uFade;
-    gl_FragColor = vec4(uColor, a);
+    if (vAlpha < 0.01) discard;
+    float idx = floor(vGlyph + 0.5);
+    vec2 uv = (vec2(mod(idx, uCols), floor(idx / uCols)) + gl_PointCoord) / uCols;
+    vec4 g = texture2D(uAtlas, uv);
+    if (g.a < 0.15) discard;
+    gl_FragColor = vec4(uColor, g.a * vAlpha * uFade);
   }
 `
 
 type Dancer = { x: number; y: number; vx: number; vy: number }
 type Blink = { clock: number; next: number; start: number }
+type Face = { form: number; formT: number; formAt: number; breakT: number }
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
@@ -244,92 +353,201 @@ export function PhoneSwarm() {
     }
   }, [])
 
-  const [built, setBuilt] = useState<{ geometry: THREE.BufferGeometry; materials: THREE.ShaderMaterial[] } | null>(null)
+  const [sim, setSim] = useState<{
+    gpu: GPUComputationRenderer
+    posVar: any
+    velVar: any
+    geometry: THREE.BufferGeometry
+    roveGeo: THREE.BufferGeometry
+    burstGeo: THREE.BufferGeometry
+    faceMats: THREE.ShaderMaterial[]
+    roveMats: THREE.ShaderMaterial[]
+    burstMats: THREE.ShaderMaterial[]
+  } | null>(null)
+
   useEffect(() => {
     if (!geo) return
-    if (!geo.attributes.normal) geo.computeVertexNormals()
-    const sampler = new MeshSurfaceSampler(new THREE.Mesh(geo)).build()
-    const count = SIZE * SIZE
-    const pos = new Float32Array(count * 3)
-    const rand = new Float32Array(count)
-    const seed = new Float32Array(count)
-    const eye = new Float32Array(count)
-    const nose = new Float32Array(count)
-    const p = new THREE.Vector3()
-    const n = new THREE.Vector3()
-    const last = new THREE.Vector3(0, -0.08, 0.2)
-    const inFace = (v: THREE.Vector3, nz: number) =>
-      nz >= FRONT_FACING &&
-      v.z >= BACK_CLIP &&
-      Math.abs(v.x) <= FACE_X_HALF &&
-      v.y >= FACE_Y_BOTTOM &&
-      v.y <= FACE_TOP_PEAK - FACE_TOP_CURVE * v.x * v.x
-    for (let i = 0; i < count; i++) {
-      // Importance sampling: dots on the eyes and nose are kept far more often than
-      // dots on bare skin, so at 50px wide the face still reads as a face.
-      let tries = 0
-      let ok = false
-      do {
-        sampler.sample(p, n)
-        tries++
-        ok = inFace(p, n.z) && Math.random() < 0.34 + 0.66 * Math.max(eyeWeight(p.x, p.y), noseWeight(p.x, p.y))
-      } while (!ok && tries < 120)
-      if (!ok) p.copy(last)
-      else last.copy(p)
-      p.x = Math.abs(p.x) * (Math.random() < 0.5 ? 1 : -1)
-      pos[i * 3] = p.x
-      pos[i * 3 + 1] = p.y
-      pos[i * 3 + 2] = p.z
-      rand[i] = Math.random()
-      seed[i] = Math.random()
-      eye[i] = eyeWeight(p.x, p.y)
-      nose[i] = noseWeight(p.x, p.y)
-    }
-    const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-    geometry.setAttribute('aRand', new THREE.BufferAttribute(rand, 1))
-    geometry.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1))
-    geometry.setAttribute('aEye', new THREE.BufferAttribute(eye, 1))
-    geometry.setAttribute('aNose', new THREE.BufferAttribute(nose, 1))
+    let cancelled = false
 
-    const atlas = makeGlyphAtlas()
-    const pr = gl.getPixelRatio()
-    const make = () =>
-      new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uDissolve: { value: 0 },
+    const build = async () => {
+      if (!geo.attributes.normal) geo.computeVertexNormals()
+      const sampler = new MeshSurfaceSampler(new THREE.Mesh(geo)).build()
+      const count = SIZE * SIZE
+      const homeData = new Float32Array(count * 4)
+      const refs = new Float32Array(count * 2)
+      const eyeData = new Float32Array(count)
+      const noseData = new Float32Array(count)
+      const randData = new Float32Array(count)
+      const p = new THREE.Vector3()
+      const n = new THREE.Vector3()
+      const inFace = (v: THREE.Vector3, nz: number) =>
+        nz >= FRONT_FACING &&
+        v.z >= BACK_CLIP &&
+        Math.abs(v.x) <= FACE_X_HALF &&
+        v.y >= FACE_Y_BOTTOM &&
+        v.y <= FACE_TOP_PEAK - FACE_TOP_CURVE * v.x * v.x
+      const last = new THREE.Vector3(0, -0.08, 0.2)
+      for (let i = 0; i < SIZE; i++) {
+        if (i % 8 === 0) await new Promise((r) => setTimeout(r, 0))
+        if (cancelled) return
+        for (let j = 0; j < SIZE; j++) {
+          const idx = i * SIZE + j
+          let tries = 0
+          do {
+            sampler.sample(p, n)
+            tries++
+          } while (!inFace(p, n.z) && tries < 40)
+          if (!inFace(p, n.z)) p.copy(last)
+          else last.copy(p)
+          p.x = Math.abs(p.x) * (Math.random() < 0.5 ? 1 : -1)
+          homeData[idx * 4] = p.x
+          homeData[idx * 4 + 1] = p.y
+          homeData[idx * 4 + 2] = p.z
+          homeData[idx * 4 + 3] = 1
+          eyeData[idx] = eyeWeight(p.x, p.y)
+          noseData[idx] = noseWeight(p.x, p.y)
+          randData[idx] = Math.random()
+          refs[idx * 2] = (j + 0.5) / SIZE
+          refs[idx * 2 + 1] = (i + 0.5) / SIZE
+        }
+      }
+
+      const gpu = new GPUComputationRenderer(SIZE, SIZE, gl)
+      const homeTex = gpu.createTexture()
+      homeTex.image.data!.set(homeData)
+      const velTex = gpu.createTexture()
+      const posVar = gpu.addVariable('uCurrentPosition', simPosition, homeTex)
+      const velVar = gpu.addVariable('uCurrentVelocity', simVelocity, velTex)
+      gpu.setVariableDependencies(posVar, [posVar, velVar])
+      gpu.setVariableDependencies(velVar, [posVar, velVar])
+      const homeRef = gpu.createTexture()
+      homeRef.image.data!.set(homeData)
+      velVar.material.uniforms.uHome = { value: homeRef }
+      velVar.material.uniforms.uTime = { value: 0 }
+      const err = gpu.init()
+      if (err) console.error('[PhoneSwarm] GPGPU init error:', err)
+
+      // Roving-glyph candidates (strided, as in the desktop swarm) and burst dots.
+      const glyphPool = Math.max(1, Math.floor(count * GLYPH_POOL_FRACTION))
+      const stride = Math.max(1, Math.floor(count / glyphPool))
+      const gRefs: number[] = []
+      const gSeeds: number[] = []
+      const baseGlyphSeed = new Float32Array(count).fill(-1)
+      for (let k = 0; k < count; k += stride) {
+        const seed = Math.random()
+        gRefs.push(refs[k * 2], refs[k * 2 + 1])
+        gSeeds.push(seed)
+        baseGlyphSeed[k] = seed
+      }
+      const bRefs: number[] = []
+      const bSeeds: number[] = []
+      const bRand: number[] = []
+      for (let k = 0; k < count; k += BURST_STRIDE) {
+        bRefs.push(refs[k * 2], refs[k * 2 + 1])
+        bSeeds.push(Math.random())
+        bRand.push(randData[k])
+      }
+
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
+      geometry.setAttribute('aRef', new THREE.BufferAttribute(refs, 2))
+      geometry.setAttribute('aGlyphSeed', new THREE.BufferAttribute(baseGlyphSeed, 1))
+      geometry.setAttribute('aEye', new THREE.BufferAttribute(eyeData, 1))
+      geometry.setAttribute('aNose', new THREE.BufferAttribute(noseData, 1))
+      geometry.setAttribute('aRand', new THREE.BufferAttribute(randData, 1))
+
+      const roveGeo = new THREE.BufferGeometry()
+      roveGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((gRefs.length / 2) * 3), 3))
+      roveGeo.setAttribute('aRef', new THREE.BufferAttribute(new Float32Array(gRefs), 2))
+      roveGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array(gSeeds), 1))
+
+      const burstGeo = new THREE.BufferGeometry()
+      burstGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((bRefs.length / 2) * 3), 3))
+      burstGeo.setAttribute('aRef', new THREE.BufferAttribute(new Float32Array(bRefs), 2))
+      burstGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array(bSeeds), 1))
+      burstGeo.setAttribute('aRand', new THREE.BufferAttribute(new Float32Array(bRand), 1))
+
+      const atlas = makeGlyphAtlas()
+      const mk = (vs: string, fs: string, uniforms: Record<string, { value: unknown }>) =>
+        new THREE.ShaderMaterial({
+          uniforms,
+          vertexShader: vs,
+          fragmentShader: fs,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        })
+      const faceMats = SLOTS.map(() =>
+        mk(renderVertex, renderFragment, {
+          uPositionTexture: { value: null },
+          uVelocityTexture: { value: null },
+          uParticleSize: { value: 0.65 },
+          uColor: { value: new THREE.Color('#c4a56c') },
+          uMinAlpha: { value: 0.05 },
+          uMaxAlpha: { value: 0.8 },
+          uFeatureFloor: { value: 0.34 },
           uEyeOpen: { value: 1 },
-          uDot: { value: 1.25 },
-          uGlyph: { value: 11 },
-          uPR: { value: pr },
-          uRise: { value: 9 },
-          uStill: { value: 0 },
+          uFade: { value: 0 },
+          uForm: { value: 1 },
+          uTime: { value: 0 },
+          uRoveSpeed: { value: GLYPH_ROVE_SPEED },
+          uOnFrac: { value: GLYPH_ON_FRAC },
+        }),
+      )
+      const roveMats = SLOTS.map(() =>
+        mk(roveVertex, glyphFragment, {
+          uPositionTexture: { value: null },
+          uGlyphSize: { value: GLYPH_SIZE },
+          uTime: { value: 0 },
+          uBinStart: { value: 0 },
+          uTelStart: { value: BINARY.length },
+          uOnFrac: { value: GLYPH_ON_FRAC },
+          uRoveSpeed: { value: GLYPH_ROVE_SPEED },
+          uDriftUp: { value: 32 },
+          uDriftOut: { value: 1.5 },
+          uDriftSide: { value: 3 },
+          uRiseExp: { value: GLYPH_RISE_EXP },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
-          uColor: { value: new THREE.Color('#c4a56c') },
-          uGlyphColor: { value: new THREE.Color('#e6d2a4').multiplyScalar(1.5) },
           uFade: { value: 0 },
-        },
-        vertexShader: vertex,
-        fragmentShader: fragment,
-        transparent: true,
-        depthTest: false,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      })
-    setBuilt({ geometry, materials: SLOTS.map(make) })
+          uColor: { value: new THREE.Color('#e6d2a4').multiplyScalar(1.7) },
+        }),
+      )
+      const burstMats = SLOTS.map(() =>
+        mk(burstVertex, glyphFragment, {
+          uPositionTexture: { value: null },
+          uGlyphSize: { value: GLYPH_SIZE * 0.85 },
+          uTime: { value: 0 },
+          uBreakT: { value: -1 },
+          uBreakDur: { value: BREAK_DUR },
+          uLife: { value: GLYPH_LIFE },
+          uRise: { value: 9 },
+          uAtlas: { value: atlas.texture },
+          uCols: { value: atlas.cols },
+          uFade: { value: 0 },
+          uColor: { value: new THREE.Color('#e6d2a4').multiplyScalar(1.0) },
+        }),
+      )
+      if (!cancelled) setSim({ gpu, posVar, velVar, geometry, roveGeo, burstGeo, faceMats, roveMats, burstMats })
+    }
+    build()
+    return () => {
+      cancelled = true
+    }
   }, [geo, gl])
 
-  // Per-face state lives outside React state (read and written every frame).
+  // Per-face and global state, outside React state (read and written every frame).
   const groups = useRef<(THREE.Group | null)[]>([])
+  const burstPts = useRef<(THREE.Object3D | null)[]>([])
   const intro = useMemo<number[]>(() => SLOTS.map(() => 0), [])
   const blinks = useMemo<Blink[]>(() => SLOTS.map((_, i) => ({ clock: 0, next: 1.4 + i * 0.41, start: -1 })), [])
   const yaw = useMemo<number[]>(() => SLOTS.map(() => 0), [])
   const pitch = useMemo<number[]>(() => SLOTS.map(() => 0), [])
+  const faces = useMemo<Face[]>(() => SLOTS.map(() => ({ form: 1, formT: 1, formAt: 0, breakT: -1 })), [])
   const dancers = useRef<Dancer[]>([])
-  const clock = useRef({ t: 0, dance: 0, lastP: 0, speed: 0, kick: 0, init: false })
-  const pointer = useRef({ x: -9999, y: -9999, at: -99, tapX: 0, tapY: 0 })
+  const clock = useRef({ t: 0, dance: 0, lastP: 0, speed: 0, kick: 0, broken: false, brkAt: 0, brkW: 0 })
+  const pointer = useRef({ x: -9999, y: -9999, at: -99 })
 
   useEffect(() => {
     const move = (e: PointerEvent) => {
@@ -339,10 +557,7 @@ export function PhoneSwarm() {
     }
     const down = (e: PointerEvent) => {
       move(e)
-      pointer.current.tapX = e.clientX
-      pointer.current.tapY = e.clientY
       clock.current.kick = 1
-      // Impulse: the keepers hop away from the tap.
       dancers.current.forEach((d) => {
         const dx = d.x - e.clientX
         const dy = d.y - e.clientY
@@ -360,10 +575,18 @@ export function PhoneSwarm() {
   }, [])
 
   useFrame((_s, rawDt) => {
-    if (!built) return
+    if (!sim) return
     const dt = Math.min(0.05, rawDt)
     const c = clock.current
     c.t += dt
+    const nowT = c.t
+
+    // The shared sim, then push its live textures into every material.
+    sim.velVar.material.uniforms.uTime.value += dt
+    sim.gpu.compute()
+    const posTex = sim.gpu.getCurrentRenderTarget(sim.posVar).texture
+    const velTex = sim.gpu.getCurrentRenderTarget(sim.velVar).texture
+    const tSim = sim.velVar.material.uniforms.uTime.value
 
     const W = size.width
     const H = size.height
@@ -376,7 +599,6 @@ export function PhoneSwarm() {
 
     const p = heroScroll.progress
     const contactAmt = 1 - contactHandoff.t
-    // Scroll speed, smoothed: it speeds the dance up while you are moving.
     const sv = Math.abs(p - c.lastP) / Math.max(dt, 0.001)
     c.lastP = p
     c.speed += (Math.min(1, sv * 6) - c.speed) * (1 - Math.exp(-dt * 6))
@@ -384,21 +606,52 @@ export function PhoneSwarm() {
     if (!reduced && !formFocused) c.dance += dt * (1 + c.speed * 2.2)
     c.kick = Math.max(0, c.kick - dt * 1.6)
 
+    // THE EVENT: cross the threshold once and the break plays out on its own clock.
     const introReady = heroIntro.ready && (heroIntro.nameDone || !heroIntro.nameExpected)
+    if (!reduced && introReady) {
+      if (!c.broken && p > BREAK_AT) {
+        c.broken = true
+        c.brkAt = nowT
+        let r = 0
+        SLOTS.forEach((s, i) => {
+          if (s.keeper) return
+          faces[i].breakT = tSim + r * BREAK_STAGGER
+          faces[i].formT = 0
+          faces[i].formAt = nowT + r * BREAK_STAGGER
+          r++
+        })
+      } else if (c.broken && p < FORM_AT) {
+        c.broken = false
+        let r = 0
+        SLOTS.forEach((s, i) => {
+          if (s.keeper) return
+          faces[i].formT = 1
+          faces[i].formAt = nowT + r * 0.06
+          r++
+        })
+      }
+    }
+    c.brkW += ((c.broken ? 1 : 0) - c.brkW) * (1 - Math.exp(-dt * 2.2))
+    const tb = c.broken ? nowT - c.brkAt : 0
+
     const now = performance.now() / 1000
     const lookActive = !reduced && now - pointer.current.at < 3
-
-    const nowT = c.t
     let keeperIdx = 0
-    let rank = 0
 
     SLOTS.forEach((slot, i) => {
       const g = groups.current[i]
-      const mat = built.materials[i]
-      if (!g || !mat) return
+      const fm = sim.faceMats[i]
+      const rm = sim.roveMats[i]
+      const bm = sim.burstMats[i]
+      if (!g || !fm || !rm || !bm) return
 
-      mat.uniforms.uTime.value = nowT
-      mat.uniforms.uStill.value = reduced ? 1 : 0
+      fm.uniforms.uPositionTexture.value = posTex
+      fm.uniforms.uVelocityTexture.value = velTex
+      fm.uniforms.uTime.value = tSim
+      rm.uniforms.uPositionTexture.value = posTex
+      rm.uniforms.uTime.value = tSim
+      bm.uniforms.uPositionTexture.value = posTex
+      bm.uniforms.uTime.value = tSim
 
       // Blink, independent per face.
       const bk = blinks[i]
@@ -412,45 +665,62 @@ export function PhoneSwarm() {
           bk.next = bk.clock + 3.2 + Math.random() * 3.8
         } else eyeOpen = 1 - Math.sin(bt * Math.PI)
       }
-      mat.uniforms.uEyeOpen.value = eyeOpen
+      fm.uniforms.uEyeOpen.value = eyeOpen
 
       // Intro: fly in from the deep once the name is done, staggered.
       if (introReady && nowT > i * INTRO_STAGGER) intro[i] = Math.min(1, intro[i] + dt / INTRO_SECS)
       const e = 1 - Math.pow(1 - intro[i], 3)
-      mat.uniforms.uFade.value = e
       const zIn = INTRO_Z_DEEP * (1 - e)
+
+      // This face's own form: ramps to its target once its stagger has passed.
+      const f = faces[i]
+      if (reduced && !slot.keeper) {
+        f.form = 0
+      } else if (nowT >= f.formAt) {
+        const step = dt / BREAK_DUR
+        f.form += Math.max(-step, Math.min(step, f.formT - f.form))
+      }
+      fm.uniforms.uForm.value = f.form
+      fm.uniforms.uFade.value = e
+      rm.uniforms.uFade.value = e * (0.35 + 0.65 * f.form)
+      // The burst keeps flying on its own clock, whatever the face is doing now.
+      bm.uniforms.uFade.value = e * 0.7
+      bm.uniforms.uBreakT.value = f.breakT
+      const bp = burstPts.current[i]
+      if (bp) bp.visible = f.breakT >= 0 && tSim - f.breakT < GLYPH_LIFE + BREAK_DUR + 0.6
 
       let px = slot.fx * W
       let py = slot.fy * H
-      let sc = baseScale * slot.scale
+      let sc = baseScale * slot.scale * (0.86 + 0.14 * Math.max(0, f.form))
       let roll = 0
 
       if (slot.keeper) {
         const k = keeperIdx++
         const homeX = px
         const homeY = py
-        const th = (p - 0.08) * Math.PI * 2 * 1.15 + c.dance * 0.5
-        const ang = th + (k * Math.PI * 2) / 3
+        const parkW = reduced || formFocused ? 1 : smooth(0.12, 0.7, contactAmt)
+
+        // Circle, then dance: both run on the clock since the break, not on scroll.
+        const circ = c.brkW * (1 - smooth(CIRCLE_SECS, CIRCLE_SECS + 2, tb))
+        const dnc = c.brkW * smooth(CIRCLE_SECS, CIRCLE_SECS + 2, tb)
+        const th = tb * 0.9 + (k * Math.PI * 2) / 3
         const R = Math.min(W * 0.3, H * 0.2)
-        const circX = W * 0.5 + R * Math.cos(ang)
-        const circY = H * 0.46 + R * 1.15 * Math.sin(ang)
-        const dt2 = c.dance
-        const danceX = W * 0.5 + W * 0.36 * Math.sin(dt2 * (0.9 + 0.13 * k) + k * 2.1)
-        const danceY = H * 0.46 + H * 0.3 * Math.sin(dt2 * (1.1 + 0.11 * k) + k * 1.3 + 1.0) - Math.abs(Math.sin(dt2 * 3 + k)) * H * 0.025
+        const circX = W * 0.5 + R * Math.cos(th)
+        const circY = H * 0.46 + R * 1.15 * Math.sin(th)
+        const d2 = c.dance
+        const danceX = W * 0.5 + W * 0.36 * Math.sin(d2 * (0.9 + 0.13 * k) + k * 2.1)
+        const danceY = H * 0.46 + H * 0.3 * Math.sin(d2 * (1.1 + 0.11 * k) + k * 1.3 + 1.0) - Math.abs(Math.sin(d2 * 3 + k)) * H * 0.025
         const parkX = W * 0.93
-        const parkY = H * (0.2 + 0.24 * k) + Math.sin(dt2 * 1.4 + k) * H * 0.012
+        const parkY = H * (0.2 + 0.24 * k) + Math.sin(d2 * 1.4 + k) * H * 0.012
 
         let tx = homeX
         let ty = homeY
-        const bc = smooth(0.07, 0.15, p)
-        tx += (circX - tx) * bc
-        ty += (circY - ty) * bc
-        const bd = smooth(0.36, 0.46, p)
-        tx += (danceX - tx) * bd
-        ty += (danceY - ty) * bd
-        const bp = reduced || formFocused ? 1 : smooth(0.12, 0.7, contactAmt)
-        tx += (parkX - tx) * bp
-        ty += (parkY - ty) * bp
+        tx += (circX - tx) * circ
+        ty += (circY - ty) * circ
+        tx += (danceX - tx) * dnc
+        ty += (danceY - ty) * dnc
+        tx += (parkX - tx) * parkW
+        ty += (parkY - ty) * parkW
         if (reduced) {
           tx = parkX
           ty = H * (0.2 + 0.24 * k)
@@ -467,7 +737,6 @@ export function PhoneSwarm() {
           d.vx = 0
           d.vy = 0
         } else {
-          // A slightly underdamped spring: it follows the target with a little bounce.
           const steps = Math.max(1, Math.ceil(dt / 0.008))
           const h = dt / steps
           for (let s = 0; s < steps; s++) {
@@ -479,21 +748,14 @@ export function PhoneSwarm() {
         }
         px = d.x
         py = d.y
-        roll = Math.max(-0.5, Math.min(0.5, d.vx / 900)) * 0.7 + Math.sin(c.dance * 2 + k) * 0.1 * bd
-        sc *= (1 + 0.1 * Math.sin(c.dance * 3.2 + k) * bd + 0.3 * c.kick) * (1 - 0.22 * bp)
-        mat.uniforms.uDissolve.value = 0
-      } else {
-        // Dissolving faces: staggered by scroll, reversible.
-        const start = DISSOLVE_START + rank * DISSOLVE_STEP
-        rank++
-        mat.uniforms.uDissolve.value = reduced ? 1.2 : Math.max(0, Math.min(1, (p - start) / DISSOLVE_SPAN))
+        roll = Math.max(-0.5, Math.min(0.5, d.vx / 900)) * 0.7 + Math.sin(c.dance * 2 + k) * 0.1 * dnc
+        sc *= (1 + 0.1 * Math.sin(c.dance * 3.2 + k) * dnc + 0.3 * c.kick) * (1 - 0.22 * parkW)
       }
 
       const w = toWorld(px, py)
       g.position.set(w.x, w.y, zIn)
       g.scale.setScalar(sc)
 
-      // Heads follow a finger; otherwise they sway a little (more when dancing).
       let lookYaw = 0
       let lookPitch = 0
       if (lookActive) {
@@ -509,12 +771,32 @@ export function PhoneSwarm() {
     })
   })
 
-  if (!built) return null
+  useEffect(() => {
+    return () => {
+      if (!sim) return
+      sim.geometry.dispose()
+      sim.roveGeo.dispose()
+      sim.burstGeo.dispose()
+      sim.faceMats.forEach((m) => m.dispose())
+      sim.roveMats.forEach((m) => m.dispose())
+      sim.burstMats.forEach((m) => m.dispose())
+    }
+  }, [sim])
+
+  if (!sim) return null
   return (
     <>
       {SLOTS.map((_, i) => (
         <group key={i} ref={(el) => { groups.current[i] = el }}>
-          <points geometry={built.geometry} material={built.materials[i]} frustumCulled={false} />
+          <points geometry={sim.geometry} material={sim.faceMats[i]} frustumCulled={false} />
+          <points geometry={sim.roveGeo} material={sim.roveMats[i]} frustumCulled={false} />
+          <points
+            ref={(el) => { burstPts.current[i] = el }}
+            geometry={sim.burstGeo}
+            material={sim.burstMats[i]}
+            frustumCulled={false}
+            visible={false}
+          />
         </group>
       ))}
     </>
