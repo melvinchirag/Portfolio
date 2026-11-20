@@ -26,6 +26,9 @@ import * as THREE from 'three'
 import { heroScroll } from '../../hooks/heroScroll'
 import { heroIntro } from '../../hooks/heroIntro'
 import { contactHandoff } from '../../hooks/contactVisibility'
+import { desktopBreak, stepDesktopBreak } from '../../hooks/desktopBreak'
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
+import { DesktopTrio, trioShared } from './DesktopTrio'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
@@ -40,12 +43,12 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast
 // √particle-count. 384 → ~147k particles (kept modest so the one-time surface
 // sampling doesn't freeze the main thread; we'll add a pre-filtered mesh to push
 // this higher without the rejection cost).
-const SIZE = 384
+export const SIZE = 384
 
 // The mask sits fixed on the LEFT, VERTICALLY CENTRED (y=0). Melvin (2026-07-28):
 // "perfectly in the center, not too up, not too down." World-space offset applied
 // to both the rendered points and the raycast mesh so cursor interaction lines up.
-const OFFSET = new THREE.Vector3(-0.62, 0, 0)
+export const OFFSET = new THREE.Vector3(-0.62, 0, 0)
 
 // Keep only front-facing samples (normal.z above this) → drops the back of the
 // head and the helmet "crown", leaving the face/mask shell.
@@ -343,7 +346,27 @@ const simVelocity = /* glsl */ `
   }
 `
 
-const renderVertex = /* glsl */ `
+/* THE BREAK (desktop, see hooks/desktopBreak.ts). `uBreak` 0..1 is a front that
+ * climbs the face from the chin to the forehead; a particle below the front
+ * (with a per-particle jitter so the edge is ragged, not a clean line) peels:
+ * it drifts up and out and fades. uBreak = 0 is an exact no-op, so the hero and
+ * the trio masks are untouched. */
+const PEEL_GLSL = /* glsl */ `
+  float peelHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float peelOf(float y, vec2 ref, float brk) {
+    float hh = y + 0.64;
+    float front = mix(-0.2, 1.5, brk);
+    return clamp((front - hh - peelHash(ref) * 0.2) / 0.25, 0.0, 1.0);
+  }
+`
+
+export const renderVertex = /* glsl */ `
+  ${PEEL_GLSL}
+  uniform float uBreak;
+  uniform float uShimmer;
+  uniform float uShimmerPhase;
+  uniform float uExtraSpeed;
+  varying float vPeel;
   uniform sampler2D uPositionTexture;
   uniform sampler2D uVelocityTexture;
   uniform float uParticleSize;
@@ -364,7 +387,19 @@ const renderVertex = /* glsl */ `
 
   void main() {
     vec3 pos = texture2D(uPositionTexture, aRef).xyz;
-    vSpeed = length(texture2D(uVelocityTexture, aRef).xyz);
+    vSpeed = length(texture2D(uVelocityTexture, aRef).xyz) + uExtraSpeed;
+    // A shimmer band travelling up the face (trio masks pulse when they pass close).
+    float band = exp(-pow((pos.y - (uShimmerPhase * 1.4 - 0.7)) * 7.0, 2.0));
+    vSpeed += uShimmer * band * 0.007;
+    vPeel = 0.0;
+    if (uBreak > 0.0) {
+      float pp = peelOf(pos.y, aRef, uBreak);
+      vPeel = pp;
+      vSpeed += sin(pp * 3.14159) * 0.006; // the glowing edge of the break
+      float j = peelHash(aRef);
+      vec3 dr = vec3((peelHash(aRef + 1.3) - 0.5) * 0.5, 0.3 + j * 0.5, 0.15 + peelHash(aRef + 2.7) * 0.5);
+      pos += dr * pp * pp;
+    }
     // Eyes fade out as they blink shut; nose is unaffected.
     vFeature = max(aNose, aEye * uEyeOpen);
     vEye = aEye * uEyeOpen;
@@ -387,7 +422,7 @@ const renderVertex = /* glsl */ `
   }
 `
 
-const renderFragment = /* glsl */ `
+export const renderFragment = /* glsl */ `
   precision highp float;
   uniform vec3  uColor;
   uniform float uMinAlpha;
@@ -400,6 +435,7 @@ const renderFragment = /* glsl */ `
   varying float vFeature;
   varying float vEye;
   varying float vPupil;
+  varying float vPeel;
 
   void main() {
     if (length(gl_PointCoord - 0.5) > 0.5) discard;   // round sprite
@@ -410,6 +446,7 @@ const renderFragment = /* glsl */ `
     // Bloom catches it.
     a = max(a, vPupil * 0.95);
     vec3 col = uColor * (1.0 + vPupil * (1.6 + 2.4 * uGlow) + vEye * uGlow * 1.2);
+    a *= 1.0 - smoothstep(0.2, 0.95, vPeel); // peeled by the break
     a *= (1.0 - vGlyphFade);   // dot vanishes as its glyph forms (the conversion)
     a *= uFade;                // whole mask fades up on load
     gl_FragColor = vec4(col, a);
@@ -423,11 +460,11 @@ const renderFragment = /* glsl */ `
 // Two categories, contiguous ranges in the atlas so the shader can cycle a
 // particle binary ⇄ Telugu by picking within the current range. (Hex removed
 // 2026-07-31 per Melvin — binary + Telugu only.)
-const BINARY = ['0', '1']
-const TELUGU = ['అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', 'న', 'మ', 'ర', 'ల', 'వ', 'స', 'హ']
+export const BINARY = ['0', '1']
+export const TELUGU = ['అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', 'న', 'మ', 'ర', 'ల', 'వ', 'స', 'హ']
 const GLYPH_CHARS = [...BINARY, ...TELUGU]
-const BIN_START = 0
-const TEL_START = BINARY.length
+export const BIN_START = 0
+export const TEL_START = BINARY.length
 // The glyph layer is now ROVING (2026-07-31, per Melvin): a scattered candidate
 // POOL of particles, of which only a small fraction is lit at any instant, and
 // WHICH ones are lit keeps drifting — so glyphs appear at random spots, fade, and
@@ -494,7 +531,9 @@ function makeGlyphAtlas() {
   return { texture: tex, cols }
 }
 
-const glyphVertex = /* glsl */ `
+export const glyphVertex = /* glsl */ `
+  ${PEEL_GLSL}
+  uniform float uBreak;
   uniform sampler2D uPositionTexture; // live (animated) positions
   uniform float uGlyphSize;
   uniform float uTime;
@@ -524,6 +563,9 @@ const glyphVertex = /* glsl */ `
     float edge = min(0.06, uOnFrac * 0.5);
     float fade = smoothstep(0.0, edge, life) - smoothstep(uOnFrac - edge, uOnFrac, life);
     vAlpha = clamp(fade, 0.0, 1.0);
+    float pl = uBreak > 0.0 ? peelOf(pos.y, aRef, uBreak) : 0.0;
+    vAlpha *= 1.0 - smoothstep(0.0, 0.5, pl);
+    pos += vec3(0.0, 0.5, 0.3) * pl * pl;
 
     // DISSIPATION (Melvin, 2026-08-01: glyphs should "float into the air and
     // disappear... peel off the face"). lp = 0→1 across the glyph's lit window.
@@ -555,7 +597,7 @@ const glyphVertex = /* glsl */ `
   }
 `
 
-const glyphFragment = /* glsl */ `
+export const glyphFragment = /* glsl */ `
   precision highp float;
   uniform sampler2D uAtlas;
   uniform float uCols;
@@ -579,7 +621,7 @@ const glyphFragment = /* glsl */ `
 // The free glyphs (see FREE GLYPHS above): plain world-space points whose
 // position, character, alpha and size are written from the CPU each frame.
 // Shares glyphFragment with the face glyphs.
-const freeVertex = /* glsl */ `
+export const freeVertex = /* glsl */ `
   uniform float uGlyphSize;
   attribute float aGlyph;
   attribute float aAlpha;
@@ -597,7 +639,7 @@ const freeVertex = /* glsl */ `
 
 // THE PUPILS: two sprites, a hot core with a soft halo. They close with the
 // blink (uEyeOpen) and flare with scroll activity (uGlow).
-const pupilVertex = /* glsl */ `
+export const pupilVertex = /* glsl */ `
   uniform float uSize;
   uniform float uScale;
   void main() {
@@ -606,7 +648,7 @@ const pupilVertex = /* glsl */ `
     gl_Position = projectionMatrix * mv;
   }
 `
-const pupilFragment = /* glsl */ `
+export const pupilFragment = /* glsl */ `
   precision highp float;
   uniform vec3  uColor;
   uniform float uFade;
@@ -626,6 +668,11 @@ export function MaskParticles() {
   const gl = useThree((s) => s.gl)
   const camera = useThree((s) => s.camera)
   const viewport = useThree((s) => s.size)
+  const reducedMotion = usePrefersReducedMotion()
+  useEffect(() => {
+    desktopBreak.enabled = !reducedMotion
+    return () => { desktopBreak.enabled = false; desktopBreak.amt = 0; desktopBreak.broken = false; desktopBreak.inited = false; desktopBreak.settle = 0 }
+  }, [reducedMotion])
 
   // Load the CC-BY cyborg mask ourselves (draco-compressed). Manual loader (no
   // Suspense) so failures surface as console errors instead of a silent hang.
@@ -820,6 +867,10 @@ export function MaskParticles() {
           // stronger features, lower for subtler.
           uFeatureFloor: { value: 0.34 },
           uEyeOpen: { value: 1 }, // 1 open → 0 shut; driven by the blink in useFrame
+          uBreak: { value: 0 },
+          uShimmer: { value: 0 },
+          uShimmerPhase: { value: 0 },
+          uExtraSpeed: { value: 0 },
           uGlow: { value: 0 },    // scroll activity; lights the eyes (see useFrame)
         },
         vertexShader: renderVertex,
@@ -863,6 +914,7 @@ export function MaskParticles() {
           uDriftSide: { value: 0.05 },
           uGlow: { value: 0 },  // scroll activity → brighter glyphs
           uBurst: { value: 0 }, // scroll activity → glyphs come out further
+          uBreak: { value: 0 },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
           uFade: { value: 0 }, // intro fade-in, shared with the base dot layer
@@ -1038,7 +1090,9 @@ export function MaskParticles() {
     // now comes purely from the smoothstep easing BETWEEN keyframes in samplePath, not
     // from input lag. Lower this toward ~6 for a floatier feel; raise for even tighter.
     smoothProg.current += (heroScroll.progress - smoothProg.current) * (1 - Math.exp(-delta * 26.0))
-    const pose = samplePath(smoothProg.current, poseScratch.current)
+    // DESKTOP BREAK: the big mask only ever exists at the top of the page now
+    // (it breaks into the trio on the first scroll), so its pose is held at home.
+    const pose = samplePath(desktopBreak.enabled ? Math.min(smoothProg.current, 0.012) : smoothProg.current, poseScratch.current)
 
     // INTRO REVEAL: ramp introT 0→1, ease-out so it decelerates as it arrives.
     // zIn starts deep in the black (INTRO_Z_DEEP) and flies to 0; fade 0→1. After
@@ -1084,9 +1138,13 @@ export function MaskParticles() {
     // leaves every other page untouched.
     const leaveFade = Math.max(0, Math.min(1, (contactHandoff.t - LEAVE_FADE_END) / (1 - LEAVE_FADE_END)))
     const fade = eIntro * leaveFade
+    stepDesktopBreak(Math.min(delta, 0.1), heroScroll.progress, te >= 1)
+    const brk = desktopBreak.amt
+    material.uniforms.uBreak.value = brk
+    glyphMat.uniforms.uBreak.value = brk
     material.uniforms.uFade.value = fade
     glyphMat.uniforms.uFade.value = fade
-    pupilMat.uniforms.uFade.value = fade
+    pupilMat.uniforms.uFade.value = fade * (1 - Math.min(1, Math.max(0, (brk - 0.42) / 0.16)))
     pupilMat.uniforms.uScale.value = pose.s
 
     // BLINK: advance the clock; when it's time, run a close→open over BLINK_DUR
@@ -1155,7 +1213,7 @@ export function MaskParticles() {
 
     // FREE GLYPHS (see the block up top): births, forces, ageing, attributes.
     const fg = free.current
-    if (fade > 0.5) {
+    if (fade > 0.5 && brk < 0.2) {
       pm.spawn = Math.min(2, pm.spawn + (FREE_IDLE_RATE + FREE_SCROLL_RATE * glow) * delta)
       while (pm.spawn >= 1 && fg.length < FREE_MAX) {
         pm.spawn -= 1
@@ -1274,7 +1332,7 @@ export function MaskParticles() {
 
     // cursor → 3D point on the (possibly rotated) mask → sim-local space
     let hit: THREE.Intersection[] = []
-    if (ndc.current.moved) {
+    if (ndc.current.moved && brk < 0.05) {
       ndcVec.set(ndc.current.x, ndc.current.y)
       raycaster.current.setFromCamera(ndcVec, camera)
       hit = raycaster.current.intersectObject(rayMesh)
@@ -1307,6 +1365,14 @@ export function MaskParticles() {
     // Keep the base dot layer's clock identical so the dot→glyph conversion stays
     // frame-exact (both recompute the same life curve from this shared time).
     material.uniforms.uTime.value = glyphMat.uniforms.uTime.value
+
+    // Hand the trio the shared sim state (same textures, clock, glow, fade).
+    const ts = trioShared
+    ts.posTex = posTex
+    ts.velTex = material.uniforms.uVelocityTexture.value
+    ts.time = glyphMat.uniforms.uTime.value
+    ts.glow = glow
+    ts.fade = eIntro * leaveFade
   })
 
   if (!sim) return null
@@ -1320,6 +1386,7 @@ export function MaskParticles() {
       {/* Free glyphs live in WORLD space, outside the mask's group, so the
           mask can fly on without them (see FREE GLYPHS). */}
       <points geometry={sim.freeGeo} material={sim.freeMat} frustumCulled={false} />
+      <DesktopTrio sim={sim} />
     </>
   )
 }
