@@ -39,24 +39,25 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { desktopBreak } from '../../hooks/desktopBreak'
+import { heroScroll } from '../../hooks/heroScroll'
 import { SIZE, OFFSET, TEL_START, BIN_START, TELUGU, freeVertex, glyphFragment } from './MaskField'
 
 /* ---- tuning knobs ---------------------------------------------------------- */
 /** Each trio mask's height as a fraction of the viewport height (30 to 38 asked). */
-export const TRIO_VH = 0.3
+export const TRIO_VH = 0.26
 /** Local height of the face crop (chin to forehead), model units. */
 const FACE_H = 1.0
 const POOL = 2400 // live glyph bodies (break rain, trails, haze)
 const RING_N = 140 // glyphs in the orbiting ring/helix
 const CAP = POOL + RING_N
-const BREAK_GLYPHS_PER_SEC = 240
+const BREAK_GLYPHS_PER_SEC = 1500 // burst of glyphs mixed into the dust (first ~0.3 s)
 const SPRING_K = 58 // underdamped, like the phone swarm (K62 C9.5), a touch softer
 const SPRING_C = 9
 const CIRCLE_UNTIL = 3.5 // seconds settled before the dance starts blending in
 const DANCE_FULL = 8.0 // seconds settled when the dance is fully blended in
 const BASE_OMEGA = 0.55 // orbit speed, rad/s, before energy
-const EMERGE_AT = [0.28, 0.38, 0.48] // break amount at which each mask starts to emerge
-const EMERGE_SPAN = 0.45
+const EMERGE_AT = [0.6, 0.66, 0.72] // break amount at which each mask starts to emerge
+const EMERGE_SPAN = 0.24
 const SHIMMER_DIST = 0.5 // world units: masks closer than this pulse
 const SHIMMER_SECS = 1.3
 
@@ -67,6 +68,8 @@ export const trioShared = {
   time: 0,
   glow: 0, // scroll activity 0..1 (also the "energy" here)
   fade: 0, // intro fade * contact-handoff fade
+  tx: -0.62, // where the trio forms (world x), read by the dust shader
+  ty: 0,
 }
 
 type Sim = {
@@ -78,6 +81,23 @@ type Sim = {
   pupilMat: THREE.ShaderMaterial
   freeMat: THREE.ShaderMaterial
   spawnPts: Float32Array
+}
+
+// Which side of the screen the trio should live on, as a fraction of the width
+// (0 left, 1 right), by hero pan progress. It steers to the side the text is NOT
+// on: Hero copy is centre-right, the Past card is left, Present is full width,
+// Future is centre-left.
+const SIDE: [number, number][] = [[0, 0.72], [0.12, 0.68], [0.33, 0.62], [0.55, 0.78], [0.8, 0.82], [1, 0.82]]
+function sideFrac(p: number): number {
+  if (p <= SIDE[0][0]) return SIDE[0][1]
+  for (let i = 1; i < SIDE.length; i++) {
+    if (p <= SIDE[i][0]) {
+      const a = SIDE[i - 1], b = SIDE[i]
+      const t = (p - a[0]) / (b[0] - a[0])
+      return a[1] + (b[1] - a[1]) * t * t * (3 - 2 * t)
+    }
+  }
+  return SIDE[SIDE.length - 1][1]
 }
 
 const smooth = (a: number, b: number, x: number) => {
@@ -182,7 +202,7 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
     px: new Float32Array(POOL), py: new Float32Array(POOL), pz: new Float32Array(POOL),
     vx: new Float32Array(POOL), vy: new Float32Array(POOL), vz: new Float32Array(POOL),
     age: new Float32Array(POOL), life: new Float32Array(POOL), seed: new Float32Array(POOL),
-    gl: new Float32Array(POOL), gt: new Float32Array(POOL), sz: new Float32Array(POOL), amp: new Float32Array(POOL),
+    gl: new Float32Array(POOL), gt: new Float32Array(POOL), sz: new Float32Array(POOL), amp: new Float32Array(POOL), kind: new Float32Array(POOL),
     ringGlyph: new Float32Array(RING_N),
     pointer: { x: 0, y: 0, moved: false, speed: 0, lx: 0, ly: 0 },
   })
@@ -236,14 +256,16 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
 
     // centre of the trio: left and centre-left, where the big mask lived
     const roam = 0.65 + 0.35 * (1 - c)
-    S.cx = -0.5 * halfW + roam * (0.2 * halfW * Math.sin(0.21 * t + 0.7) + 0.08 * halfW * Math.sin(0.53 * t))
+    S.cx = (2 * sideFrac(heroScroll.progress) - 1) * halfW + roam * (0.1 * halfW * Math.sin(0.21 * t + 0.7) + 0.05 * halfW * Math.sin(0.53 * t))
     S.cy = 0.02 * halfH + roam * (0.1 * halfH * Math.sin(0.17 * t + 1.3) + 0.05 * halfH * Math.sin(0.41 * t))
+    ts.tx = S.cx
+    ts.ty = S.cy
     const R = (0.3 + 0.16 * (1 - c) + 0.04 * Math.sin(0.9 * t)) * halfH * 1.05
 
     const pw = S.pointer.moved ? S.pointer.x * halfW : S.cx
     const ph = S.pointer.moved ? S.pointer.y * halfH : S.cy
 
-    const N = Math.min(SIZE * SIZE, Math.round(SIZE * SIZE * Math.min(1, sBase * 1.1) ** 2))
+    const N = Math.min(SIZE * SIZE, Math.round(SIZE * SIZE * Math.min(1, sBase) ** 2))
     const stride = 8 // glyph pool stride in MaskField (count / (count * GLYPH_POOL_FRACTION))
     let presence = 0
 
@@ -268,8 +290,8 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
       const par = S.pointer.moved ? 0.05 : 0
       tx += S.pointer.x * par * (0.5 + tz * 2)
       ty += S.pointer.y * par * (0.5 + tz * 2) * 0.7
-      const spX = OFFSET.x + (i - 1) * 0.2
-      const spY = -0.3 + 0.1 * (1 - Math.abs(i - 1))
+      const spX = S.cx + (i - 1) * 0.12
+      const spY = S.cy
       const ee = 1 - Math.pow(1 - e, 3)
       const gx = spX + (tx - spX) * ee
       const gy = spY + (Math.max(-0.6 * halfH, Math.min(0.6 * halfH, ty)) - spY) * ee
@@ -368,21 +390,17 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
     const alive = ts.fade > 0.03
     const tNow = S.clock
 
-    // 1) lift-off from the break line, bottom to top
-    if (B.broken && B.amt < 1 && alive) {
+    // 1) the explosion: glyphs burst out with the dust, then ride the wave to the trio
+    if (B.broken && B.amt < 0.2 && alive) {
       S.breakAcc += BREAK_GLYPHS_PER_SEC * dt
-      const front = -0.2 + 1.7 * B.amt // in face-height units (0 = chin)
       while (S.breakAcc >= 1) {
         S.breakAcc -= 1
         if (S.n >= POOL) break
-        let k = 0
-        for (let tries = 0; tries < 10; tries++) {
-          k = (rnd() * (sim.spawnPts.length / 3)) | 0
-          const hh = sim.spawnPts[k * 3 + 1] + 0.64
-          if (hh <= front + 0.05 && hh >= front - 0.35) break
-        }
+        const k = (rnd() * (sim.spawnPts.length / 3)) | 0
+        const a = rnd() * Math.PI * 2
+        const sp = 0.5 + rnd() * 1.1
         emit(S, OFFSET.x + sim.spawnPts[k * 3], OFFSET.y + sim.spawnPts[k * 3 + 1], sim.spawnPts[k * 3 + 2],
-          (rnd() - 0.5) * 0.1, 0.09 + rnd() * 0.18, 0.03 + rnd() * 0.12, 4.5 + rnd() * 4, 0.9 + rnd() * 0.5, 0.8)
+          Math.cos(a) * sp, Math.sin(a) * sp, 0.2 + rnd() * 0.5, 3.5 + rnd() * 2.5, 0.9 + rnd() * 0.5, 0.9, 1)
       }
     } else S.breakAcc = 0
 
@@ -420,6 +438,14 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
       S.vx[i] += Math.sin(tNow * 0.7 + sd) * 0.05 * dt
       S.vy[i] += (0.012 + Math.cos(tNow * 0.55 + sd * 1.3) * 0.03) * dt
       S.vz[i] += Math.sin(tNow * 0.4 + sd * 0.7) * 0.02 * dt
+      if (S.kind[i] === 1 && S.age[i] < 1.5) {
+        // wave glyphs: pulled to the trio's spot on a ripple, quick not floaty
+        const ox = Math.sin(sd * 3.1) * 0.3, oy = Math.cos(sd * 1.7) * 0.4
+        S.vx[i] += (S.cx + ox - S.px[i]) * 9 * dt
+        S.vy[i] += ((S.cy + oy - S.py[i]) * 9 + Math.sin(S.px[i] * 7 + tNow * 16) * 4) * dt
+        S.vx[i] *= Math.exp(-dt * 1.6)
+        S.vy[i] *= Math.exp(-dt * 1.6)
+      }
       const rx = S.px[i] - S.cx, ry = S.py[i] - S.cy
       const rl = Math.hypot(rx, ry) + 0.25
       S.vx[i] += (-ry / rl) * 0.05 * dt * presence
@@ -512,17 +538,17 @@ function randGlyph(): number {
   return rnd() < 0.5 ? TEL_START + ((rnd() * TELUGU.length) | 0) : BIN_START + ((rnd() * 2) | 0)
 }
 
-function emit(S: any, x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, size: number, amp: number) {
+function emit(S: any, x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, size: number, amp: number, kind = 0) {
   const i = S.n++
   S.px[i] = x; S.py[i] = y; S.pz[i] = z
   S.vx[i] = vx; S.vy[i] = vy; S.vz[i] = vz
   S.age[i] = 0; S.life[i] = life; S.seed[i] = rnd() * 1000
   S.gl[i] = randGlyph(); S.gt[i] = rnd() * 0.8
-  S.sz[i] = size; S.amp[i] = amp
+  S.sz[i] = size; S.amp[i] = amp; S.kind[i] = kind
 }
 
 function remove(S: any, i: number) {
   const l = --S.n
   if (i === l) return
-  for (const k of ['px', 'py', 'pz', 'vx', 'vy', 'vz', 'age', 'life', 'seed', 'gl', 'gt', 'sz', 'amp']) S[k][i] = S[k][l]
+  for (const k of ['px', 'py', 'pz', 'vx', 'vy', 'vz', 'age', 'life', 'seed', 'gl', 'gt', 'sz', 'amp', 'kind']) S[k][i] = S[k][l]
 }

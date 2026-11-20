@@ -26,7 +26,7 @@ import * as THREE from 'three'
 import { heroScroll } from '../../hooks/heroScroll'
 import { heroIntro } from '../../hooks/heroIntro'
 import { contactHandoff } from '../../hooks/contactVisibility'
-import { desktopBreak, stepDesktopBreak } from '../../hooks/desktopBreak'
+import { desktopBreak, stepDesktopBreak, installBreakKick } from '../../hooks/desktopBreak'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import { DesktopTrio, trioShared } from './DesktopTrio'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -346,17 +346,35 @@ const simVelocity = /* glsl */ `
   }
 `
 
-/* THE BREAK (desktop, see hooks/desktopBreak.ts). `uBreak` 0..1 is a front that
- * climbs the face from the chin to the forehead; a particle below the front
- * (with a per-particle jitter so the edge is ragged, not a clean line) peels:
- * it drifts up and out and fades. uBreak = 0 is an exact no-op, so the hero and
- * the trio masks are untouched. */
+/* THE BREAK (desktop, see hooks/desktopBreak.ts). Round 2 (Melvin, 2026-11-20:
+ * "it can just explode into a dust ... move across the page like a wave and go
+ * into the Past tab and turn into three masks ... fast"). `uBreak` is the break
+ * clock 0..1 (about 1.8 s). A pure function of that clock, so it plays forward
+ * and back (re-form) with no state:
+ *   0.00 to 0.30  EXPLODE: every particle bursts outward in its own random
+ *                 direction as fine dust (no bottom-up edge);
+ *   0.16 to 0.74  WAVE: the dust sweeps across the page to `uBTarget` (where the
+ *                 trio forms), rightmost particles first so the head of the sheet
+ *                 leads, rippling on a sinusoid;
+ *   0.72 to 0.94  the dust fades as the three masks (DesktopTrio) condense there.
+ * uBreak = 0 is an exact no-op, so the hero and the trio masks are untouched. */
 const PEEL_GLSL = /* glsl */ `
+  uniform vec3 uBTarget;
   float peelHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float peelOf(float y, vec2 ref, float brk) {
-    float hh = y + 0.64;
-    float front = mix(-0.2, 1.5, brk);
-    return clamp((front - hh - peelHash(ref) * 0.2) / 0.25, 0.0, 1.0);
+  vec3 burstPos(vec3 pos, vec2 ref, float t) {
+    float h1 = peelHash(ref), h2 = peelHash(ref + 1.7), h3 = peelHash(ref + 3.1), h4 = peelHash(ref + 5.3);
+    vec3 dir = normalize(vec3(h1 - 0.5, h2 - 0.5, (h3 - 0.5) * 0.8 + 0.3) + vec3(1e-4));
+    float sp = 0.3 + 1.2 * h4 * h4;
+    float ex = 1.0 - pow(1.0 - clamp(t / 0.3, 0.0, 1.0), 3.0);
+    vec3 p = pos + dir * sp * ex * 0.8;
+    float delay = 0.16 + 0.14 * (1.0 - clamp((pos.x + 0.32) / 0.64, 0.0, 1.0)) + 0.05 * h3;
+    float w = smoothstep(delay, delay + 0.42, t);
+    vec3 tgt = uBTarget + vec3((h2 - 0.5) * 0.55, (h3 - 0.5) * 0.8, (h4 - 0.5) * 0.3);
+    vec3 q = mix(p, tgt, w);
+    float env = sin(3.14159 * w);
+    q.y += sin(pos.x * 7.0 + t * 16.0 + h2 * 1.5) * 0.26 * env + sin(w * 9.0 + h1 * 6.0) * 0.08 * env;
+    q.z += cos(t * 12.0 + h1 * 6.0) * 0.1 * env;
+    return q;
   }
 `
 
@@ -393,12 +411,9 @@ export const renderVertex = /* glsl */ `
     vSpeed += uShimmer * band * 0.007;
     vPeel = 0.0;
     if (uBreak > 0.0) {
-      float pp = peelOf(pos.y, aRef, uBreak);
-      vPeel = pp;
-      vSpeed += sin(pp * 3.14159) * 0.006; // the glowing edge of the break
-      float j = peelHash(aRef);
-      vec3 dr = vec3((peelHash(aRef + 1.3) - 0.5) * 0.5, 0.3 + j * 0.5, 0.15 + peelHash(aRef + 2.7) * 0.5);
-      pos += dr * pp * pp;
+      pos = burstPos(pos, aRef, uBreak);
+      vPeel = smoothstep(0.72, 0.94, uBreak);
+      vSpeed += 0.005 * sin(3.14159 * clamp(uBreak, 0.0, 1.0)); // dust glitters while it moves
     }
     // Eyes fade out as they blink shut; nose is unaffected.
     vFeature = max(aNose, aEye * uEyeOpen);
@@ -446,7 +461,7 @@ export const renderFragment = /* glsl */ `
     // Bloom catches it.
     a = max(a, vPupil * 0.95);
     vec3 col = uColor * (1.0 + vPupil * (1.6 + 2.4 * uGlow) + vEye * uGlow * 1.2);
-    a *= 1.0 - smoothstep(0.2, 0.95, vPeel); // peeled by the break
+    a *= 1.0 - vPeel; // dust fades as the trio condenses
     a *= (1.0 - vGlyphFade);   // dot vanishes as its glyph forms (the conversion)
     a *= uFade;                // whole mask fades up on load
     gl_FragColor = vec4(col, a);
@@ -563,9 +578,10 @@ export const glyphVertex = /* glsl */ `
     float edge = min(0.06, uOnFrac * 0.5);
     float fade = smoothstep(0.0, edge, life) - smoothstep(uOnFrac - edge, uOnFrac, life);
     vAlpha = clamp(fade, 0.0, 1.0);
-    float pl = uBreak > 0.0 ? peelOf(pos.y, aRef, uBreak) : 0.0;
-    vAlpha *= 1.0 - smoothstep(0.0, 0.5, pl);
-    pos += vec3(0.0, 0.5, 0.3) * pl * pl;
+    if (uBreak > 0.0) {
+      pos = burstPos(pos, aRef, uBreak);
+      vAlpha *= 1.0 - smoothstep(0.72, 0.94, uBreak);
+    }
 
     // DISSIPATION (Melvin, 2026-08-01: glyphs should "float into the air and
     // disappear... peel off the face"). lp = 0→1 across the glyph's lit window.
@@ -671,7 +687,8 @@ export function MaskParticles() {
   const reducedMotion = usePrefersReducedMotion()
   useEffect(() => {
     desktopBreak.enabled = !reducedMotion
-    return () => { desktopBreak.enabled = false; desktopBreak.amt = 0; desktopBreak.broken = false; desktopBreak.inited = false; desktopBreak.settle = 0 }
+    const off = reducedMotion ? () => {} : installBreakKick()
+    return () => { off(); desktopBreak.enabled = false; desktopBreak.amt = 0; desktopBreak.broken = false; desktopBreak.inited = false; desktopBreak.settle = 0 }
   }, [reducedMotion])
 
   // Load the CC-BY cyborg mask ourselves (draco-compressed). Manual loader (no
@@ -868,6 +885,7 @@ export function MaskParticles() {
           uFeatureFloor: { value: 0.34 },
           uEyeOpen: { value: 1 }, // 1 open → 0 shut; driven by the blink in useFrame
           uBreak: { value: 0 },
+          uBTarget: { value: new THREE.Vector3() },
           uShimmer: { value: 0 },
           uShimmerPhase: { value: 0 },
           uExtraSpeed: { value: 0 },
@@ -915,6 +933,7 @@ export function MaskParticles() {
           uGlow: { value: 0 },  // scroll activity → brighter glyphs
           uBurst: { value: 0 }, // scroll activity → glyphs come out further
           uBreak: { value: 0 },
+          uBTarget: { value: new THREE.Vector3() },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
           uFade: { value: 0 }, // intro fade-in, shared with the base dot layer
@@ -1142,9 +1161,12 @@ export function MaskParticles() {
     const brk = desktopBreak.amt
     material.uniforms.uBreak.value = brk
     glyphMat.uniforms.uBreak.value = brk
+    // dust target = where the trio forms, in this mask's local space
+    material.uniforms.uBTarget.value.set(trioShared.tx - OFFSET.x, trioShared.ty - OFFSET.y, 0)
+    glyphMat.uniforms.uBTarget.value.copy(material.uniforms.uBTarget.value)
     material.uniforms.uFade.value = fade
     glyphMat.uniforms.uFade.value = fade
-    pupilMat.uniforms.uFade.value = fade * (1 - Math.min(1, Math.max(0, (brk - 0.42) / 0.16)))
+    pupilMat.uniforms.uFade.value = fade * (1 - Math.min(1, brk / 0.08))
     pupilMat.uniforms.uScale.value = pose.s
 
     // BLINK: advance the clock; when it's time, run a close→open over BLINK_DUR
@@ -1213,7 +1235,7 @@ export function MaskParticles() {
 
     // FREE GLYPHS (see the block up top): births, forces, ageing, attributes.
     const fg = free.current
-    if (fade > 0.5 && brk < 0.2) {
+    if (fade > 0.5 && brk < 0.01) {
       pm.spawn = Math.min(2, pm.spawn + (FREE_IDLE_RATE + FREE_SCROLL_RATE * glow) * delta)
       while (pm.spawn >= 1 && fg.length < FREE_MAX) {
         pm.spawn -= 1
