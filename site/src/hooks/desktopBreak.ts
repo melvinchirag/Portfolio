@@ -14,12 +14,12 @@
  * ========================================================================= */
 
 /** heroScroll.progress above this breaks the mask; below BREAK_OFF it re-forms. */
-export const BREAK_ON = 0.012
-export const BREAK_OFF = 0.004
-/** Seconds for the dissolve (bottom to top) to play out. */
-export const BREAK_SECS = 2.6
+export const BREAK_ON = 0.003
+export const BREAK_OFF = 0.001
+/** Seconds from trigger to three formed masks (explode, wave, condense). */
+export const BREAK_SECS = 1.8
 /** Seconds for the trio to flow back and the big mask to re-form. */
-export const MERGE_SECS = 1.8
+export const MERGE_SECS = 1.2
 
 export const desktopBreak = {
   /** True when the trio feature is on (desktop/tablet, motion allowed). */
@@ -32,6 +32,35 @@ export const desktopBreak = {
   settle: 0,
   /** Has the first evaluation happened (a page restored mid-scroll skips the replay). */
   inited: false,
+}
+
+/** Seconds the trigger stays latched after a wheel/touch/key nudge, so the break
+ *  can fire on the very first sign of scroll (before Lenis has moved the page). */
+const KICK_HOLD = 0.8
+let kickT = 0
+
+/** Wheel, touch or key scroll intent at the top of the page fires the break at once. */
+export function installBreakKick(): () => void {
+  const kick = () => {
+    if (desktopBreak.enabled && desktopBreak.inited && window.scrollY < 6) kickT = KICK_HOLD
+  }
+  const onWheel = (e: WheelEvent) => { if (e.deltaY > 0) kick() }
+  const onKey = (e: KeyboardEvent) => {
+    if (['ArrowDown', 'PageDown', ' ', 'End'].includes(e.key)) kick()
+  }
+  let ty = 0
+  const onTS = (e: TouchEvent) => { ty = e.touches[0]?.clientY ?? 0 }
+  const onTM = (e: TouchEvent) => { if ((e.touches[0]?.clientY ?? 0) < ty - 4) kick() }
+  window.addEventListener('wheel', onWheel, { passive: true })
+  window.addEventListener('keydown', onKey)
+  window.addEventListener('touchstart', onTS, { passive: true })
+  window.addEventListener('touchmove', onTM, { passive: true })
+  return () => {
+    window.removeEventListener('wheel', onWheel)
+    window.removeEventListener('keydown', onKey)
+    window.removeEventListener('touchstart', onTS)
+    window.removeEventListener('touchmove', onTM)
+  }
 }
 
 export function stepDesktopBreak(dt: number, progress: number, armed: boolean) {
@@ -51,8 +80,10 @@ export function stepDesktopBreak(dt: number, progress: number, armed: boolean) {
       return
     }
   }
-  if (!b.broken && progress > BREAK_ON) b.broken = true
-  else if (b.broken && progress < BREAK_OFF) b.broken = false
+  if (progress > BREAK_ON) kickT = 0
+  else kickT = Math.max(0, kickT - dt)
+  if (!b.broken && (progress > BREAK_ON || kickT > 0)) b.broken = true
+  else if (b.broken && progress < BREAK_OFF && kickT <= 0) b.broken = false
   if (b.broken) {
     b.amt = Math.min(1, b.amt + dt / BREAK_SECS)
     b.settle += dt
