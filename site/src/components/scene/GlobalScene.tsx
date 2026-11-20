@@ -5,9 +5,11 @@ import * as THREE from 'three'
 import { useLocation } from 'react-router-dom'
 import { MaskParticles } from './MaskField'
 import { ContactMaskSwarm } from './ContactMaskSwarm'
+import { PhoneSwarm } from './PhoneSwarm'
 import { LiquidGlassField } from './LiquidGlassField'
 import { VideoPlane } from './VideoBackground'
 import { useSwarmMounted } from '../../hooks/contactVisibility'
+import { useIsPhone } from '../../hooks/useIsPhone'
 
 /**
  * Creates the looping VideoTexture for the About background. Lives OUTSIDE the
@@ -122,11 +124,13 @@ function useAboutVideoTexture(active: boolean) {
 function SceneContents({
   isHome,
   isAbout,
+  isPhone,
   aboutTex,
   showSwarm,
 }: {
   isHome: boolean
   isAbout: boolean
+  isPhone: boolean
   aboutTex: THREE.VideoTexture | null
   showSwarm: boolean
 }) {
@@ -157,8 +161,12 @@ function SceneContents({
           so while you're in Future they sit at their true position below the
           fold and are simply not visible — no force-relocation into view,
           which is what previously made them collide with the big mask. */}
-      {isHome && <MaskParticles />}
-      {isHome && showSwarm && <ContactMaskSwarm />}
+      {/* PHONES (Melvin, 2026-11-20): no big mask and no Contact swarm. The phone
+          swarm replaces both: twelve small faces that dissolve into glyphs on
+          scroll, leaving three that circle and dance. See PhoneSwarm.tsx. */}
+      {isHome && !isPhone && <MaskParticles />}
+      {isHome && !isPhone && showSwarm && <ContactMaskSwarm />}
+      {isHome && isPhone && <PhoneSwarm />}
 
       {/* On About, hand the video texture straight to the glass (it refracts THAT
           rather than capturing the scene — see LiquidGlassField). Elsewhere it
@@ -189,6 +197,7 @@ export function GlobalScene() {
   const loc = useLocation()
   const isHome = loc.pathname === '/'
   const isAbout = loc.pathname === '/about'
+  const isPhone = useIsPhone()
   const aboutTex = useAboutVideoTexture(isAbout)
   // Latched: flies in on reaching Contact, stays mounted if you scroll back up
   // to Future (so glyphs keep floating there), resets at Present or earlier.
@@ -206,7 +215,7 @@ export function GlobalScene() {
         }}
       >
         <color attach="background" args={['#0f1012']} />
-        <SceneContents isHome={isHome} isAbout={isAbout} aboutTex={aboutTex} showSwarm={showSwarm} />
+        <SceneContents isHome={isHome} isAbout={isAbout} isPhone={isPhone} aboutTex={aboutTex} showSwarm={showSwarm} />
       </Canvas>
     </div>
   )
