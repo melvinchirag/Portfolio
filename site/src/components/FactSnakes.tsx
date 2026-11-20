@@ -42,6 +42,7 @@ import { useEffect, useRef } from 'react'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import { contactHandoff } from '../hooks/contactVisibility'
 import { SNAKE_SLOTS, snakeField } from '../hooks/snakeField'
+import { onReadingColumn, readingColumn } from '../hooks/readingColumn'
 import FACTS from '../data/facts.json'
 
 const FONT = '500 11px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace'
@@ -141,6 +142,42 @@ export function FactSnakes() {
       // height. Facts alternate v, h, v, h ... so the count of each is tied
       // to the total; a short screen caps the rows and the leftover facts
       // simply aren't shown.
+      // CONTENT PAGES (a reading column is published): only vertical snakes, only
+      // in the margins either side of the text, never crossing it. A margin too
+      // narrow (laptops with a wide column, phones) gets no snake on that side.
+      const colHalf = readingColumn.half
+      if (colHalf > 0) {
+        const mid = W / 2
+        const bands: [number, number][] = [
+          [left, mid - colHalf - 28],
+          [mid + colHalf + 28, right],
+        ]
+        const lanes: number[] = []
+        for (const [a, b] of bands) {
+          if (b - a < 56) continue
+          const cnt = Math.min(2, Math.max(1, Math.floor((b - a) / 130)))
+          for (let k = 0; k < cnt; k++) lanes.push(a + ((b - a) * (k + 0.5)) / cnt)
+        }
+        const prevM = snakes
+        snakes = []
+        lanes.forEach((x, k) => {
+          const text = FACTS[(k * 2) % FACTS.length]
+          const prev = prevM.length === lanes.length ? prevM[k] : null
+          const idxM = snakes.length
+          snakes.push({
+            text,
+            axis: 'v',
+            lane: x,
+            pos: prev ? prev.pos : H * ((idxM * 0.618) % 1),
+            dir: k % 2 === 0 ? 1 : -1,
+            speed: prev ? prev.speed : SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN),
+            len: measure(text),
+            seed: prev ? prev.seed : Math.random() * 1000,
+            born: prev ? prev.born : t0 + idxM * STAGGER_SECS * 1000,
+          })
+        })
+        return
+      }
       const total = Math.max(2, Math.min(FACTS.length, Math.floor((right - left) / COL_EVERY)))
       const nV = Math.ceil(total / 2)
       const nH = Math.max(1, Math.min(Math.floor(total / 2), Math.floor((bottom - top) / ROW_EVERY)))
@@ -286,7 +323,9 @@ export function FactSnakes() {
     }
     window.addEventListener('resize', onResize)
     document.addEventListener('visibilitychange', onVisibility)
+    const offColumn = onReadingColumn(onResize)
     return () => {
+      offColumn()
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', onResize)
       document.removeEventListener('visibilitychange', onVisibility)

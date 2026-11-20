@@ -36,6 +36,7 @@ import { ICON_PATHS } from '../components/SocialLinks'
 import { Reveal } from '../components/Reveal'
 import { WipNote } from '../components/WipNote'
 import { usePageMeta } from '../hooks/usePageMeta'
+import { useReadingColumn } from '../hooks/readingColumn'
 
 /** What brings people to the contact form. Doubles as the email subject line.
  *  The last two are Melvin's own joke additions (2026-08-10) — verbatim, not
@@ -592,6 +593,7 @@ export function ContactPage() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
+  useReadingColumn(512)
   const [view, setView] = useState<View>('contact')
 
   return (

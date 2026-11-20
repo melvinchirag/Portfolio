@@ -22,7 +22,7 @@
  * the data files and fills in by editing data, not this component.
  * ========================================================================= */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { WORK_PROJECTS, CATEGORY_LABEL, type WorkProject } from '../data/work'
 import { TAGS, type TagId } from '../data/tags'
 import { DOMAINS } from '../data/skills'
@@ -31,6 +31,7 @@ import { ProjectRow } from '../components/work/ProjectRow'
 import { SkillDisclosure } from '../components/work/SkillDisclosure'
 import { ProjectSearch } from '../components/work/ProjectSearch'
 import { Reveal } from '../components/Reveal'
+import { PageShell } from '../components/PageShell'
 import { usePageMeta } from '../hooks/usePageMeta'
 
 // Current roles, from Otto's `context/uni.md` (2026-10-29). Newest first.
@@ -66,11 +67,6 @@ export function Work() {
     '/work',
     'Projects by Melvin Chirag Karupati: hackathon winners, computer-vision and machine-learning builds, and the work behind Hack The Nest, SPARC and GDG on Campus.',
   )
-  // Always land at the top when navigating in.
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
-
   // Which sections/projects are open. Flagship and Hackathons start open (the
   // two a recruiter reads first); the rest closed.
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(['Flagship', 'Hackathons']))
@@ -136,15 +132,7 @@ export function Work() {
   )
 
   return (
-    <div className="relative z-10 mx-auto max-w-4xl px-6 pt-32 pb-24 md:px-10">
-      <Reveal as="header" className="mb-10">
-        <p className="label">The present</p>
-        <h1 className="display-wide mt-4 font-display text-5xl leading-[0.95] font-bold tracking-tight text-white md:text-7xl">
-          Work
-        </h1>
-        <p className="mt-4 max-w-xl text-sm text-white/40">What I'm building now.</p>
-      </Reveal>
-
+    <PageShell eyebrow="The present" title="Work" intro="What I'm building now." width="wide">
       <Reveal delay={80}>
         <ProjectSearch onRevealProject={revealProject} onRevealFoundations={revealFoundations} />
       </Reveal>
@@ -184,7 +172,7 @@ export function Work() {
           <div className="flex flex-col gap-8">
             {personalGroups.map((g) => (
               <div key={g.pid}>
-                <h3 className="mb-3 text-[11px] tracking-[0.2em] text-white/40 uppercase">
+                <h3 className="mb-3 text-[11px] tracking-[0.2em] text-white/60 uppercase">
                   {g.label}
                 </h3>
                 {renderRows(g.projects)}
@@ -205,8 +193,8 @@ export function Work() {
             {LEADERSHIP.map((l) => (
               <li key={l.role + l.org} className="flex flex-col gap-1 border-l border-white/10 pl-4">
                 <span className="text-sm font-medium text-white/85">{l.role}</span>
-                <span className="text-xs text-white/50">{l.org}</span>
-                <span className="max-w-xl text-xs leading-relaxed text-white/40">{l.note}</span>
+                <span className="text-xs text-white/65">{l.org}</span>
+                <span className="max-w-xl text-xs leading-relaxed text-white/60">{l.note}</span>
               </li>
             ))}
           </ul>
@@ -221,7 +209,7 @@ export function Work() {
           <div className="flex flex-col gap-8">
             {DOMAINS.map((domain) => (
               <div key={domain.name}>
-                <h3 className="mb-3 text-[11px] tracking-[0.2em] text-white/40 uppercase">
+                <h3 className="mb-3 text-[11px] tracking-[0.2em] text-white/60 uppercase">
                   {domain.name}
                 </h3>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -234,6 +222,6 @@ export function Work() {
           </div>
         </WorkSection>
       </div>
-    </div>
+    </PageShell>
   )
 }
