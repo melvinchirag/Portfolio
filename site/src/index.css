@@ -116,8 +116,8 @@
  * and cream across every token. See src/velvet.ts. Off unless the address asks. */
 html[data-velvet] {
   --color-void: var(--velvet-void, #12050a);
-  --color-deep: #1d0a10;
-  --color-line: #3b1a23;
+  --color-deep: #14070b;
+  --color-line: #2e1219;
   --color-sand: #f3e9d2;
   --color-sand-dim: #c4b294;
   --color-sand-deep: #6e4b4a;

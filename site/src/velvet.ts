@@ -3,7 +3,8 @@
  * idea on the REAL site, switched by the address bar so the live look is untouched:
  *
  *   /?velvet=1  royal velvet        /?velvet=2  oxblood and cream
- *   /?velvet=3  burgundy, rose gold /?velvet=0  back to graphite and sand
+ *   /?velvet=3  burgundy, rose gold /?velvet=4  black velvet (darkest)
+ *   /?velvet=0  back to graphite and sand
  *
  * The choice is remembered for the tab (sessionStorage) so moving between pages
  * keeps it. Nothing here runs when the value is 0.
@@ -12,7 +13,7 @@ function read(): number {
   try {
     const q = new URLSearchParams(window.location.search).get('velvet')
     if (q !== null) {
-      const n = Math.max(0, Math.min(3, parseInt(q, 10) || 0))
+      const n = Math.max(0, Math.min(4, parseInt(q, 10) || 0))
       sessionStorage.setItem('velvet', String(n))
       return n
     }
@@ -27,11 +28,13 @@ export const velvet = typeof window === 'undefined' ? 0 : read()
 type V3 = [number, number, number]
 /** Ribbon colours: ground, shadowed cloth, lit cloth, and the satin sheen. */
 const RAMPS: Record<number, [V3, V3, V3, V3]> = {
-  1: [[0.045, 0.008, 0.02], [0.17, 0.012, 0.04], [0.46, 0.035, 0.08], [0.96, 0.91, 0.82]],
+  // Darkened 2026-11-20 (Melvin: "can the royal velvet be darker"). 4 is darker still.
+  1: [[0.02, 0.004, 0.009], [0.085, 0.006, 0.02], [0.27, 0.018, 0.045], [0.96, 0.91, 0.82]],
+  4: [[0.008, 0.002, 0.004], [0.04, 0.003, 0.01], [0.17, 0.01, 0.028], [0.96, 0.91, 0.82]],
   2: [[0.03, 0.006, 0.012], [0.11, 0.01, 0.028], [0.28, 0.022, 0.05], [1.0, 0.97, 0.9]],
   3: [[0.055, 0.014, 0.022], [0.2, 0.03, 0.055], [0.44, 0.07, 0.1], [0.95, 0.72, 0.55]],
 }
-const VOIDS: Record<number, string> = { 1: '#12050a', 2: '#0b0305', 3: '#16070a' }
+const VOIDS: Record<number, string> = { 1: '#0a0306', 2: '#0b0305', 3: '#16070a', 4: '#060203' }
 
 export const velvetRamp = RAMPS[velvet] ?? RAMPS[1]
 /** The ground colour: graphite normally, deep wine in velvet. */
