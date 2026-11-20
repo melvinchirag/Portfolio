@@ -4212,3 +4212,6 @@ Melvin: the form "said sent" but opened another Chrome window and not his email.
 
 ## 2026-11-19 FORM: FormSubmit is too fragile, Web3Forms wired (key pending)
 Diagnosis: FormSubmit treats each referring page URL as its own form needing activation (Home "melvinchirag.com/" and "/contact" are separate), and every unactivated send emails a fresh link that invalidates older ones. That is why Melvin's Activate click said "invalid". (My one diagnostic curl also created a fresh "/contact" activation email; harmless.) Fix: deliver() in pages/Contact.tsx posts to Web3Forms (api.web3forms.com/submit, JSON, no activation) as soon as WEB3FORMS_KEY in data/site.ts is non-empty; FormSubmit stays as the fallback while it is empty. WAITING ON MELVIN: get a free key at web3forms.com (enter melvinchirag@gmail.com, they email the key) and paste it; then set WEB3FORMS_KEY, build, push, and he sends one test.
+
+## 2026-11-19 WEB3FORMS KEY SET
+Melvin created the form (label url https://melvinchirag.com/contact) and gave the access key; WEB3FORMS_KEY set in data/site.ts (public by design). Contact and testimonial forms now post to api.web3forms.com directly. WAITING: Melvin sends one test from the live site and confirms it lands in melvinchirag@gmail.com.

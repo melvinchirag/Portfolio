@@ -17,4 +17,4 @@ export const DEFAULT_DESCRIPTION =
  *  design (it only lets a form SEND to the inbox it was issued for), so it is safe in
  *  the bundle. Empty until Melvin pastes it; the forms then use it automatically.
  *  Get one free at web3forms.com by entering the inbox address. */
-export const WEB3FORMS_KEY = ''
+export const WEB3FORMS_KEY = 'a3297ce6-11b7-441e-8ac2-0e3877dd320a'
