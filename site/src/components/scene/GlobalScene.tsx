@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
+import type { BloomEffect } from 'postprocessing'
 import * as THREE from 'three'
 import { useLocation } from 'react-router-dom'
 import { MaskParticles } from './MaskField'
@@ -12,6 +13,19 @@ import { useSwarmMounted } from '../../hooks/contactVisibility'
 import { useIsPhone } from '../../hooks/useIsPhone'
 import { groundHex, velvet } from '../../velvet'
 import { RibbonBackdrop } from './RibbonBackdrop'
+import { lab } from '../../velvetLab'
+
+/** The bloom. In the velvet preview its strength and threshold follow the look lab live. */
+function TunedBloom() {
+  const ref = useRef<BloomEffect>(null)
+  useFrame(() => {
+    const b = ref.current
+    if (!b || !velvet) return
+    b.intensity = lab.bloom
+    b.luminanceMaterial.threshold = lab.bloom_threshold
+  })
+  return <Bloom ref={ref} intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
+}
 
 /**
  * Creates the looping VideoTexture for the About background. Lives OUTSIDE the
@@ -191,7 +205,7 @@ function SceneContents({
       />
 
       <EffectComposer>
-        <Bloom intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
+        <TunedBloom />
       </EffectComposer>
     </>
   )

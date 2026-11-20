@@ -24,7 +24,12 @@ import { SNAKE_SLOTS, snakeField } from '../../hooks/snakeField'
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { heroScroll } from '../../hooks/heroScroll'
-import { lightHex } from '../../velvet'
+import { lightHex, velvet } from '../../velvet'
+import { CREST_GLSL, SHEET, maskScreen } from '../../velvetLab'
+
+// Scratch vectors for projecting the face onto the screen (velvet look lab).
+const labA = new THREE.Vector3()
+const labB = new THREE.Vector3()
 import { heroIntro } from '../../hooks/heroIntro'
 import { contactHandoff } from '../../hooks/contactVisibility'
 import { desktopBreak, stepDesktopBreak, installBreakKick } from '../../hooks/desktopBreak'
@@ -498,6 +503,12 @@ export const renderFragment = /* glsl */ `
   varying float vEye;
   varying float vPupil;
   varying float vPeel;
+  // VELVET LOOK LAB: the light sheet's own crest, time and colours (velvetLab.ts).
+  uniform vec4 uSheet;      // buffer width, height, sheet time, how much the face catches the light
+  uniform vec3 uSheetHot;
+  uniform vec3 uSheetRed;
+  uniform vec4 uMaskCol;    // lab mask colour; w = 1 when the lab drives it
+  ${CREST_GLSL}
 
   void main() {
     if (length(gl_PointCoord - 0.5) > 0.5) discard;   // round sprite
@@ -507,7 +518,21 @@ export const renderFragment = /* glsl */ `
     // with scroll and settles again (Melvin, 2026-11-01). Overdriven past 1 so
     // Bloom catches it.
     a = max(a, vPupil * 0.95);
-    vec3 col = uColor * (1.0 + vPupil * (1.6 + 2.4 * uGlow) + vEye * uGlow * 1.2);
+    vec3 base = mix(uColor, uMaskCol.rgb * 1.15, uMaskCol.w);
+    vec3 col = base * (1.0 + vPupil * (1.6 + 2.4 * uGlow) + vEye * uGlow * 1.2);
+    // VELVET: the face is LIT BY the light sheet behind it. Where the crest crosses
+    // the face its dots burn in the hot colour, below the crest they sit in the red
+    // of the curtain, and above it they fall into shadow. The pupils keep their own light.
+    if (uSheet.w > 0.0) {
+      vec2 suv = gl_FragCoord.xy / uSheet.xy;
+      float sd = suv.y - crest(suv.x * uSheet.x / uSheet.y, uSheet.z);
+      float lit = exp(-abs(sd) * 11.0);
+      float curtain = step(sd, 0.0) * exp(sd * 3.2);
+      vec3 lightCol = mix(uSheetRed * 2.4, uSheetHot * 1.3, lit);
+      float amt = uSheet.w * clamp(0.3 + lit + curtain * 0.7, 0.0, 1.0) * (1.0 - vPupil);
+      col = mix(col, lightCol, amt);
+      a *= mix(1.0, 0.6 + 1.8 * lit + 0.5 * curtain, uSheet.w);
+    }
     a *= 1.0 - vPeel; // extra flock fades as the masks condense
     a *= (1.0 - vGlyphFade);   // dot vanishes as its glyph forms (the conversion)
     a *= uFade;                // whole mask fades up on load
@@ -667,6 +692,7 @@ export const glyphFragment = /* glsl */ `
   uniform sampler2D uAtlas;
   uniform float uCols;
   uniform vec3 uColor;
+  uniform vec4 uMaskCol; // velvet look lab: mask colour, w = 1 when it drives
   uniform float uFade;   // 0→1 intro fade-in, shared with the base dot layer
   uniform float uGlow;   // scroll activity 0..1: glyphs glow while you scroll
   varying float vGlyph;
@@ -679,7 +705,7 @@ export const glyphFragment = /* glsl */ `
     vec2 uv = (vec2(cx, cy) + gl_PointCoord) / uCols;
     vec4 g = texture2D(uAtlas, uv);
     if (g.a < 0.15) discard;
-    gl_FragColor = vec4(uColor * (1.0 + uGlow * 0.9), g.a * vAlpha * uFade);
+    gl_FragColor = vec4(mix(uColor, uMaskCol.rgb * 1.7, uMaskCol.w) * (1.0 + uGlow * 0.9), g.a * vAlpha * uFade);
   }
 `
 
@@ -945,6 +971,11 @@ export function MaskParticles() {
           uShimmerPhase: { value: 0 },
           uExtraSpeed: { value: 0 },
           uGlow: { value: 0 },    // scroll activity; lights the eyes (see useFrame)
+          uSheet: SHEET.uSheet,
+          uCrest: SHEET.uCrest,
+          uSheetHot: SHEET.uSheetHot,
+          uSheetRed: SHEET.uSheetRed,
+          uMaskCol: SHEET.uMaskCol,
         },
         vertexShader: renderVertex,
         fragmentShader: renderFragment,
@@ -999,7 +1030,7 @@ export function MaskParticles() {
           // shared Bloom intensity (which would also brighten the base dot layer,
           // not just the glyphs Melvin asked about). Same hue, 1.7x intensity
           // (1.5→1.7, 2026-08-01: "a bit more prominent").
-          uColor: { value: new THREE.Color(lightHex('#e6d2a4')).multiplyScalar(1.7) },
+          uColor: { value: new THREE.Color(lightHex('#e6d2a4')).multiplyScalar(1.7) }, uMaskCol: SHEET.uMaskCol,
         },
         vertexShader: glyphVertex,
         fragmentShader: glyphFragment,
@@ -1029,7 +1060,7 @@ export function MaskParticles() {
           uGlyphSize: { value: 17 },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
-          uColor: { value: new THREE.Color(lightHex('#e6d2a4')).multiplyScalar(1.7) },
+          uColor: { value: new THREE.Color(lightHex('#e6d2a4')).multiplyScalar(1.7) }, uMaskCol: SHEET.uMaskCol,
           uFade: { value: 0 },
           uGlow: { value: 0 },
         },
@@ -1257,6 +1288,18 @@ export function MaskParticles() {
     rayMesh.scale.setScalar(pose.s)
     rayMesh.rotation.set(rot.current.x, rot.current.y + pose.ry, pose.rz)
     rayMesh.updateMatrixWorld()
+    // VELVET: tell the light sheet where the face is, so its particles bend round it.
+    if (velvet) {
+      labA.set(0, 0, 0)
+      rayMesh.localToWorld(labA).project(camera)
+      labB.set(0, 0.58, 0)
+      rayMesh.localToWorld(labB).project(camera)
+      maskScreen.x = labA.x * 0.5 + 0.5
+      maskScreen.y = labA.y * 0.5 + 0.5
+      maskScreen.r = Math.hypot((labB.x - labA.x) * 0.5 * (viewport.width / viewport.height), (labB.y - labA.y) * 0.5)
+      maskScreen.a = fade * (1 - Math.min(1, brk / 0.25))
+      maskScreen.t = performance.now()
+    }
 
     // SCROLL ACTIVITY → glow (Melvin, 2026-11-01: eyes and glyphs "glow and
     // de-glow as I scroll"). Page scroll speed plus the mask's own speed along

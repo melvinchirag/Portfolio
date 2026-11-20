@@ -4,6 +4,10 @@ import './index.css'
 import './velvet'
 import App from './App.tsx'
 import { Analytics } from '@vercel/analytics/react'
+import { labOn } from './velvetLab'
+
+// Velvet preview only: the look lab panel (/?velvet=1&lab=1).
+if (labOn) void import('./velvetLabPanel').then((m) => m.mountLookLab())
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
