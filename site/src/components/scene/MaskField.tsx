@@ -49,6 +49,10 @@ export const SIZE = 384
 // "perfectly in the center, not too up, not too down." World-space offset applied
 // to both the rendered points and the raycast mesh so cursor interaction lines up.
 export const OFFSET = new THREE.Vector3(-0.62, 0, 0)
+// The trio masks' live centres (written by DesktopTrio) and the hero face centre,
+// both read by the murmuration shader.
+export const trioQ = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]
+const HERO_C = new THREE.Vector3(OFFSET.x, OFFSET.y - 0.14, OFFSET.z)
 
 // Keep only front-facing samples (normal.z above this) → drops the back of the
 // head and the helmet "crown", leaving the face/mask shell.
@@ -346,35 +350,59 @@ const simVelocity = /* glsl */ `
   }
 `
 
-/* THE BREAK (desktop, see hooks/desktopBreak.ts). Round 2 (Melvin, 2026-11-20:
- * "it can just explode into a dust ... move across the page like a wave and go
- * into the Past tab and turn into three masks ... fast"). `uBreak` is the break
- * clock 0..1 (about 1.8 s). A pure function of that clock, so it plays forward
- * and back (re-form) with no state:
- *   0.00 to 0.30  EXPLODE: every particle bursts outward in its own random
- *                 direction as fine dust (no bottom-up edge);
- *   0.16 to 0.74  WAVE: the dust sweeps across the page to `uBTarget` (where the
- *                 trio forms), rightmost particles first so the head of the sheet
- *                 leads, rippling on a sinusoid;
- *   0.72 to 0.94  the dust fades as the three masks (DesktopTrio) condense there.
- * uBreak = 0 is an exact no-op, so the hero and the trio masks are untouched. */
+/* THE BREAK (desktop, see hooks/desktopBreak.ts), round 3: a MURMURATION.
+ * Melvin (2026-11-20): "no square or block ... a flow, almost like starlings in
+ * the sky, moving in sync, smoothly, from the hero page to the Past ... the three
+ * masks formed and ready before the Past comes to the centre."
+ * `uBreak` is the break clock 0..1 (BREAK_SECS long). Every position is a pure
+ * function of that clock and the particle index k, so it plays forward and back
+ * (re-form) with no state. Per particle:
+ *   t 0 to 0.22  EXPLODE: bursts outward in its own direction as fine dust;
+ *   then STREAM:  leaves at its own time d0 (so the flock is a long thin ribbon,
+ *                 never a block) along ONE OF THREE curved streams, one per
+ *                 destination mask (k's block), a bezier arc that fans out and a
+ *                 sinusoid that makes the three braid; the ribbon is thin, then
+ *                 thick, then thin again, and twists in z, all through one shared
+ *                 flow field so neighbours move alike (cohesion);
+ *   arrival      the particle spirals into ITS OWN home point on its mask (the
+ *                 trio dots ARE the first 3N particles of the hero mask), so each
+ *                 mask condenses out of its stream with no cross-fade.
+ * The particles past 3N (the hero has 147k, the trio needs about 58k) fly in the
+ * streams as extra flock and fade out on arrival. uBreak = 0 is an exact no-op. */
 const PEEL_GLSL = /* glsl */ `
-  uniform vec3 uBTarget;
-  float peelHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  vec3 burstPos(vec3 pos, vec2 ref, float t) {
-    float h1 = peelHash(ref), h2 = peelHash(ref + 1.7), h3 = peelHash(ref + 3.1), h4 = peelHash(ref + 5.3);
+  uniform vec3 uQ[3];      // where each destination mask is right now (world)
+  uniform vec3 uHeroC;     // the hero mask's centre (world)
+  uniform vec3 uHeroOff;   // hero group offset: world = local + this
+  float fh(float k, float s) { return fract(sin(k * 12.9898 + s * 78.233) * 43758.5453); }
+  vec3 flockWorld(vec3 p0, float k, int m, float t, out float s) {
+    float h1 = fh(k, 1.0), h2 = fh(k, 2.0), h3 = fh(k, 3.0), h4 = fh(k, 4.0), h5 = fh(k, 5.0);
     vec3 dir = normalize(vec3(h1 - 0.5, h2 - 0.5, (h3 - 0.5) * 0.8 + 0.3) + vec3(1e-4));
-    float sp = 0.3 + 1.2 * h4 * h4;
-    float ex = 1.0 - pow(1.0 - clamp(t / 0.3, 0.0, 1.0), 3.0);
-    vec3 p = pos + dir * sp * ex * 0.8;
-    float delay = 0.16 + 0.14 * (1.0 - clamp((pos.x + 0.32) / 0.64, 0.0, 1.0)) + 0.05 * h3;
-    float w = smoothstep(delay, delay + 0.42, t);
-    vec3 tgt = uBTarget + vec3((h2 - 0.5) * 0.55, (h3 - 0.5) * 0.8, (h4 - 0.5) * 0.3);
-    vec3 q = mix(p, tgt, w);
-    float env = sin(3.14159 * w);
-    q.y += sin(pos.x * 7.0 + t * 16.0 + h2 * 1.5) * 0.26 * env + sin(w * 9.0 + h1 * 6.0) * 0.08 * env;
-    q.z += cos(t * 12.0 + h1 * 6.0) * 0.1 * env;
-    return q;
+    float ex = 1.0 - pow(1.0 - clamp(t / 0.16, 0.0, 1.0), 3.0);
+    float d0 = 0.05 + 0.33 * h5;
+    vec3 pe = p0 + dir * (0.15 + 0.6 * h4 * h4) * ex * 0.6;
+    pe = mix(pe, uHeroC + (pe - uHeroC) * 0.35, 0.8 * smoothstep(0.12, d0 + 0.1, t)); // the source cloud drains into the stream
+    s = smoothstep(d0, d0 + 0.55, t);
+    float fm = float(m);
+    float side = fm - 1.0;
+    vec3 H = uHeroC;
+    vec3 Q = uQ[m];
+    vec2 dl = Q.xy - H.xy;
+    float len = length(dl) + 1e-3;
+    vec2 pr = vec2(-dl.y, dl.x) / len;
+    vec3 ctrl = 0.5 * (H + Q);
+    ctrl.xy += pr * (0.35 * side + 0.12) * (0.6 + len * 0.5) + vec2(0.0, 0.12 * side);
+    float om = 1.0 - s;
+    vec3 B = om * om * H + 2.0 * om * s * ctrl + s * s * Q;
+    float env = sin(3.14159 * s);
+    B.xy += pr * 0.12 * sin(6.2832 * s * 1.1 + t * 5.0 + fm * 2.1) * env;
+    float lam = (h2 - 0.5) * 2.0;
+    lam = sign(lam) * pow(abs(lam), 1.5);
+    float wdt = 0.018 + 0.085 * env * (0.55 + 0.45 * sin(s * 9.0 - t * 9.0 + fm * 1.7));
+    float th = s * 7.0 + t * 4.0 + h1 * 0.8;
+    B.xy += pr * lam * wdt * cos(th);
+    B.z += lam * wdt * sin(th) * 0.8;
+    B.xy += vec2(sin(B.y * 3.0 + t * 6.0), cos(B.x * 2.4 + t * 5.0)) * 0.045 * env;
+    return mix(pe, B, smoothstep(0.0, 0.3, s));
   }
 `
 
@@ -384,6 +412,10 @@ export const renderVertex = /* glsl */ `
   uniform float uShimmer;
   uniform float uShimmerPhase;
   uniform float uExtraSpeed;
+  uniform float uMode;      // 0 = hero mask, 1 = a trio mask
+  uniform float uMaskIdx;   // which trio mask (0..2)
+  uniform mat4  uInvModel;  // trio: world to this mask's local space
+  uniform float uFlight;    // brightness of the flock while it flies
   varying float vPeel;
   uniform sampler2D uPositionTexture;
   uniform sampler2D uVelocityTexture;
@@ -410,15 +442,29 @@ export const renderVertex = /* glsl */ `
     float band = exp(-pow((pos.y - (uShimmerPhase * 1.4 - 0.7)) * 7.0, 2.0));
     vSpeed += uShimmer * band * 0.007;
     vPeel = 0.0;
+    float arr = 1.0;
     if (uBreak > 0.0) {
-      pos = burstPos(pos, aRef, uBreak);
-      vPeel = smoothstep(0.72, 0.94, uBreak);
-      vSpeed += 0.005 * sin(3.14159 * clamp(uBreak, 0.0, 1.0)); // dust glitters while it moves
+      float k = floor(aRef.y * ${SIZE}.0) * ${SIZE}.0 + floor(aRef.x * ${SIZE}.0);
+      int m = uMode > 0.5 ? int(uMaskIdx + 0.5) : int(mod(k, 3.0));
+      float s;
+      vec3 w = flockWorld(pos + uHeroOff, k, m, uBreak, s);
+      if (uMode > 0.5) {
+        float a = smoothstep(0.65, 1.0, s);
+        arr = a;
+        vec3 d = (uInvModel * vec4(w, 1.0)).xyz - pos;
+        float ang = sin(3.14159 * a) * 1.8 * (m == 1 ? -1.0 : 1.0);
+        float c = cos(ang), sn = sin(ang);
+        pos = pos + vec3(c * d.x - sn * d.y, sn * d.x + c * d.y, d.z) * (1.0 - a);
+      } else {
+        pos = w - uHeroOff;
+        vPeel = smoothstep(0.7, 0.95, s);
+      }
+      vSpeed += uFlight * sin(3.14159 * s) + 0.004 * sin(3.14159 * clamp(uBreak / 0.3, 0.0, 1.0));
     }
     // Eyes fade out as they blink shut; nose is unaffected.
-    vFeature = max(aNose, aEye * uEyeOpen);
-    vEye = aEye * uEyeOpen;
-    vPupil = aPupil * uEyeOpen;
+    vFeature = max(aNose, aEye * uEyeOpen) * arr;
+    vEye = aEye * uEyeOpen * arr;
+    vPupil = aPupil * uEyeOpen * arr;
 
     // CONVERSION: if this dot is a glyph candidate, recompute the SAME life curve
     // the glyph layer uses, and report how "lit" its glyph is. The fragment fades
@@ -461,7 +507,7 @@ export const renderFragment = /* glsl */ `
     // Bloom catches it.
     a = max(a, vPupil * 0.95);
     vec3 col = uColor * (1.0 + vPupil * (1.6 + 2.4 * uGlow) + vEye * uGlow * 1.2);
-    a *= 1.0 - vPeel; // dust fades as the trio condenses
+    a *= 1.0 - vPeel; // extra flock fades as the masks condense
     a *= (1.0 - vGlyphFade);   // dot vanishes as its glyph forms (the conversion)
     a *= uFade;                // whole mask fades up on load
     gl_FragColor = vec4(col, a);
@@ -579,8 +625,10 @@ export const glyphVertex = /* glsl */ `
     float fade = smoothstep(0.0, edge, life) - smoothstep(uOnFrac - edge, uOnFrac, life);
     vAlpha = clamp(fade, 0.0, 1.0);
     if (uBreak > 0.0) {
-      pos = burstPos(pos, aRef, uBreak);
-      vAlpha *= 1.0 - smoothstep(0.72, 0.94, uBreak);
+      float k = floor(aRef.y * ${SIZE}.0) * ${SIZE}.0 + floor(aRef.x * ${SIZE}.0);
+      float s;
+      pos = flockWorld(pos + uHeroOff, k, int(mod(k, 3.0)), uBreak, s) - uHeroOff;
+      vAlpha *= 1.0 - smoothstep(0.2, 0.55, s);
     }
 
     // DISSIPATION (Melvin, 2026-08-01: glyphs should "float into the air and
@@ -885,7 +933,13 @@ export function MaskParticles() {
           uFeatureFloor: { value: 0.34 },
           uEyeOpen: { value: 1 }, // 1 open → 0 shut; driven by the blink in useFrame
           uBreak: { value: 0 },
-          uBTarget: { value: new THREE.Vector3() },
+          uMode: { value: 0 },
+          uMaskIdx: { value: 0 },
+          uInvModel: { value: new THREE.Matrix4() },
+          uFlight: { value: 0.004 },
+          uQ: { value: trioQ },
+          uHeroC: { value: HERO_C },
+          uHeroOff: { value: OFFSET },
           uShimmer: { value: 0 },
           uShimmerPhase: { value: 0 },
           uExtraSpeed: { value: 0 },
@@ -933,7 +987,9 @@ export function MaskParticles() {
           uGlow: { value: 0 },  // scroll activity → brighter glyphs
           uBurst: { value: 0 }, // scroll activity → glyphs come out further
           uBreak: { value: 0 },
-          uBTarget: { value: new THREE.Vector3() },
+          uQ: { value: trioQ },
+          uHeroC: { value: HERO_C },
+          uHeroOff: { value: OFFSET },
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
           uFade: { value: 0 }, // intro fade-in, shared with the base dot layer
@@ -1161,9 +1217,9 @@ export function MaskParticles() {
     const brk = desktopBreak.amt
     material.uniforms.uBreak.value = brk
     glyphMat.uniforms.uBreak.value = brk
-    // dust target = where the trio forms, in this mask's local space
-    material.uniforms.uBTarget.value.set(trioShared.tx - OFFSET.x, trioShared.ty - OFFSET.y, 0)
-    glyphMat.uniforms.uBTarget.value.copy(material.uniforms.uBTarget.value)
+    // From the first moment of the break the trio draws the first 3N particles and
+    // the hero draws only the rest (the extra flock); once formed it draws none.
+    sim.geometry.setDrawRange(brk > 0.0001 ? trioShared.n3 : 0, brk > 0.999 ? 0 : Infinity)
     material.uniforms.uFade.value = fade
     glyphMat.uniforms.uFade.value = fade
     pupilMat.uniforms.uFade.value = fade * (1 - Math.min(1, brk / 0.08))
@@ -1376,7 +1432,9 @@ export function MaskParticles() {
     u.uAspect.value = viewport.width / viewport.height
     ;(u.uSnakes.value as Float32Array).set(snakeField.seg)
     ;(u.uSnakeW.value as Float32Array).set(snakeField.w)
-    u.uSnakeN.value = snakeField.count
+    // No fact-word physics on the trio (it shares this sim): the snakes only part the
+    // hero mask, so they are off for the whole break.
+    u.uSnakeN.value = brk > 0.0001 ? 0 : snakeField.count
 
     gpu.compute()
     const posTex = gpu.getCurrentRenderTarget(posVar).texture

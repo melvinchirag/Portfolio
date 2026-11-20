@@ -1,36 +1,34 @@
 /* ============================================================================
  * DesktopTrio.tsx: the desktop hero's "break into three" (Melvin, 2026-11-20)
  * ----------------------------------------------------------------------------
- * "Once I start scrolling, it breaks ... from the bottom it dissipates and breaks
- *  into 3 different masks ... they come together in the same style as the phone
- *  and start dancing ... on desktop make it at least 2x more magical."
+ * Round 3 (calmer, whole screen, murmuration):
+ *  "...it creates a square before the three masks form. That shouldn't happen.
+ *   There should be a flow ... almost like starlings in the sky ... smoothly,
+ *   from the hero page to the Past. As soon as you get to the Past, before it
+ *   comes to the centre, the three masks should have formed and be dancing ...
+ *   the dancing should occupy all sides of the screen ... I don't want it too
+ *   messy."
  *
  * HOW IT IS BUILT
- *  - NOT a second pipeline. The three masks are three more draws of the SAME
- *    GPGPU sim, geometry, shaders, atlas and pupils the big hero mask uses
- *    (MaskField.tsx, which renders this component and shares its sim). So the
- *    particles, the eye/nose brightening, the blink and the glyph layer are
- *    identical; only the size differs. Each mask draws the first N particles of
- *    the (randomly ordered) sample, N = SIZE^2 * s^2, which keeps the particle
- *    density per screen area the same as the hero mask.
- *  - The break itself is the `uBreak` front in MaskField's shaders (bottom to
- *    top, ragged edge, particles peel up and out). Its state lives in
- *    hooks/desktopBreak.ts and runs in TIME, not scroll (an event, not a scrub).
- *  - Everything here after the trigger is driven by the clock. Scroll speed and
- *    the pointer only add energy.
+ *  - The three masks are the SAME particles as the hero mask: mask i draws
+ *    particles [i*N, (i+1)*N) of the shared GPGPU sample (N = SIZE^2 * s^2, so
+ *    density per screen area equals the hero mask), with the same shaders, eye
+ *    and nose weights, blink, pupils and glyph layer. While the break runs, the
+ *    vertex shader (PEEL_GLSL in MaskField.tsx) flies each particle through the
+ *    explosion and a murmuration ribbon (three braided streams, one per mask) and
+ *    spirals it into ITS OWN home point on its mask. So each mask condenses out
+ *    of its stream; there is no block and no cross-fade.
+ *  - The break clock (hooks/desktopBreak.ts) runs in time, not scroll. After it
+ *    completes everything here is still clock-driven: ambient, forever; scroll
+ *    speed and the pointer only add energy.
+ *  - The masks ignore the fact snakes completely (MaskField turns them off for the
+ *    whole break) and nothing here reads snakeField.
  *
- * THE MAGIC (what was picked)
- *   1. emergence: three ghost masks condense out of the dissolving big mask and
- *      fly to their orbit slots on underdamped springs (they overshoot, settle);
- *   2. circle together, then dance: orbit + Lissajous roaming, hops, breathing,
- *      depth (z) so they pass in front of and behind each other;
- *   3. each mask turns to look at the pointer and drifts with parallax;
- *   4. a ribbon of changing glyphs trails behind each dancer;
- *   5. a slow orbiting glyph ring/helix around the trio;
- *   6. shimmer pulses climb a mask when two pass close (or the pointer brushes);
- *   7. glyph rain/lift-off from the break line, and a faint glyph haze after.
- * Glyphs are CPU bodies in WORLD space, so when the visitor scrolls back up and
- * the masks merge, glyphs already released keep flying until they fade.
+ * THE DANCE: each mask follows a wide Lissajous path with its own periods across
+ * the WHOLE viewport; every so often they gather and circle together, then split
+ * towards three corners and rejoin. Depth in z, springs that overshoot a little,
+ * a soft keep-out so they never overlap, and a gentle bounce at the screen edges.
+ * Glyphs are few and slow: a burst that rides the flock, faint trails, a thin haze.
  *
  * Graphite and Sand only (the same sand tokens as MaskField); no new glow.
  * ========================================================================= */
@@ -39,27 +37,23 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { desktopBreak } from '../../hooks/desktopBreak'
-import { heroScroll } from '../../hooks/heroScroll'
-import { SIZE, OFFSET, TEL_START, BIN_START, TELUGU, freeVertex, glyphFragment } from './MaskField'
+import { SIZE, OFFSET, TEL_START, BIN_START, TELUGU, freeVertex, glyphFragment, trioQ } from './MaskField'
 
 /* ---- tuning knobs ---------------------------------------------------------- */
-/** Each trio mask's height as a fraction of the viewport height (30 to 38 asked). */
+/** Each trio mask's height as a fraction of the viewport height. */
 export const TRIO_VH = 0.26
-/** Local height of the face crop (chin to forehead), model units. */
-const FACE_H = 1.0
-const POOL = 2400 // live glyph bodies (break rain, trails, haze)
-const RING_N = 140 // glyphs in the orbiting ring/helix
-const CAP = POOL + RING_N
-const BREAK_GLYPHS_PER_SEC = 1500 // burst of glyphs mixed into the dust (first ~0.3 s)
-const SPRING_K = 58 // underdamped, like the phone swarm (K62 C9.5), a touch softer
-const SPRING_C = 9
-const CIRCLE_UNTIL = 3.5 // seconds settled before the dance starts blending in
-const DANCE_FULL = 8.0 // seconds settled when the dance is fully blended in
-const BASE_OMEGA = 0.55 // orbit speed, rad/s, before energy
-const EMERGE_AT = [0.6, 0.66, 0.72] // break amount at which each mask starts to emerge
-const EMERGE_SPAN = 0.24
-const SHIMMER_DIST = 0.5 // world units: masks closer than this pulse
+const FACE_H = 1.0 // local height of the face crop
+const POOL = 1200 // live glyph bodies (about half of round 2)
+const BURST_GLYPHS_PER_SEC = 700 // glyphs that ride the flock (first ~0.3 s)
+const SPRING_K = 46 // underdamped: a little overshoot, softer than before
+const SPRING_C = 8.5
+const ROAM_X = 0.78 // fraction of the half-width the masks may roam
+const ROAM_Y = 0.62 // fraction of the half-height
+const KEEP_OUT = 0.5 // world units: masks are pushed apart below this distance
+const DANCE_SPEED = 1.25 // overall choreography speed
+const SHIMMER_DIST = 0.55
 const SHIMMER_SECS = 1.3
+const FORMED_AT = 0.88 // break clock at which pupils and face glyphs fade in
 
 /** Shared with MaskParticles: its sim textures and clocks, written every frame. */
 export const trioShared = {
@@ -68,8 +62,7 @@ export const trioShared = {
   time: 0,
   glow: 0, // scroll activity 0..1 (also the "energy" here)
   fade: 0, // intro fade * contact-handoff fade
-  tx: -0.62, // where the trio forms (world x), read by the dust shader
-  ty: 0,
+  n3: 0, // 3N: the first particles belong to the trio while it is broken
 }
 
 type Sim = {
@@ -83,35 +76,17 @@ type Sim = {
   spawnPts: Float32Array
 }
 
-// Which side of the screen the trio should live on, as a fraction of the width
-// (0 left, 1 right), by hero pan progress. It steers to the side the text is NOT
-// on: Hero copy is centre-right, the Past card is left, Present is full width,
-// Future is centre-left.
-const SIDE: [number, number][] = [[0, 0.72], [0.12, 0.68], [0.33, 0.62], [0.55, 0.78], [0.8, 0.82], [1, 0.82]]
-function sideFrac(p: number): number {
-  if (p <= SIDE[0][0]) return SIDE[0][1]
-  for (let i = 1; i < SIDE.length; i++) {
-    if (p <= SIDE[i][0]) {
-      const a = SIDE[i - 1], b = SIDE[i]
-      const t = (p - a[0]) / (b[0] - a[0])
-      return a[1] + (b[1] - a[1]) * t * t * (3 - 2 * t)
-    }
-  }
-  return SIDE[SIDE.length - 1][1]
-}
-
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)))
   return t * t * (3 - 2 * t)
 }
 const rnd = Math.random
 
-// Copies a uniform set so each instance owns its numbers but shares textures.
 function cloneUniforms(u: Record<string, { value: any }>) {
   const out: Record<string, { value: any }> = {}
   for (const k of Object.keys(u)) {
     const v = u[k].value
-    out[k] = { value: v && v.isColor ? v.clone() : v }
+    out[k] = { value: v && v.isColor ? v.clone() : v && v.isMatrix4 ? v.clone() : v }
   }
   return out
 }
@@ -122,39 +97,35 @@ type Mask = {
   yaw: number; pitch: number; roll: number
   blinkNext: number; blinkStart: number
   shimPhase: number; shimRun: boolean; shimCool: number
-  e: number
 }
+
+const OMX = [0.37, 0.29, 0.43]
+const OMY = [0.33, 0.47, 0.23]
+const PHX = [0, 2.1, 4.2]
+const PHY = [1, 3, 5.2]
 
 export function DesktopTrio({ sim }: { sim: Sim }) {
   const camera = useThree((s) => s.camera)
   const size = useThree((s) => s.size)
 
-  // Three groups of three draws each (dots, face glyphs, pupils), plus one
-  // glyph Points for the ring + pool. All geometry shares the sim's buffers.
   const rig = useMemo(() => {
-    const masks = [0, 1, 2].map(() => {
+    const masks = [0, 1, 2].map((i) => {
       const dotGeo = new THREE.BufferGeometry()
       for (const k of Object.keys(sim.geometry.attributes)) dotGeo.setAttribute(k, sim.geometry.attributes[k])
       const glyphGeo = new THREE.BufferGeometry()
       for (const k of Object.keys(sim.glyphGeo.attributes)) glyphGeo.setAttribute(k, sim.glyphGeo.attributes[k])
-      const dotMat = new THREE.ShaderMaterial({
-        uniforms: cloneUniforms(sim.material.uniforms),
-        vertexShader: sim.material.vertexShader,
-        fragmentShader: sim.material.fragmentShader,
-        transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
-      })
-      const glyphMat = new THREE.ShaderMaterial({
-        uniforms: cloneUniforms(sim.glyphMat.uniforms),
-        vertexShader: sim.glyphMat.vertexShader,
-        fragmentShader: sim.glyphMat.fragmentShader,
-        transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
-      })
-      const pupilMat = new THREE.ShaderMaterial({
-        uniforms: cloneUniforms(sim.pupilMat.uniforms),
-        vertexShader: sim.pupilMat.vertexShader,
-        fragmentShader: sim.pupilMat.fragmentShader,
-        transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
-      })
+      const mk = (src: THREE.ShaderMaterial) =>
+        new THREE.ShaderMaterial({
+          uniforms: cloneUniforms(src.uniforms),
+          vertexShader: src.vertexShader,
+          fragmentShader: src.fragmentShader,
+          transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
+        })
+      const dotMat = mk(sim.material)
+      dotMat.uniforms.uMode.value = 1
+      dotMat.uniforms.uMaskIdx.value = i
+      const glyphMat = mk(sim.glyphMat)
+      const pupilMat = mk(sim.pupilMat)
       const group = new THREE.Group()
       const pts = [
         new THREE.Points(dotGeo, dotMat),
@@ -167,10 +138,10 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
     })
 
     const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(CAP * 3), 3))
-    geo.setAttribute('aGlyph', new THREE.BufferAttribute(new Float32Array(CAP), 1))
-    geo.setAttribute('aAlpha', new THREE.BufferAttribute(new Float32Array(CAP), 1))
-    geo.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(CAP), 1))
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(POOL * 3), 3))
+    geo.setAttribute('aGlyph', new THREE.BufferAttribute(new Float32Array(POOL), 1))
+    geo.setAttribute('aAlpha', new THREE.BufferAttribute(new Float32Array(POOL), 1))
+    geo.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(POOL), 1))
     geo.setDrawRange(0, 0)
     const mat = new THREE.ShaderMaterial({
       uniforms: cloneUniforms(sim.freeMat.uniforms),
@@ -189,21 +160,18 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
     rig.mat.dispose()
   }, [rig])
 
-  // Simulation state (refs, never React state).
   const st = useRef({
-    clock: 0, orb: 0, dance: 0, ring: 0, cx: 0, cy: 0, spd: 0,
-    breakAcc: 0, trailAcc: [0, 0, 0], hazeAcc: 0, scrollY: -1,
+    clock: 0, dance: 0, wasBroken: false,
+    breakAcc: 0, trailAcc: [0, 0, 0], hazeAcc: 0,
     masks: [0, 1, 2].map((i): Mask => ({
-      x: OFFSET.x, y: -0.3, z: 0, vx: 0, vy: 0, vz: 0, yaw: 0, pitch: 0, roll: 0,
-      blinkNext: 2 + i * 1.7, blinkStart: -1, shimPhase: 0, shimRun: false, shimCool: 0, e: 0,
+      x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, yaw: 0, pitch: 0, roll: 0,
+      blinkNext: 2 + i * 1.7, blinkStart: -1, shimPhase: 0, shimRun: false, shimCool: 0,
     })),
-    // glyph pool (structure of arrays)
     n: 0,
     px: new Float32Array(POOL), py: new Float32Array(POOL), pz: new Float32Array(POOL),
     vx: new Float32Array(POOL), vy: new Float32Array(POOL), vz: new Float32Array(POOL),
     age: new Float32Array(POOL), life: new Float32Array(POOL), seed: new Float32Array(POOL),
     gl: new Float32Array(POOL), gt: new Float32Array(POOL), sz: new Float32Array(POOL), amp: new Float32Array(POOL), kind: new Float32Array(POOL),
-    ringGlyph: new Float32Array(RING_N),
     pointer: { x: 0, y: 0, moved: false, speed: 0, lx: 0, ly: 0 },
   })
 
@@ -219,11 +187,6 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
     return () => window.removeEventListener('pointermove', move)
   }, [])
 
-  useEffect(() => {
-    const S = st.current
-    for (let k = 0; k < RING_N; k++) S.ringGlyph[k] = randGlyph()
-  }, [])
-
   useFrame((_, delta) => {
     const S = st.current
     const ts = trioShared
@@ -234,90 +197,92 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
 
     const cam = camera as THREE.PerspectiveCamera
     const halfH = Math.tan((cam.fov * Math.PI) / 360) * cam.position.z
-    const aspect = size.width / size.height
-    const halfW = halfH * aspect
-    const sBase = (TRIO_VH * 2 * halfH) / FACE_H // mask scale for 30% of the viewport height
+    const halfW = halfH * (size.width / size.height)
+    const sBase = (TRIO_VH * 2 * halfH) / FACE_H
+    const N = Math.min(Math.floor((SIZE * SIZE) / 3), Math.round(SIZE * SIZE * Math.min(1, sBase) ** 2)) & ~7
+    ts.n3 = 3 * N
+    const stride = 8 // glyph pool stride in MaskField
 
     S.clock += dt
     S.pointer.speed *= Math.exp(-dt * 3)
     const energy = Math.min(1.6, ts.glow + S.pointer.speed * 0.35)
-
-    // scroll speed (extra energy, plus it is what ts.glow already carries)
-    S.spd = Math.min(1, S.spd * Math.exp(-dt * 2))
-
-    // ---- phases (all clock-driven) ----
-    const c = 1 - smooth(CIRCLE_UNTIL, DANCE_FULL, B.settle) // 1 = circling together, 0 = dancing
-    const omega = (BASE_OMEGA + 0.4 * (1 - c)) * (1 + 1.3 * energy)
-    S.orb += dt * omega
-    S.dance += dt * (0.75 + 0.9 * energy)
-    S.ring += dt * 0.24 * (1 + energy)
-    const t = S.clock
+    S.dance += dt * DANCE_SPEED * (1 + 1.1 * energy)
     const d = S.dance
+    const visible = B.amt > 0.0001 && ts.fade > 0.002
+    const formed = smooth(FORMED_AT, 1, B.amt)
 
-    // centre of the trio: left and centre-left, where the big mask lived
-    const roam = 0.65 + 0.35 * (1 - c)
-    S.cx = (2 * sideFrac(heroScroll.progress) - 1) * halfW + roam * (0.1 * halfW * Math.sin(0.21 * t + 0.7) + 0.05 * halfW * Math.sin(0.53 * t))
-    S.cy = 0.02 * halfH + roam * (0.1 * halfH * Math.sin(0.17 * t + 1.3) + 0.05 * halfH * Math.sin(0.41 * t))
-    ts.tx = S.cx
-    ts.ty = S.cy
-    const R = (0.3 + 0.16 * (1 - c) + 0.04 * Math.sin(0.9 * t)) * halfH * 1.05
+    // ---- choreography: the whole screen ----
+    const g = smooth(0.35, 0.7, 0.5 + 0.5 * Math.sin(0.3 * d + 0.8)) // gather and circle together
+    const g2 = smooth(0.55, 0.9, 0.5 + 0.5 * Math.sin(0.19 * d + 3)) // split to three corners
+    const cX = 0.5 * halfW * Math.sin(0.17 * d), cY = 0.38 * halfH * Math.sin(0.23 * d + 1)
+    const corners: [number, number][] = [[-0.74 * halfW, 0.55 * halfH], [0.74 * halfW, 0.45 * halfH], [0.05 * halfW, -0.6 * halfH]]
+    const pw = S.pointer.moved ? S.pointer.x * halfW : 0
+    const ph = S.pointer.moved ? S.pointer.y * halfH : 0
+    const tg: { x: number; y: number; z: number }[] = []
+    for (let i = 0; i < 3; i++) {
+      const th = 0.7 * d + (i * Math.PI * 2) / 3
+      const gx = cX + 0.38 * Math.cos(th), gy = cY + 0.31 * Math.sin(th)
+      const lx = ROAM_X * halfW * Math.sin(OMX[i] * d + PHX[i]), ly = ROAM_Y * halfH * Math.sin(OMY[i] * d + PHY[i])
+      let tx = lx + (gx - lx) * g
+      let ty = ly + (gy - ly) * g
+      tx += (corners[i][0] - tx) * g2 * 0.75
+      ty += (corners[i][1] - ty) * g2 * 0.75
+      const tz = 0.27 * Math.sin(0.5 * d + i * 2.1) + 0.08 * Math.sin(1.1 * d + i)
+      tx = Math.max(-halfW + 0.22, Math.min(halfW - 0.22, tx))
+      ty = Math.max(-halfH + 0.28, Math.min(halfH - 0.28, ty))
+      tg.push({ x: tx + S.pointer.x * 0.04 * (0.5 + tz * 2) * (S.pointer.moved ? 1 : 0), y: ty, z: tz })
+    }
 
-    const pw = S.pointer.moved ? S.pointer.x * halfW : S.cx
-    const ph = S.pointer.moved ? S.pointer.y * halfH : S.cy
+    if (visible && !S.wasBroken) {
+      // the break just began: the masks start at their slots (invisible until the flock arrives)
+      for (let i = 0; i < 3; i++) { const M = S.masks[i]; M.x = tg[i].x; M.y = tg[i].y; M.z = tg[i].z; M.vx = M.vy = M.vz = 0 }
+    }
+    S.wasBroken = visible
 
-    const N = Math.min(SIZE * SIZE, Math.round(SIZE * SIZE * Math.min(1, sBase) ** 2))
-    const stride = 8 // glyph pool stride in MaskField (count / (count * GLYPH_POOL_FRACTION))
     let presence = 0
-
     for (let i = 0; i < 3; i++) {
       const M = S.masks[i]
       const rg = rig.masks[i]
-      const e = smooth(EMERGE_AT[i], EMERGE_AT[i] + EMERGE_SPAN, B.amt)
-      M.e = e
-      presence += e / 3
-      rg.group.visible = e > 0.002 && ts.fade > 0.002
+      presence += formed / 3
+      rg.group.visible = visible
 
-      // where it should be: from the break zone out to its orbit / dance slot
-      const th = S.orb + (i * Math.PI * 2) / 3
-      const rr = R * (0.7 + 0.3 * c + 0.0)
-      let tx = S.cx + rr * 1.25 * Math.cos(th)
-      let ty = S.cy + rr * 0.85 * Math.sin(th)
-      const ax = 0.2 * halfW, ay = 0.2 * halfH, dw = (1 - c) * 0.85
-      tx += dw * (ax * Math.sin(0.9 * d + i * 2.1) + 0.4 * ax * Math.sin(2.1 * d + i * 1.3))
-      ty += dw * (ay * Math.sin(1.2 * d + i * 1.7) + 0.35 * ay * Math.sin(2.7 * d + i)) + (1 - c) * 0.05 * Math.abs(Math.sin(2.2 * d + i))
-      const tz = 0.26 * Math.sin(th + 0.6) * (0.6 + 0.4 * (1 - c)) + 0.1 * Math.sin(0.8 * d + i)
-      // pointer parallax: deeper masks drift opposite the pointer, nearer ones with it
-      const par = S.pointer.moved ? 0.05 : 0
-      tx += S.pointer.x * par * (0.5 + tz * 2)
-      ty += S.pointer.y * par * (0.5 + tz * 2) * 0.7
-      const spX = S.cx + (i - 1) * 0.12
-      const spY = S.cy
-      const ee = 1 - Math.pow(1 - e, 3)
-      const gx = spX + (tx - spX) * ee
-      const gy = spY + (Math.max(-0.6 * halfH, Math.min(0.6 * halfH, ty)) - spY) * ee
-      const gz = tz * ee
-
-      // pointer kick: brush a mask and it is shoved away (more with speed)
+      // pointer kick: brush a mask and it is shoved away
       const dxp = M.x - pw, dyp = M.y - ph
       const dp = Math.hypot(dxp, dyp)
       if (S.pointer.moved && dp < 0.32 && dp > 1e-4) {
-        const k = (1 - dp / 0.32) * S.pointer.speed * 5.5 * dt
+        const k = (1 - dp / 0.32) * S.pointer.speed * 4 * dt
         M.vx += (dxp / dp) * k
         M.vy += (dyp / dp) * k
-        if (M.shimCool <= 0 && S.pointer.speed > 0.5) { M.shimRun = true; M.shimPhase = 0; M.shimCool = 2.5 }
+        if (M.shimCool <= 0 && S.pointer.speed > 0.5 && formed > 0.9) { M.shimRun = true; M.shimPhase = 0; M.shimCool = 2.5 }
       }
-
-      // underdamped spring (overshoots and settles, which is what reads as alive)
-      M.vx += (SPRING_K * (gx - M.x) - SPRING_C * M.vx) * dt
-      M.vy += (SPRING_K * (gy - M.y) - SPRING_C * M.vy) * dt
-      M.vz += (SPRING_K * (gz - M.z) - SPRING_C * M.vz) * dt
+      // soft keep-out between masks: they never overlap
+      for (let j = 0; j < 3; j++) {
+        if (j === i) continue
+        const o = S.masks[j]
+        const ex = M.x - o.x, ey = M.y - o.y
+        const ed = Math.hypot(ex, ey)
+        if (ed < KEEP_OUT && ed > 1e-4) {
+          const k = (KEEP_OUT - ed) * 60 * dt
+          M.vx += (ex / ed) * k
+          M.vy += (ey / ed) * k
+        }
+      }
+      // underdamped spring toward its place in the choreography
+      M.vx += (SPRING_K * (tg[i].x - M.x) - SPRING_C * M.vx) * dt
+      M.vy += (SPRING_K * (tg[i].y - M.y) - SPRING_C * M.vy) * dt
+      M.vz += (SPRING_K * (tg[i].z - M.z) - SPRING_C * M.vz) * dt
       M.x += M.vx * dt; M.y += M.vy * dt; M.z += M.vz * dt
+      // gentle bounce at the screen edges
+      const bx = halfW - 0.2, by = halfH - 0.26
+      if (M.x > bx) { M.x = bx; M.vx = -Math.abs(M.vx) * 0.6 } else if (M.x < -bx) { M.x = -bx; M.vx = Math.abs(M.vx) * 0.6 }
+      if (M.y > by) { M.y = by; M.vy = -Math.abs(M.vy) * 0.6 } else if (M.y < -by) { M.y = -by; M.vy = Math.abs(M.vy) * 0.6 }
       const spd = Math.hypot(M.vx, M.vy)
+      trioQ[i].set(M.x, M.y, M.z)
 
-      // look at the pointer (or turn with the orbit when it is idle)
+      // look at the pointer (or drift) and breathe
       const lookYaw = S.pointer.moved ? Math.max(-0.75, Math.min(0.75, (pw - M.x) * 0.9)) : 0
       const lookPitch = S.pointer.moved ? Math.max(-0.4, Math.min(0.4, -(ph - M.y) * 0.6)) : 0
-      const yawT = lookYaw + 0.35 * Math.sin(th) + 0.12 * Math.sin(0.7 * d + i)
+      const yawT = lookYaw + 0.3 * Math.sin(0.6 * d + i * 2) + Math.max(-0.3, Math.min(0.3, -M.vx * 0.25))
       const pitchT = lookPitch + 0.08 * Math.sin(0.9 * d + i * 2)
       const rollT = Math.max(-0.25, Math.min(0.25, M.vx * 0.12)) + 0.06 * Math.sin(1.1 * d + i)
       const rk = 1 - Math.exp(-dt * 6)
@@ -325,9 +290,8 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
       M.pitch += (pitchT - M.pitch) * rk
       M.roll += (rollT - M.roll) * rk
 
-      // blink (own timer per mask so they do not blink in unison)
       let eyeOpen = 1
-      if (e > 0.9) {
+      if (formed > 0.95) {
         if (M.blinkStart < 0 && S.clock >= M.blinkNext) M.blinkStart = S.clock
         if (M.blinkStart >= 0) {
           const bt = (S.clock - M.blinkStart) / 0.16
@@ -335,19 +299,20 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
         }
       }
 
-      // transform: perspective does the depth scaling; breathing on top
-      const sc = sBase * (0.3 + 0.7 * ee) * (1 + 0.035 * Math.sin(1.6 * d + i * 2.4))
+      const sc = sBase * (1 + 0.03 * Math.sin(1.6 * d + i * 2.4))
       rg.group.position.set(M.x, M.y, M.z)
       rg.group.scale.setScalar(sc)
       rg.group.rotation.set(M.pitch, M.yaw, M.roll)
+      rg.group.updateMatrix()
+      rg.dotMat.uniforms.uInvModel.value.copy(rg.group.matrix).invert()
 
       // shimmer: a pulse climbs the face when two masks pass close
       M.shimCool -= dt
       for (let j = i + 1; j < 3; j++) {
         const o = S.masks[j]
-        if (e > 0.8 && o.e > 0.8 && M.shimCool <= 0 && Math.hypot(M.x - o.x, M.y - o.y) < SHIMMER_DIST * (1 + 0.5 * (M.z + o.z))) {
-          M.shimRun = true; M.shimPhase = 0; M.shimCool = 2.5
-          o.shimRun = true; o.shimPhase = 0; o.shimCool = 2.5
+        if (formed > 0.9 && M.shimCool <= 0 && Math.hypot(M.x - o.x, M.y - o.y) < SHIMMER_DIST) {
+          M.shimRun = true; M.shimPhase = 0; M.shimCool = 3
+          o.shimRun = true; o.shimPhase = 0; o.shimCool = 3
         }
       }
       if (M.shimRun) {
@@ -356,172 +321,123 @@ export function DesktopTrio({ sim }: { sim: Sim }) {
       }
       const shim = M.shimRun ? Math.sin(Math.min(1, M.shimPhase) * Math.PI) : 0
 
-      // uniforms
-      const depthDim = 0.78 + 0.22 * Math.min(1, Math.max(0, (M.z + 0.3) / 0.6)) // far = a little dimmer
-      const f = Math.pow(e, 1.3) * ts.fade * depthDim
+      const depthDim = 0.78 + 0.22 * Math.min(1, Math.max(0, (M.z + 0.3) / 0.6))
+      const f = ts.fade * depthDim
+      const glow = Math.min(1, ts.glow + shim * 0.6)
       const du = rg.dotMat.uniforms
       du.uPositionTexture.value = posTex
       du.uVelocityTexture.value = ts.velTex
       du.uFade.value = f
+      du.uBreak.value = B.amt
       du.uEyeOpen.value = eyeOpen
-      du.uGlow.value = Math.min(1, ts.glow + shim * 0.6)
+      du.uGlow.value = glow
       du.uTime.value = ts.time
       du.uShimmer.value = shim
       du.uShimmerPhase.value = M.shimPhase
       du.uExtraSpeed.value = Math.min(0.0035, spd * 0.0025)
       const gu = rg.glyphMat.uniforms
       gu.uPositionTexture.value = posTex
-      gu.uFade.value = f
-      gu.uGlow.value = Math.min(1, ts.glow + shim * 0.6)
+      gu.uFade.value = f * formed
+      gu.uGlow.value = glow
       gu.uBurst.value = ts.glow
       gu.uTime.value = ts.time
       gu.uGlyphSize.value = 14
       const pu = rg.pupilMat.uniforms
-      pu.uFade.value = f
+      pu.uFade.value = f * formed
       pu.uEyeOpen.value = eyeOpen
-      pu.uGlow.value = Math.min(1, ts.glow + shim * 0.6)
+      pu.uGlow.value = glow
       pu.uScale.value = sc
-      // same density per area as the hero mask: first N of the random-order sample
-      rg.dotGeo.setDrawRange(0, N)
-      rg.glyphGeo.setDrawRange(0, Math.floor(N / stride))
+      // same density per area as the hero mask: particles [i*N, (i+1)*N)
+      rg.dotGeo.setDrawRange(i * N, N)
+      rg.glyphGeo.setDrawRange((i * N) / stride, N / stride)
     }
 
-    // ---- glyphs (CPU bodies in world space) ----
+    // ---- glyphs (CPU bodies in world space): few, slow, long-lived ----
     const alive = ts.fade > 0.03
     const tNow = S.clock
 
-    // 1) the explosion: glyphs burst out with the dust, then ride the wave to the trio
+    // 1) a burst that rides the flock
     if (B.broken && B.amt < 0.2 && alive) {
-      S.breakAcc += BREAK_GLYPHS_PER_SEC * dt
+      S.breakAcc += BURST_GLYPHS_PER_SEC * dt
       while (S.breakAcc >= 1) {
         S.breakAcc -= 1
         if (S.n >= POOL) break
         const k = (rnd() * (sim.spawnPts.length / 3)) | 0
         const a = rnd() * Math.PI * 2
-        const sp = 0.5 + rnd() * 1.1
+        const sp = 0.4 + rnd() * 0.9
         emit(S, OFFSET.x + sim.spawnPts[k * 3], OFFSET.y + sim.spawnPts[k * 3 + 1], sim.spawnPts[k * 3 + 2],
-          Math.cos(a) * sp, Math.sin(a) * sp, 0.2 + rnd() * 0.5, 3.5 + rnd() * 2.5, 0.9 + rnd() * 0.5, 0.9, 1)
+          Math.cos(a) * sp, Math.sin(a) * sp, 0.2 + rnd() * 0.4, 4 + rnd() * 3, 0.9 + rnd() * 0.4, 0.8, 1)
       }
     } else S.breakAcc = 0
 
-    // 2) ribbons trailing behind each dancer, and 3) the faint haze
-    if (alive) {
+    // 2) faint trails behind each dancer, and 3) a thin haze
+    if (alive && formed > 0.5) {
       for (let i = 0; i < 3; i++) {
         const M = S.masks[i]
-        if (M.e < 0.25) continue
         const sp = Math.min(1, Math.hypot(M.vx, M.vy))
-        S.trailAcc[i] += (16 + 60 * sp) * dt
+        S.trailAcc[i] += (5 + 20 * sp) * dt
         while (S.trailAcc[i] >= 1 && S.n < POOL) {
           S.trailAcc[i] -= 1
           emit(S, M.x + (rnd() - 0.5) * 0.14, M.y + (rnd() - 0.5) * 0.2, M.z - 0.02,
-            -M.vx * 0.15 + (rnd() - 0.5) * 0.03, -M.vy * 0.15 + (rnd() - 0.5) * 0.03, (rnd() - 0.5) * 0.02,
-            1.5 + rnd() * 1.1, 0.6 + rnd() * 0.35, 0.6 * M.e)
+            -M.vx * 0.12 + (rnd() - 0.5) * 0.02, -M.vy * 0.12 + (rnd() - 0.5) * 0.02, (rnd() - 0.5) * 0.02,
+            2 + rnd() * 1.2, 0.6 + rnd() * 0.25, 0.4)
         }
-        S.trailAcc[i] = Math.min(S.trailAcc[i], 3)
+        S.trailAcc[i] = Math.min(S.trailAcc[i], 2)
       }
-      if (presence > 0.5) {
-        S.hazeAcc += 5 * dt
-        while (S.hazeAcc >= 1 && S.n < POOL) {
-          S.hazeAcc -= 1
-          emit(S, (rnd() * 1.45 - 0.95) * halfW, (rnd() * 1.6 - 1.0) * halfH, (rnd() - 0.5) * 0.5,
-            (rnd() - 0.5) * 0.02, 0.03 + rnd() * 0.05, 0, 6 + rnd() * 4, 0.8 + rnd() * 0.5, 0.4)
-        }
+      S.hazeAcc += 2.5 * dt
+      while (S.hazeAcc >= 1 && S.n < POOL) {
+        S.hazeAcc -= 1
+        emit(S, (rnd() * 2 - 1) * halfW, (rnd() * 2 - 1) * halfH, (rnd() - 0.5) * 0.5,
+          (rnd() - 0.5) * 0.02, 0.02 + rnd() * 0.04, 0, 8 + rnd() * 5, 0.8 + rnd() * 0.4, 0.35)
       }
     }
 
-    // 4) integrate the pool: wander, a faint swirl round the trio, pointer shove
+    // 4) integrate: gentle wander; flock glyphs are drawn to their mask
     const damp = Math.exp(-dt * 0.9)
     for (let i = S.n - 1; i >= 0; i--) {
       S.age[i] += dt
       if (S.age[i] >= S.life[i]) { remove(S, i); continue }
       const sd = S.seed[i]
-      S.vx[i] += Math.sin(tNow * 0.7 + sd) * 0.05 * dt
-      S.vy[i] += (0.012 + Math.cos(tNow * 0.55 + sd * 1.3) * 0.03) * dt
-      S.vz[i] += Math.sin(tNow * 0.4 + sd * 0.7) * 0.02 * dt
-      if (S.kind[i] === 1 && S.age[i] < 1.5) {
-        // wave glyphs: pulled to the trio's spot on a ripple, quick not floaty
-        const ox = Math.sin(sd * 3.1) * 0.3, oy = Math.cos(sd * 1.7) * 0.4
-        S.vx[i] += (S.cx + ox - S.px[i]) * 9 * dt
-        S.vy[i] += ((S.cy + oy - S.py[i]) * 9 + Math.sin(S.px[i] * 7 + tNow * 16) * 4) * dt
+      S.vx[i] += Math.sin(tNow * 0.5 + sd) * 0.03 * dt
+      S.vy[i] += (0.008 + Math.cos(tNow * 0.4 + sd * 1.3) * 0.02) * dt
+      S.vz[i] += Math.sin(tNow * 0.3 + sd * 0.7) * 0.015 * dt
+      if (S.kind[i] === 1 && S.age[i] < 1.4) {
+        const M = S.masks[((sd * 7) | 0) % 3]
+        S.vx[i] += (M.x + Math.sin(sd * 3.1) * 0.25 - S.px[i]) * 8 * dt
+        S.vy[i] += ((M.y + Math.cos(sd * 1.7) * 0.3 - S.py[i]) * 8 + Math.sin(S.px[i] * 6 + tNow * 12) * 3) * dt
         S.vx[i] *= Math.exp(-dt * 1.6)
         S.vy[i] *= Math.exp(-dt * 1.6)
-      }
-      const rx = S.px[i] - S.cx, ry = S.py[i] - S.cy
-      const rl = Math.hypot(rx, ry) + 0.25
-      S.vx[i] += (-ry / rl) * 0.05 * dt * presence
-      S.vy[i] += (rx / rl) * 0.05 * dt * presence
-      if (S.pointer.moved) {
-        const qx = S.px[i] - pw, qy = S.py[i] - ph
-        const qd = Math.hypot(qx, qy)
-        if (qd < 0.3 && qd > 1e-4) {
-          const k = (1 - qd / 0.3) * (0.05 + S.pointer.speed * 0.3) * dt * 8
-          S.vx[i] += (qx / qd) * k
-          S.vy[i] += (qy / qd) * k
-        }
       }
       S.vx[i] *= damp; S.vy[i] *= damp; S.vz[i] *= damp
       S.px[i] += S.vx[i] * dt
       S.py[i] += S.vy[i] * dt
       S.pz[i] = Math.min(0.9, S.pz[i] + S.vz[i] * dt)
       S.gt[i] -= dt
-      if (S.gt[i] <= 0) { S.gl[i] = randGlyph(); S.gt[i] = 0.35 + rnd() * 0.9 } // keep changing
+      if (S.gt[i] <= 0) { S.gl[i] = randGlyph(); S.gt[i] = 0.6 + rnd() * 1.2 }
       if (Math.abs(S.px[i]) > halfW * 1.4 || Math.abs(S.py[i]) > halfH * 1.4) remove(S, i)
     }
 
-    // 5) write buffers: ring/helix first, then the pool
+    // 5) write buffers
     const pos = rig.geo.attributes.position.array as Float32Array
     const gla = rig.geo.attributes.aGlyph.array as Float32Array
     const ala = rig.geo.attributes.aAlpha.array as Float32Array
     const sza = rig.geo.attributes.aSize.array as Float32Array
-    let w = 0
-    const ringPresence = presence * presence
-    if (ringPresence > 0.01) {
-      let mx = 0, my = 0
-      for (const M of S.masks) { mx += M.x / 3; my += M.y / 3 }
-      const rk2 = 1 - Math.exp(-dt * 3)
-      const ringCx = (S as any).rcx === undefined ? mx : (S as any).rcx + (mx - (S as any).rcx) * rk2
-      const ringCy = (S as any).rcy === undefined ? my : (S as any).rcy + (my - (S as any).rcy) * rk2
-      ;(S as any).rcx = ringCx; (S as any).rcy = ringCy
-      const Rr = (R + 0.3) * 1.05
-      const reroll = (rnd() * RING_N) | 0
-      S.ringGlyph[reroll] = randGlyph()
-      for (let k = 0; k < RING_N; k++) {
-        const u = k / RING_N
-        const second = k & 1
-        const a = u * Math.PI * 2 * 2 + S.ring * (second ? -1.3 : 1) + second * 1.1
-        const rad = Rr * (second ? 0.78 : 1) * (1 + 0.06 * Math.sin(0.7 * t + u * 9))
-        const sa = Math.sin(a)
-        pos[w * 3] = ringCx + Math.cos(a) * rad * 1.35
-        pos[w * 3 + 1] = ringCy + sa * rad * 0.4 + 0.06 * Math.sin(5 * a + t) + (second ? 0.05 : -0.05)
-        pos[w * 3 + 2] = sa * rad * 0.7
-        gla[w] = S.ringGlyph[k]
-        ala[w] = ringPresence * ts.fade * (0.22 + 0.3 * (sa * 0.5 + 0.5)) * (0.7 + 0.3 * Math.sin(t * 2.1 + k))
-        sza[w] = 0.55 + 0.35 * (sa * 0.5 + 0.5)
-        w++
-      }
-    } else {
-      delete (S as any).rcx
-      delete (S as any).rcy
-    }
     for (let i = 0; i < S.n; i++) {
-      pos[w * 3] = S.px[i]; pos[w * 3 + 1] = S.py[i]; pos[w * 3 + 2] = S.pz[i]
-      gla[w] = S.gl[i]
-      const ai = Math.min(1, S.age[i] / 0.6)
+      pos[i * 3] = S.px[i]; pos[i * 3 + 1] = S.py[i]; pos[i * 3 + 2] = S.pz[i]
+      gla[i] = S.gl[i]
+      const ai = Math.min(1, S.age[i] / 0.8)
       const ao = Math.min(1, (S.life[i] - S.age[i]) / (S.life[i] * 0.45))
-      ala[w] = ai * ai * (3 - 2 * ai) * ao * ao * (3 - 2 * ao) * S.amp[i] * 0.85
-      sza[w] = S.sz[i]
-      w++
+      ala[i] = ai * ai * (3 - 2 * ai) * ao * ao * (3 - 2 * ao) * S.amp[i] * 0.85
+      sza[i] = S.sz[i]
     }
     rig.geo.attributes.position.needsUpdate = true
     rig.geo.attributes.aGlyph.needsUpdate = true
     rig.geo.attributes.aAlpha.needsUpdate = true
     rig.geo.attributes.aSize.needsUpdate = true
-    rig.geo.setDrawRange(0, w)
-    const mu = rig.mat.uniforms
-    mu.uFade.value = ts.fade
-    mu.uGlow.value = ts.glow
-    // nothing to see and nothing in flight: skip the draw entirely
-    rig.glyphPts.visible = w > 0
+    rig.geo.setDrawRange(0, S.n)
+    rig.mat.uniforms.uFade.value = ts.fade
+    rig.mat.uniforms.uGlow.value = ts.glow
+    rig.glyphPts.visible = S.n > 0 && presence >= 0
   })
 
   return (

@@ -17,7 +17,7 @@
 export const BREAK_ON = 0.003
 export const BREAK_OFF = 0.001
 /** Seconds from trigger to three formed masks (explode, wave, condense). */
-export const BREAK_SECS = 1.8
+export const BREAK_SECS = 1.6
 /** Seconds for the trio to flow back and the big mask to re-form. */
 export const MERGE_SECS = 1.2
 
