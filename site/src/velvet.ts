@@ -2,8 +2,8 @@
  * VELVET PREVIEW (2026-11-20). A try-on of Melvin's "royal velvet red and cream"
  * idea on the REAL site, switched by the address bar so the live look is untouched:
  *
- *   /?velvet=1  royal velvet        /?velvet=2  oxblood and cream
- *   /?velvet=3  burgundy, rose gold /?velvet=4  black velvet (darkest)
+ *   /?velvet=1  rich red   /?velvet=2  ember (towards orange)
+ *   /?velvet=3  rose       /?velvet=4  ruby (cooler)
  *   /?velvet=0  back to graphite and sand
  *
  * The choice is remembered for the tab (sessionStorage) so moving between pages
@@ -26,16 +26,14 @@ function read(): number {
 export const velvet = typeof window === 'undefined' ? 0 : read()
 
 type V3 = [number, number, number]
-/** Ribbon colours: ground, shadowed cloth, lit cloth, and the satin sheen. */
+/** Light sheet colours: ground, far curtain, near curtain and glow, white-hot core. */
 const RAMPS: Record<number, [V3, V3, V3, V3]> = {
-  // Darkened 2026-11-20 (Melvin: "can the royal velvet be darker"). 4 is darker still.
-  // Rich true red, not wine (Melvin, 2026-11-20): almost no blue in the cloth.
-  1: [[0.022, 0.003, 0.005], [0.16, 0.006, 0.012], [0.6, 0.018, 0.03], [0.96, 0.91, 0.82]],
-  4: [[0.008, 0.001, 0.002], [0.09, 0.003, 0.007], [0.5, 0.014, 0.024], [0.96, 0.91, 0.82]],
-  2: [[0.03, 0.006, 0.012], [0.11, 0.01, 0.028], [0.28, 0.022, 0.05], [1.0, 0.97, 0.9]],
-  3: [[0.055, 0.014, 0.022], [0.2, 0.03, 0.055], [0.44, 0.07, 0.1], [0.95, 0.72, 0.55]],
+  1: [[0.012, 0.002, 0.004], [0.3, 0.01, 0.025], [0.95, 0.05, 0.06], [0.96, 0.91, 0.82]], // rich red
+  2: [[0.012, 0.003, 0.002], [0.35, 0.03, 0.01], [1.0, 0.16, 0.04], [1.0, 0.9, 0.7]], // ember, towards orange
+  3: [[0.014, 0.004, 0.005], [0.3, 0.06, 0.06], [0.9, 0.3, 0.25], [1.0, 0.93, 0.84]], // rose
+  4: [[0.01, 0.001, 0.004], [0.26, 0.005, 0.04], [0.85, 0.02, 0.09], [0.96, 0.91, 0.82]], // ruby, cooler
 }
-const VOIDS: Record<number, string> = { 1: '#0b0304', 2: '#0b0305', 3: '#16070a', 4: '#060202' }
+const VOIDS: Record<number, string> = { 1: '#070203', 2: '#070302', 3: '#080303', 4: '#060203' }
 
 export const velvetRamp = RAMPS[velvet] ?? RAMPS[1]
 /** The ground colour: graphite normally, deep wine in velvet. */
