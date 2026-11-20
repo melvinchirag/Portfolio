@@ -332,6 +332,8 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
   const setShape: Ferro['setShape'] = (mask, w, h, emPx, sw) => {
     if (lost || !progs) return false
     lastMask = mask
+    // The span can be zero-sized (hidden, mid-pan, fonts not in yet): nothing to rasterise.
+    if (!(mask.width > 0 && mask.height > 0 && w > 0 && h > 0)) return false
     lastArgs = [w, h, emPx, sw]
     releaseTextures()
     cssW = w
