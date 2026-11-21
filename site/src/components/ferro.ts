@@ -44,6 +44,7 @@
 
 import { spikeSpring } from './spikes'
 import { FLUID } from '../velvet'
+import { ink } from '../velvetLab'
 
 export const TUNING = {
   /** Radius of the hole under the pointer, in ems of the name's font size. */
@@ -167,6 +168,7 @@ const FS_DRAW = `${HEAD}
 uniform sampler2D uS; uniform sampler2D uB; uniform sampler2D uThi; uniform sampler2D uL;
 uniform vec2 uCss; uniform float uTime; uniform float uStill;
 uniform float uDome; uniform float uSpH; uniform float uPitch; uniform float uK;
+uniform vec3 uInk;
 ${WARP}
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 // Height (css px) of the hex cone array at x. Lattice fixed to the canvas, so spikes
@@ -380,7 +382,7 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
     const warp = program(FS_WARP, ['uT', 'uRes', 'uCss', 'uZone', 'uD'])
     const blur = program(FS_BLUR, ['uSrc', 'uStep'])
     const grad = program(FS_GRAD, ['uSrc'])
-    const draw = program(FS_DRAW, ['uS', 'uB', 'uThi', 'uL', 'uCss', 'uTime', 'uStill', 'uDome', 'uSpH', 'uPitch', 'uK', 'uD'])
+    const draw = program(FS_DRAW, ['uS', 'uB', 'uThi', 'uL', 'uCss', 'uTime', 'uStill', 'uDome', 'uSpH', 'uPitch', 'uK', 'uD', 'uInk'])
     if (!warp || !blur || !grad || !draw) return false
     progs = { warp, blur, grad, draw }
     vao = gl.createVertexArray()
@@ -491,6 +493,7 @@ export function createFerro(canvas: HTMLCanvasElement): Ferro | null {
     const P = progs.draw
     gl.bindVertexArray(vao)
     gl.useProgram(P.p)
+    gl.uniform3f(P.u.uInk ?? null, ink[0], ink[1], ink[2])
     target(null)
     gl.viewport(0, 0, canvas.width, canvas.height)
     gl.clearColor(0, 0, 0, 0)

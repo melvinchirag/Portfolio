@@ -19,6 +19,7 @@ const GROUPS: { title: string; rows: Row[] }[] = [
       { key: 'core', label: 'Hot line and glints' },
       { key: 'ground', label: 'Background' },
       { key: 'mask', label: 'Mask' },
+      { key: 'text', label: 'Text, title and buttons' },
     ],
   },
   {

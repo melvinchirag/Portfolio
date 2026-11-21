@@ -32,7 +32,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
 import { heroScroll } from '../../hooks/heroScroll'
-import { lightHex } from '../../velvet'
+import { maskColor } from '../../velvetLab'
 import { contactHandoff } from '../../hooks/contactVisibility'
 import { heroIntro } from '../../hooks/heroIntro'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
@@ -545,7 +545,7 @@ export function PhoneSwarm() {
           uPositionTexture: { value: null },
           uVelocityTexture: { value: null },
           uParticleSize: { value: 0.95 },
-          uColor: { value: new THREE.Color(lightHex('#d9bb7c')) },
+          uColor: { value: maskColor('#d9bb7c') },
           uMinAlpha: { value: 0.17 },
           uMaxAlpha: { value: 1.0 },
           uFeatureFloor: { value: 0.8 },
@@ -573,7 +573,7 @@ export function PhoneSwarm() {
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
           uFade: { value: 0 },
-          uColor: { value: new THREE.Color(lightHex('#e6d2a4')).multiplyScalar(1.7) },
+          uColor: { value: maskColor('#e6d2a4', 1.7) },
         }),
       )
       const burstMats = SLOTS.map(() =>
@@ -588,7 +588,7 @@ export function PhoneSwarm() {
           uAtlas: { value: atlas.texture },
           uCols: { value: atlas.cols },
           uFade: { value: 0 },
-          uColor: { value: new THREE.Color(lightHex('#e6d2a4')).multiplyScalar(1.0) },
+          uColor: { value: maskColor('#e6d2a4', 1.0) },
         }),
       )
       const atmosMat = mk(atmosVertex, glyphFragment, {
@@ -600,7 +600,7 @@ export function PhoneSwarm() {
         uAtlas: { value: atlas.texture },
         uCols: { value: atlas.cols },
         uFade: { value: 1 },
-        uColor: { value: new THREE.Color(lightHex('#ecd9ab')).multiplyScalar(1.15) },
+        uColor: { value: maskColor('#ecd9ab', 1.15) },
       })
       if (!cancelled) setSim({ gpu, posVar, velVar, geometry, roveGeo, burstGeo, atmosGeo, atmosMat, faceMats, roveMats, burstMats })
     }

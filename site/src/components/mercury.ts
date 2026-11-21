@@ -20,6 +20,7 @@
 
 import { SPIKE_GLSL, SPIKE_UNIFORMS, spikeSpring } from './spikes'
 import { FLUID } from '../velvet'
+import { ink } from '../velvetLab'
 
 export type MercuryFrame = {
   time: number
@@ -57,6 +58,7 @@ uniform vec4 u_body; uniform float u_bodyOn; uniform float u_axis; uniform float
 
 float sdEll(vec3 p, vec3 r){ float k0 = length(p / r); float k1 = length(p / (r * r)); return k0 * (k0 - 1.0) / k1; }
 float smin(float a, float b, float k){ float h = max(k - abs(a - b), 0.0) / k; return min(a, b) - h * h * k * 0.25; }
+uniform vec3 uInk;
 float ellZ(vec2 q, vec2 c, vec3 r){ vec2 w = (q - c) / max(r.xy, vec2(0.001)); return r.z * sqrt(max(0.0, 1.0 - dot(w, w))); }
 float bodyZ(vec2 q){ float z = max(ellZ(q, u_a, u_ra), ellZ(q, u_b, u_rb)); if (u_bodyOn > 0.5) z = max(z, ellZ(q, u_body.xy, vec3(u_body.zw, u_rb.z))); return z; }
 ${SPIKE_GLSL}
@@ -105,7 +107,7 @@ void main(){
 }
 `
 
-const UNIFORMS = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_body', 'u_bodyOn', 'u_axis', 'u_still', ...SPIKE_UNIFORMS] as const
+const UNIFORMS = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_body', 'u_bodyOn', 'u_axis', 'u_still', 'uInk', ...SPIKE_UNIFORMS] as const
 
 function compile(gl: WebGLRenderingContext, type: number, src: string) {
   const s = gl.createShader(type)
@@ -170,6 +172,7 @@ export function createMercury(canvas: HTMLCanvasElement): Mercury | null {
       if (lost) return
       gl.uniform2f(U.u_res, canvas.width, canvas.height)
       gl.uniform1f(U.u_time, f.time)
+      gl.uniform3f(U.uInk, ink[0], ink[1], ink[2])
       gl.uniform2f(U.u_a, f.a[0], f.a[1])
       gl.uniform2f(U.u_b, f.b[0], f.b[1])
       gl.uniform3f(U.u_ra, f.ra[0], f.ra[1], f.ra[2])

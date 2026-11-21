@@ -33,6 +33,7 @@
 
 import { SPIKE_GLSL, SPIKE_UNIFORMS, spikeSpring } from './spikes'
 import { FLUID } from '../velvet'
+import { ink } from '../velvetLab'
 
 type Shape = 'pill' | 'round' | 'dot' | 'line'
 type Cfg = { shape: Shape; spikes: boolean; pad: number; spS: number; spH: number; spR: number; hov: number }
@@ -45,6 +46,7 @@ uniform vec2 u_res; uniform float u_time; uniform vec2 u_a; uniform vec2 u_b; un
 uniform float u_still;
 float sdEll(vec3 p, vec3 r){ if (r.x < 0.003 || r.y < 0.003) return 10.0; float k0 = length(p/r); float k1 = length(p/(r*r)); return k0*(k0-1.0)/k1; }
 float smin(float a, float b, float k){ float h = max(k-abs(a-b),0.0)/k; return min(a,b) - h*h*k*0.25; }
+uniform vec3 uInk;
 float ellZ(vec2 q, vec2 c, vec3 r){ vec2 w = (q - c) / max(r.xy, vec2(0.001)); return r.z * sqrt(max(0.0, 1.0 - dot(w, w))); }
 float bodyZ(vec2 q){ return max(ellZ(q, u_a, u_ra), ellZ(q, u_b, u_rb)); }
 ${SPIKE_GLSL}
@@ -83,7 +85,7 @@ void main(){
 }
 `
 
-const UN = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_still', ...SPIKE_UNIFORMS] as const
+const UN = ['u_res', 'u_time', 'u_a', 'u_b', 'u_ra', 'u_rb', 'u_k', 'u_still', 'uInk', ...SPIKE_UNIFORMS] as const
 type UName = (typeof UN)[number]
 type GL = { gl: WebGLRenderingContext; U: Record<UName, WebGLUniformLocation | null>; free: () => void }
 
@@ -449,6 +451,7 @@ class Slime {
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.uniform2f(U.u_res, canvas.width, canvas.height)
     gl.uniform1f(U.u_time, rm ? 0 : now / 1000)
+    gl.uniform3f(U.uInk, ink[0], ink[1], ink[2])
     gl.uniform2f(U.u_a, this.a[0], this.a[1])
     gl.uniform2f(U.u_b, this.b[0], this.b[1])
     gl.uniform3f(U.u_ra, this.ra[0], this.ra[1], this.ra[2])

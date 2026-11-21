@@ -50,10 +50,12 @@ export const lightRgb = velvet ? '243, 233, 210' : '205, 183, 138'
 /** The liquid (menu, buttons, MELVIN title) colours, as GLSL. */
 export const FLUID = velvet
   ? {
-      deep: 'vec3(0.52, 0.36, 0.33)',
-      body: 'vec3(0.953, 0.914, 0.824)',
-      light: 'vec3(1.0, 0.97, 0.90)',
-      cap: 'vec3(1.0, 0.98, 0.93)',
+      // uInk is the look lab's "text, title and buttons" colour, set every frame
+      // by mercury.ts, slime.ts and ferro.ts so the liquids follow the panel live.
+      deep: '(uInk * vec3(0.55, 0.40, 0.40))',
+      body: 'uInk',
+      light: 'min(uInk * 1.08, vec3(1.0))',
+      cap: 'min(uInk * 1.1, vec3(1.0))',
     }
   : {
       deep: 'vec3(0.40, 0.35, 0.25)',

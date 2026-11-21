@@ -9,7 +9,7 @@
  * Nothing here runs unless the velvet preview is on.
  */
 import * as THREE from 'three'
-import { velvet } from './velvet'
+import { lightRgb, velvet } from './velvet'
 
 /** MELVIN'S PICK (2026-11-21): the look he tuned in the panel and pasted back. */
 export const LAB_DEFAULTS = {
@@ -18,6 +18,7 @@ export const LAB_DEFAULTS = {
   red: '#c00812',
   core: '#ff8800',
   mask: '#eca33c',
+  text: '#f5d6a3',
   brightness: 1,
   core_strength: 0.79,
   core_thin: 68,
@@ -53,6 +54,7 @@ const FIRST_LOOK: typeof LAB_DEFAULTS = {
   red: '#c00812',
   core: '#ffd9bf',
   mask: '#f1e4cc',
+  text: '#f3e9d2',
   // the light
   brightness: 1,
   core_strength: 0.35,
@@ -136,6 +138,7 @@ export function saveLab() {
     /* ignore */
   }
   applyGround()
+  applyInk()
 }
 
 export function setLab(values: Partial<Lab>) {
@@ -149,6 +152,53 @@ export function applyGround() {
   document.documentElement.style.setProperty('--velvet-void', lab.ground)
 }
 applyGround()
+
+/** The text colour as 0..1 sRGB, for the liquid shaders (menu, buttons, MELVIN title). */
+export const ink: [number, number, number] = [0.953, 0.914, 0.824]
+/** The text colour as an "r, g, b" triple for the 2D canvases (fact snakes, name dots). */
+export const inkState = { rgb: lightRgb }
+/** Mask-coloured THREE colours handed out by maskColor(), kept in step with the lab. */
+const tracked: { c: THREE.Color; k: number }[] = []
+
+/**
+ * A particle colour for the small faces (phone swarm, Contact swarm). Outside the
+ * velvet preview it is just the sand hex. In it, it is the lab's mask colour times
+ * `k`, and it follows the panel.
+ */
+export function maskColor(sandHex: string, k = 1): THREE.Color {
+  if (!velvet) return new THREE.Color(sandHex).multiplyScalar(k)
+  const c = new THREE.Color(lab.mask).multiplyScalar(k * lab.mask_bright)
+  tracked.push({ c, k })
+  if (tracked.length > 64) tracked.shift()
+  return c
+}
+
+function shade(hex: string, f: number, towards: [number, number, number] = [0, 0, 0]) {
+  const n = parseInt(hex.slice(1), 16)
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v, i) => Math.round(v * f + towards[i] * (1 - f)))
+  return '#' + ch.map((v) => v.toString(16).padStart(2, '0')).join('')
+}
+
+/** Text, title, menu and buttons: CSS tokens, liquid shaders and canvases all follow lab.text. */
+export function applyInk() {
+  if (!velvet || typeof document === 'undefined') return
+  const n = parseInt(lab.text.slice(1), 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  ink[0] = r / 255
+  ink[1] = g / 255
+  ink[2] = b / 255
+  inkState.rgb = r + ', ' + g + ', ' + b
+  const st = document.documentElement.style
+  st.setProperty('--color-sand', lab.text)
+  st.setProperty('--color-accent', lab.text)
+  st.setProperty('--color-white', lab.text)
+  st.setProperty('--color-sand-dim', shade(lab.text, 0.78))
+  st.setProperty('--color-sand-deep', shade(lab.text, 0.42, [70, 14, 14]))
+  for (const t of tracked) t.c.set(lab.mask).multiplyScalar(t.k * lab.mask_bright)
+}
+applyInk()
 
 function readLabFlag(): boolean {
   if (!velvet || typeof window === 'undefined') return false
