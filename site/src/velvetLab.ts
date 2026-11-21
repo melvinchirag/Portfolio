@@ -11,7 +11,42 @@
 import * as THREE from 'three'
 import { velvet } from './velvet'
 
+/** MELVIN'S PICK (2026-11-21): the look he tuned in the panel and pasted back. */
 export const LAB_DEFAULTS = {
+  ground: '#060102',
+  deep: '#68080e',
+  red: '#c00812',
+  core: '#ff8800',
+  mask: '#eca33c',
+  brightness: 1,
+  core_strength: 0.79,
+  core_thin: 68,
+  glow: 1.06,
+  glow_reach: 14,
+  second: 0.54,
+  curtain: 0.14,
+  haze: 0.21,
+  dust: 0.12,
+  dust_bright: 0.46,
+  dust_size: 0.5,
+  glints: 0.34,
+  twinkle: 0.32,
+  height: 0.6,
+  tilt: 0.07,
+  wave: 0.96,
+  speed: 2.38,
+  vignette: 0,
+  mask_bright: 0.98,
+  mask_catch: 0.64,
+  mask_wrap: 1.04,
+  mask_halo: 0.5,
+  mask_dim: 0.76,
+  bloom: 1.61,
+  bloom_threshold: 0.19,
+}
+
+/** The first starting look (deep crimson and cream), kept so the presets below still mean what they did. */
+const FIRST_LOOK: typeof LAB_DEFAULTS = {
   // colours (as picked: sRGB hex)
   ground: '#060102',
   deep: '#4a0308',
@@ -54,23 +89,27 @@ export type LabKey = keyof Lab
 
 /** Starting points to compare. Each is a partial override of the defaults. */
 export const LAB_PRESETS: Record<string, Partial<Lab>> = {
-  'Deep crimson': {},
+  'Your pick': {},
+  'Deep crimson': { ...FIRST_LOOK },
   Oxblood: {
+    ...FIRST_LOOK,
     ground: '#040001', deep: '#2e0206', red: '#8f0510', core: '#f2b59a',
     core_strength: 0.22, glow: 1.3, haze: 0.3, glints: 0.12, bloom: 0.55, mask: '#e8d6bc',
   },
   'Ruby glow': {
+    ...FIRST_LOOK,
     ground: '#070102', deep: '#5a0209', red: '#e0061a', core: '#ffc7b0',
     core_strength: 0.3, glow: 1.5, haze: 0.3, dust_bright: 1.7, bloom: 0.85,
   },
   'White hot': {
+    ...FIRST_LOOK,
     ground: '#070203', deep: '#941a2c', red: '#fa3f44', core: '#fbf5e9',
     core_strength: 1.05, glow: 1, haze: 0.05, glints: 0.7, mask: '#f3e9d2',
     mask_catch: 0, mask_wrap: 0, mask_halo: 0, mask_dim: 0,
   },
 }
 
-const KEY = 'velvetLab.v1'
+const KEY = 'velvetLab.v2'
 
 function load(): Lab {
   const out = { ...LAB_DEFAULTS }
