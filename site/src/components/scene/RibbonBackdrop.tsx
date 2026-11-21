@@ -9,6 +9,7 @@
  * Every colour and amount comes from the look lab (velvetLab.ts) each frame, so the
  * panel changes it live. The sheet also knows where the big mask is: its particles
  * bend round the face, gather at its edge and thin out behind it.
+ * `lite` (phones) draws two particle depths instead of four to spare the GPU.
  */
 import { useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
@@ -19,7 +20,7 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 const vertex = /* glsl */ `
   void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
 `
-const fragment = /* glsl */ `
+const fragment = (lite: boolean) => /* glsl */ `
   precision highp float;
   uniform vec4 uSheet;   // buffer width, height, time, (mask catch: unused here)
   uniform float uGain; uniform float uDpr;
@@ -86,9 +87,9 @@ const fragment = /* glsl */ `
     float px = uRes.y / uDpr / uDust.z;             // screen height in CSS pixels
     vec2 sp = vec2(x, d) - push;
     float fine = motes(vec2(sp.x + uT * 0.004, sp.y + uT * 0.010) * px / 2.6, dens * 0.95, 0.0);
-    float fine2 = motes(vec2(sp.x - uT * 0.003, sp.y + uT * 0.013) * px / 3.7 + 19.5, dens * 0.7, 71.0);
+    ${lite ? 'float fine2 = 0.0;' : 'float fine2 = motes(vec2(sp.x - uT * 0.003, sp.y + uT * 0.013) * px / 3.7 + 19.5, dens * 0.7, 71.0);'}
     float mid = motes(vec2(sp.x - uT * 0.006, sp.y + uT * 0.016) * px / 6.5, dens * 0.34, 17.0);
-    float far = motes(vec2(sp.x + uT * 0.009, sp.y + uT * 0.024) * px / 15.0, dens * 0.16, 41.0);
+    ${lite ? 'float far = 0.0;' : 'float far = motes(vec2(sp.x + uT * 0.009, sp.y + uT * 0.024) * px / 15.0, dens * 0.16, 41.0);'}
     float dotOn = fine * 1.15 + fine2 + mid * 1.25 + far * 0.55;
     float warm = motesWarm;
 
@@ -118,7 +119,7 @@ const fragment = /* glsl */ `
 const bg = new THREE.Color()
 const buf = new THREE.Vector2()
 
-export function RibbonBackdrop({ gain }: { gain: number }) {
+export function RibbonBackdrop({ gain, lite = false }: { gain: number; lite?: boolean }) {
   const reduced = usePrefersReducedMotion()
   const { geo, mat } = useMemo(() => {
     const geo = new THREE.BufferGeometry()
@@ -141,14 +142,14 @@ export function RibbonBackdrop({ gain }: { gain: number }) {
         uTwinkle: { value: 0.35 },
       },
       vertexShader: vertex,
-      fragmentShader: fragment,
+      fragmentShader: fragment(lite),
       depthTest: false,
       depthWrite: false,
       toneMapped: false,
     })
     return { geo, mat }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [lite])
 
   useFrame((state, dt) => {
     const u = mat.uniforms

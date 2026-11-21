@@ -4248,3 +4248,12 @@ Melvin: no square before the masks; flow like starlings; masks formed before the
 
 ## 2026-11-20 VISION PLAN written (docs/VISION-PLAN.md)
 Melvin rejected the flat-colour palette boards and sent 17 saved reels (analysed read-only by three agents). Vision Lab (artifact BzxWYSp1SpZJUYqzg6gxVf: eyes, garden, descent) and Light Lab (QhhAtk58AH8Rk62c4xUEPJ: grain ribbon, light ring, chromatic edge; rebuilt from the agent log after Lab B overwrote Lab A's file) are mock-ups only. His feedback: use ALL the references, not three; Work stays CLEAN with a moving gradient background; flowers do not go on Work, they become a garden on Contact that grows; he likes the eye (place it). Plan: Intro = opening eye; Work = clean + gradient; About = eye and portrait; Vision = Mariana descent with the lure as a real light; Contact = growing garden tied to the form; global grain and chromatic fringe; colour rule: Graphite and Sand carry UI, the loud colour only on living things.
+
+## 2026-11-21: red and amber look is LIVE (replaces graphite and sand)
+
+- Melvin tuned the look himself in the look lab and asked for it on melvinchirag.com. The live default is now: near-black red ground, one light sheet (deep red body, orange-hot crest) behind every page except About, amber particle masks, pale amber text, title, menu and buttons.
+- All values live in `site/src/velvetLab.ts` (`LAB_DEFAULTS` = his pick). `/?lab=1` opens the tuning panel on any page; "Copy settings" gives the values to paste back. `/?velvet=0` shows the old graphite and sand for the tab.
+- The light sheet is `site/src/components/scene/RibbonBackdrop.tsx` (name is historical: it was ribbons first, rebuilt after reel 4). Phones get a lighter version of the shader (`lite`).
+- The big mask is lit by the sheet and the sheet's particles bend round the face (`maskScreen`, `SHEET` in velvetLab.ts; MaskField.tsx).
+- Superseded: the "opening eye" intro in docs/VISION-PLAN.md. The neuron loader stays; the eye is kept only as an About idea.
+- Domain: melvinchirag.com was suspended by Namecheap on Nov 20 for unverified contact email; verified Nov 21 and nameservers restored to Vercel.

@@ -160,7 +160,7 @@ function SceneContents({
     <>
       {isAbout && aboutTex && <VideoPlane texture={aboutTex} />}
       {/* Velvet preview: the light sheet, bright in the hero and quiet on reading pages. */}
-      {velvet > 0 && !isAbout && <RibbonBackdrop gain={isHome ? 1 : 0.5} />}
+      {velvet > 0 && !isAbout && <RibbonBackdrop gain={isHome ? 1 : 0.5} lite={isPhone} />}
 
       {/* TWO LAYERS ACROSS THE HERO → CONTACT BOUNDARY, both driven off the
           one shared `contactHandoff.t` in contactVisibility.ts so they can't

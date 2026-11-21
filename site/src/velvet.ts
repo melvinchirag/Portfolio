@@ -17,9 +17,13 @@ function read(): number {
       sessionStorage.setItem('velvet', String(n))
       return n
     }
-    return parseInt(sessionStorage.getItem('velvet') || '0', 10) || 0
+    // LIVE since 2026-11-21 (Melvin: "the changes we chose are not there in
+    // melvinchirag.com"): the red and amber look is the default. /?velvet=0 still
+    // brings graphite and sand back for the tab.
+    const saved = sessionStorage.getItem('velvet')
+    return saved === null ? 1 : parseInt(saved, 10) || 0
   } catch {
-    return 0
+    return 1
   }
 }
 
