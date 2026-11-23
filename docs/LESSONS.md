@@ -249,3 +249,14 @@ would have saved a whole session.
    `docs/PAGE-PLAN.md`). Melvin can switch AI tools "like a pair of gloves."
 4. **Log every change to `CONTEXT.md` immediately** (standing rule), and add new
    hard-won lessons here.
+5. **Click through the menu before every production push.** Loading each page
+   by its address is not a test of the site: route changes re-render the shared
+   scene, and a bug that only fires on re-render stays hidden. On Nov 21, 2026 a
+   `ref` on the library's `<Bloom>` made every menu click blank the whole site
+   for a day, while every direct page load looked fine. The check is: load Home,
+   click each menu word in turn, scroll Home to the bottom and back, repeat at
+   phone width, and read the console for errors.
+6. **Never put a `ref` (or any object) on an `@react-three/postprocessing`
+   effect component.** It runs `JSON.stringify` over its props, and in React 19
+   `ref` is a prop. Build the effect yourself and hand it over with
+   `<primitive object={effect} />` (see `TunedBloom` in GlobalScene.tsx).

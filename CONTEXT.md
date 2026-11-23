@@ -4257,3 +4257,11 @@ Melvin rejected the flat-colour palette boards and sent 17 saved reels (analysed
 - The big mask is lit by the sheet and the sheet's particles bend round the face (`maskScreen`, `SHEET` in velvetLab.ts; MaskField.tsx).
 - Superseded: the "opening eye" intro in docs/VISION-PLAN.md. The neuron loader stays; the eye is kept only as an About idea.
 - Domain: melvinchirag.com was suspended by Namecheap on Nov 20 for unverified contact email; verified Nov 21 and nameservers restored to Vercel.
+
+## 2026-11-22: FIXED menu clicks blanking the site (live Nov 21 to Nov 22)
+
+- Symptom (Melvin: "certain parts and pages of the website didn't work"): any menu click, on desktop or phone, turned the whole site black. Direct page loads worked.
+- Cause: the look-lab bloom in GlobalScene.tsx passed a `ref` to `<Bloom>`; the library stringifies its props, the ref became circular after first render, and the next re-render (every route change) threw and unmounted the app.
+- Fix (main 65f4ada): `TunedBloom` builds one `BloomEffect` and renders it as a primitive. Same settings, still follows the look lab.
+- Verified on melvinchirag.com and locally: Home, Work (row expand, search), Vision, About, Contact through the menu; Home scrolled to the Contact section and back; phone width menu and scroll; no console errors. See docs/LESSONS.md 5 and 6.
+- Open, not a bug: on Home the bright crest of the light runs through the Present cards and the Contact form. Offer made to Melvin to dim the light once the page scrolls past the top.
