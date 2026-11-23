@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { EffectComposer, Bloom } from '@react-three/postprocessing'
-import type { BloomEffect } from 'postprocessing'
+import { EffectComposer } from '@react-three/postprocessing'
+import { BloomEffect } from 'postprocessing'
 import * as THREE from 'three'
 import { useLocation } from 'react-router-dom'
 import { MaskParticles } from './MaskField'
@@ -15,16 +15,28 @@ import { groundHex, velvet } from '../../velvet'
 import { RibbonBackdrop } from './RibbonBackdrop'
 import { lab } from '../../velvetLab'
 
-/** The bloom. In the velvet preview its strength and threshold follow the look lab live. */
+/**
+ * The bloom. Its strength and threshold follow the look lab live.
+ *
+ * WHY NOT <Bloom ref={...}>: the library's <Bloom> wrapper does JSON.stringify on
+ * every prop it is given to decide when to rebuild the effect. In React 19 `ref` is
+ * an ordinary prop, so once the ref held the effect (a circular object) the next
+ * re-render threw "Converting circular structure to JSON" and took the whole app
+ * down. A re-render happens on every route change, so every menu click blanked the
+ * site (live from Nov 21 to Nov 22, 2026). The effect is built here once and handed
+ * to the composer directly, so there is no ref and nothing to stringify.
+ */
 function TunedBloom() {
-  const ref = useRef<BloomEffect>(null)
+  const effect = useMemo(
+    () => new BloomEffect({ intensity: 0.7, luminanceThreshold: 0.15, luminanceSmoothing: 0.4, mipmapBlur: true }),
+    [],
+  )
   useFrame(() => {
-    const b = ref.current
-    if (!b || !velvet) return
-    b.intensity = lab.bloom
-    b.luminanceMaterial.threshold = lab.bloom_threshold
+    if (!velvet) return
+    effect.intensity = lab.bloom
+    effect.luminanceMaterial.threshold = lab.bloom_threshold
   })
-  return <Bloom ref={ref} intensity={0.7} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
+  return <primitive object={effect} dispose={null} />
 }
 
 /**
