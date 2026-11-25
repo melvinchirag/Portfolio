@@ -101,7 +101,9 @@ const PROSE_STACK =
 function FrameDots({ active }: { active: number }) {
   return (
     // bottom-3: low, out of the way of the name block and the fact snakes.
-    <div ref={slime.dots} className="absolute bottom-[92px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 md:bottom-3">
+    // Phones (Melvin, 2026-11-25): the page menu moved to the CM button in the top
+    // right corner, so the dots take the very bottom of the screen.
+    <div ref={slime.dots} className="absolute bottom-[calc(18px+env(safe-area-inset-bottom,0px))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 md:bottom-3">
       {FRAMES.map((f, i) => (
         <button
           key={f.id}
@@ -186,7 +188,7 @@ function IdentityFrame({ index }: { index: number }) {
       ref={rootRef}
       data-pan={index}
       // Right padding on md+ clears the fixed 76px clock rail (HeroClockRail).
-      className="relative grid h-full w-full grid-cols-12 items-end px-6 pb-[19vh] md:px-10 md:pb-[12vh] md:pr-[100px] lg:px-14 lg:pr-[110px]"
+      className="relative grid h-full w-full grid-cols-12 items-end px-6 pb-[calc(64px+env(safe-area-inset-bottom,0px))] md:px-10 md:pb-[12vh] md:pr-[100px] lg:px-14 lg:pr-[110px]"
     >
       <NameAssembly rootRef={rootRef} targetRef={firstNameRef} onDone={reveal} />
 
@@ -199,9 +201,10 @@ function IdentityFrame({ index }: { index: number }) {
           the N of MELVIN, and the surname is tracked out to MELVIN's width
           (see the effect above), so the whole lockup is one aligned block. */}
       <div className="frame-item relative col-span-12 flex flex-col md:col-span-7 md:col-start-6 md:block" style={FI(0)}>
-        {/* On a phone the wrapper below is display:contents so the links, the two
-            buttons, the name and the sentence can be reordered: the buttons sit ABOVE
-            the name (Melvin, 2026-11-20) and stay clear of the bottom menu. */}
+        {/* On a phone the wrapper below is display:contents so the links, the name,
+            the sentence and the two buttons can be ordered freely. Order since
+            2026-11-25 (Melvin): links, name, sentence, then the buttons UNDER the
+            sentence where the page dots used to be, and the dots at the very bottom. */}
         <div className="contents md:relative md:block md:w-fit">
           <div ref={slime.links} className="label order-2 mb-5 flex items-center justify-end gap-5">
             <a data-slime href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
@@ -247,15 +250,19 @@ function IdentityFrame({ index }: { index: number }) {
         </div>
 
         <p className="order-4 mt-7 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/75 sm:text-[15.5px]">
-          I build computer-vision and machine-learning systems that work outside the screen, and I
-          am vice president of Hack The Nest, EMU's first hackathon. This site can{' '}
+          {/* Rewritten 2026-11-25. Melvin: "I don't build computer vision and machine
+              learning systems only, right? I have a lot of things." Every item named
+              here is a project on the Work page. */}
+          I build whatever the idea needs: AI agents, vision systems, a space simulator, this
+          site. Some of it has won hackathons. I'm also vice president of Hack The Nest, EMU's
+          first hackathon. This site can{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
             see further
           </Link>
           .
         </p>
 
-        <div ref={slime.cta} className="order-1 mb-6 flex flex-wrap items-center gap-3 md:order-none md:mt-8 md:mb-0">
+        <div ref={slime.cta} className="order-5 mt-6 flex flex-wrap items-center gap-3 md:order-none md:mt-8">
           <Link data-slime data-slime-home to="/work" className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide">
             See the work
           </Link>
@@ -683,9 +690,9 @@ function FutureFrame({ index }: { index: number }) {
   )
 }
 
-/** Phones: room kept clear above a text frame (the logo) and below it (page dots and menu), in px. */
-const FIT_TOP = 58
-const FIT_BOTTOM = 128
+/** Phones: room kept clear above a text frame (the logo and the CM menu button) and below it (the page dots), in px. */
+const FIT_TOP = 66
+const FIT_BOTTOM = 52
 /** The smallest a frame is ever scaled to. Below this the text stops being readable. */
 const FIT_FLOOR = 0.72
 
