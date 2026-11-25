@@ -24,7 +24,7 @@
 import { useRef } from 'react'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { HeroBeats } from '../components/HeroBeats'
-import { BEAT_COUNT, useHeroScrollTrack } from '../hooks/heroScroll'
+import { BEAT_COUNT, useHeroScrollTrack, usePhoneFrameSettle } from '../hooks/heroScroll'
 import { Contact } from './Contact'
 
 export function Home() {
@@ -34,11 +34,16 @@ export function Home() {
   // Measures scroll position through the track and publishes it to the shared
   // `heroScroll` store. This is the ONLY thing that writes scroll state.
   useHeroScrollTrack(trackRef)
+  // Phones: never leave the page resting between two frames (see heroScroll.ts).
+  usePhoneFrameSettle(trackRef)
 
   return (
     <>
       <section id="hero-track" ref={trackRef} className="relative" style={{ height: `${BEAT_COUNT * 100}vh` }}>
-        <div className="sticky top-0 h-screen w-full overflow-hidden">
+        {/* h-svh on phones: 100vh on an iPhone is the height with the browser bars
+            hidden, so an h-screen box ran under Safari's toolbar and pushed the
+            frames and their dots below the visible screen. */}
+        <div className="sticky top-0 h-svh w-full overflow-hidden md:h-screen">
           {/* The persistent WebGL layer (particle mask + liquid glass) is now
               rendered globally in App.tsx -> GlobalScene so it persists across pages. */}
 

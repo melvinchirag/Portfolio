@@ -4265,3 +4265,14 @@ Melvin rejected the flat-colour palette boards and sent 17 saved reels (analysed
 - Fix (main 65f4ada): `TunedBloom` builds one `BloomEffect` and renders it as a primitive. Same settings, still follows the look lab.
 - Verified on melvinchirag.com and locally: Home, Work (row expand, search), Vision, About, Contact through the menu; Home scrolled to the Contact section and back; phone width menu and scroll; no console errors. See docs/LESSONS.md 5 and 6.
 - Open, not a bug: on Home the bright crest of the light runs through the Present cards and the Contact form. Offer made to Melvin to dim the light once the page scrolls past the top.
+
+## 2026-11-24: PHONE HERO FIXED (friends reported "the phone version breaks and it's not functional")
+
+Found with a new phone emulation harness (`tools/phone-check/`, headless Chrome as a phone with real finger drags). No crash and no errors; the faults were layout and motion, on the Home hero only:
+
+1. **Frames rested half off the screen.** The pan was linear in scroll, so a frame was centred at exactly one scroll position. A thumb scroll stops anywhere: 8 of 19 test rests had text cut off. Now on phones (`hooks/heroScroll.ts`): `phonePan` holds each frame centred for 30 percent of a step either side and slides only in the gap; `usePhoneFrameSettle` glides the page out of the gap when a scroll stops inside it (not while a finger is down, not in the Contact section). After: 0 of 19, at 390x664, 360x640 and 390x844.
+2. **Frames were taller than a real phone screen.** At the 664px an iPhone shows with Safari's bars up, The Present lost its title off the top and its tags under the menu. Now: pinned box is `h-svh` on phones (Home.tsx); phone titles are one line (2.2rem), box padding and the project preview are shorter (HeroBeats.tsx); and the pan loop centres each text frame between the logo and the page dots and scales it down only if it is still too tall (`FIT_TOP`, `FIT_BOTTOM`, `FIT_FLOOR` = 0.72).
+3. **Light ran through the text.** On phones the light sheet now falls to 45 percent once the hero scrolls past its first frame (`scrollDim` on RibbonBackdrop).
+4. **Safety net for slow phones.** `PhoneQualityGuard` in GlobalScene.tsx lowers the canvas resolution a step (2x, 1.5x, 1x) after two slow readings under 30 fps. Verified it steps down under a 20x CPU slowdown with no errors.
+
+Desktop is unchanged (checked at 1440x900: same linear pan, no scaling). NOT verified: a real iPhone or Android, Safari itself, in-app browsers (Instagram, LinkedIn), real GPU speed. Waiting on Melvin or a friend to confirm on a device, and to say what exactly they saw if anything is still wrong.

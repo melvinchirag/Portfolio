@@ -260,3 +260,13 @@ would have saved a whole session.
    effect component.** It runs `JSON.stringify` over its props, and in React 19
    `ref` is a prop. Build the effect yourself and hand it over with
    `<primitive object={effect} />` (see `TunedBloom` in GlobalScene.tsx).
+7. **Test phones at the height a phone really shows, with real finger scrolls.**
+   An iPhone in Safari shows about 660px of height, not the 844 a simulator or a
+   390px iframe gives you, and a thumb scroll stops anywhere. Checking only tidy
+   positions on a tall screen hid two faults for days: hero frames resting half
+   off the screen, and The Present running under the menu. Run
+   `tools/phone-check/settle.mjs` at 390x664 and 360x640 before pushing anything
+   that touches the home hero.
+8. **Anything pinned with `overflow: hidden` must fit the smallest screen or scale
+   to it.** There is no scrollbar to rescue it. Use `svh`, not `vh`, for a pinned
+   box on phones: `100vh` on iOS is the height with the browser bars hidden.

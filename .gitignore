@@ -38,3 +38,6 @@ skills-lock.json
 
 # Large video master (compressed 4.6MB version ships in site/public/; keep the 209MB 4K master local only)
 video-source/
+
+# phone-check output
+.phone-out/

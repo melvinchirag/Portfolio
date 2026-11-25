@@ -30,7 +30,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { BEAT_COUNT, heroScroll, useHeroFrame } from '../hooks/heroScroll'
+import { BEAT_COUNT, heroScroll, useHeroFrame, isPhoneWidth, phonePan } from '../hooks/heroScroll'
 import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
 import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
@@ -79,7 +79,7 @@ const AREAS = [
 // is gone from every hero element, so the WebGL glass shader skips this page,
 // and `.slide-glass` is now a plain transparent box (see index.css). The
 // text-shadow went with it: no shadows, no glow, anywhere.
-const GLASS_BOX = 'slide-glass px-6 py-7 sm:px-8 sm:py-9 md:px-10'
+const GLASS_BOX = 'slide-glass px-6 py-4 sm:px-8 sm:py-9 md:px-10'
 
 /* The prose block inside Past and Future, as ONE shared class so the two
  * frames can't drift apart (Melvin, 2026-08-11: "this formatting needs to be
@@ -281,7 +281,7 @@ function PastFrame({ index }: { index: number }) {
   return (
       <div data-pan={index} className={`${GLASS_BOX} w-[min(88vw,600px)]`}>
         <h2
-          className="frame-title frame-item font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]"
+          className="frame-title frame-item font-display text-[2.2rem] tracking-[-0.015em] leading-[0.95] sm:text-[clamp(2.6rem,7vw,5.2rem)]"
           style={FI(0)}
         >
           The Past
@@ -554,7 +554,7 @@ function ProjectRail() {
                 aria-label={`Explore ${p.name}`}
                 className="group/card ease-out-expo -m-1 rounded-lg p-1 transition-opacity duration-300 hover:opacity-90"
               >
-                <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-lg bg-white/[0.045] transition-colors group-hover/card:bg-white/[0.07]">
+                <div className="relative mb-4 flex aspect-[16/7] items-end sm:aspect-[16/10] overflow-hidden rounded-lg bg-white/[0.045] transition-colors group-hover/card:bg-white/[0.07]">
                   <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
                     {p.name.charAt(0)}
                   </span>
@@ -574,7 +574,7 @@ function ProjectRail() {
               </a>
             ) : (
               <>
-                <div className="relative mb-4 flex aspect-[16/10] items-end overflow-hidden rounded-lg bg-white/[0.045]">
+                <div className="relative mb-4 flex aspect-[16/7] items-end sm:aspect-[16/10] overflow-hidden rounded-lg bg-white/[0.045]">
                   <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
                     {p.name.charAt(0)}
                   </span>
@@ -612,7 +612,7 @@ function PresentFrame({ index }: { index: number }) {
   return (
       <div data-pan={index} className={`${GLASS_BOX} relative w-[min(94vw,1060px)]`}>
         <h2
-          className="frame-title frame-item font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]"
+          className="frame-title frame-item font-display text-[2.2rem] tracking-[-0.015em] leading-[0.95] sm:text-[clamp(2.6rem,7vw,5.2rem)]"
           style={FI(0)}
         >
           The Present
@@ -648,7 +648,7 @@ function FutureFrame({ index }: { index: number }) {
   return (
       <div data-pan={index} className={`${GLASS_BOX} w-[min(90vw,680px)]`}>
         <h2
-          className="frame-title frame-item font-display text-[clamp(2.6rem,7vw,5.2rem)] tracking-[-0.015em] leading-[0.95]"
+          className="frame-title frame-item font-display text-[2.2rem] tracking-[-0.015em] leading-[0.95] sm:text-[clamp(2.6rem,7vw,5.2rem)]"
           style={FI(0)}
         >
           The Future
@@ -683,6 +683,12 @@ function FutureFrame({ index }: { index: number }) {
   )
 }
 
+/** Phones: room kept clear above a text frame (the logo) and below it (page dots and menu), in px. */
+const FIT_TOP = 58
+const FIT_BOTTOM = 128
+/** The smallest a frame is ever scaled to. Below this the text stops being readable. */
+const FIT_FLOOR = 0.72
+
 export function HeroBeats() {
   const frame = useHeroFrame()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -707,11 +713,28 @@ export function HeroBeats() {
     let raf = 0
     const tick = () => {
       const step = root.clientWidth || window.innerWidth
-      const centre = heroScroll.progress * LAST
+      // Phones hold each frame centred and slide only in the gap between (heroScroll.ts).
+      const linear = heroScroll.progress * LAST
+      const phoneNow = isPhoneWidth()
+      const centre = phoneNow ? phonePan(linear) : linear
       const x = centre * step
+      // PHONES: FIT EVERY TEXT FRAME TO THE SCREEN (2026-11-24). The frames are
+      // pinned with overflow hidden, so a frame taller than the screen was cut off
+      // at the top and ran under the menu, with no way to scroll to the rest. A
+      // real iPhone shows about 660px of height with its browser bars up, far less
+      // than the 844 a simulator assumes. So on phones each text frame is centred
+      // in the band between the logo and the page dots and, only if it is still
+      // taller than that band, scaled down to fit (never below FIT_FLOOR).
+      const fit = phoneNow && root.clientHeight > 0
+      const band = root.clientHeight - FIT_TOP - FIT_BOTTOM
       for (const el of panes) {
         const k = Number(el.dataset.pan)
-        el.style.transform = `translate3d(${k * step - x}px,0,0)`
+        if (fit && k > 0) {
+          const s = Math.max(FIT_FLOOR, Math.min(1, band / Math.max(1, el.offsetHeight)))
+          el.style.transform = `translate3d(${k * step - x}px,${(FIT_TOP - FIT_BOTTOM) / 2}px,0) scale(${s.toFixed(3)})`
+        } else {
+          el.style.transform = `translate3d(${k * step - x}px,0,0)`
+        }
         // `--fin`: 1 when this frame is centred, 0 once it is ~60% of a frame
         // away. The `.frame-item` children fade and lift off it (index.css),
         // so a frame's content arrives as it slides in and leaves as it

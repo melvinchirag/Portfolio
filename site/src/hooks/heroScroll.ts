@@ -52,6 +52,91 @@ export const heroScroll = {
 
 const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n)
 
+/* ----------------------------------------------------------------------------
+ * PHONES: HOLD EACH FRAME, THEN SLIDE (2026-11-24)
+ * On a wide screen the frames pan in direct proportion to scroll and it reads
+ * fine. On a phone it did not: a thumb scroll stops anywhere, and anywhere that
+ * is not exactly on a frame showed text cut off at the screen edge or half faded
+ * (Melvin's friends: "the phone version breaks and it's not functional").
+ *
+ * So below the md breakpoint the pan runs through `phonePan`: each frame sits
+ * dead centre for PHONE_HOLD of a step either side of its own position, and the
+ * slide to the next frame happens in the gap between. `usePhoneFrameSettle`
+ * then nudges the page out of that gap when a scroll stops inside it.
+ * -------------------------------------------------------------------------- */
+const PHONE_QUERY = '(max-width: 767px)'
+/** Share of a frame step, either side of a frame's centre, where it holds still. */
+export const PHONE_HOLD = 0.3
+
+/** True on phone-width screens. Read live so a rotated or resized window follows. */
+export function isPhoneWidth(): boolean {
+  return typeof matchMedia !== 'undefined' && matchMedia(PHONE_QUERY).matches
+}
+
+/**
+ * The pan position on phones. `pos` is progress times (frames minus one), so whole
+ * numbers are frame centres; the result holds at each whole number and eases
+ * between them.
+ */
+export function phonePan(pos: number): number {
+  const k = Math.floor(pos)
+  const t = pos - k
+  const u = clamp01((t - PHONE_HOLD) / (1 - 2 * PHONE_HOLD))
+  return k + u * u * (3 - 2 * u)
+}
+
+/**
+ * Phones only: when a scroll comes to rest inside the slide between two frames,
+ * glide the short distance to the nearer frame's hold zone, so the page never
+ * sits with a frame half off the screen. Does nothing while a finger is down,
+ * inside a hold zone, above the track or once the Contact section has taken over.
+ */
+export function usePhoneFrameSettle(ref: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const LAST = BEAT_COUNT - 1
+    let timer = 0
+    let touching = false
+    const settle = () => {
+      const el = ref.current
+      if (!el || touching || !isPhoneWidth()) return
+      const rect = el.getBoundingClientRect()
+      const scrollable = rect.height - window.innerHeight
+      const scrolled = -rect.top
+      if (scrollable <= 0 || scrolled <= 0 || scrolled >= scrollable) return
+      const pos = (scrolled / scrollable) * LAST
+      const k = Math.round(pos)
+      const off = pos - k
+      if (Math.abs(off) <= PHONE_HOLD) return
+      const target = k + Math.sign(off) * (PHONE_HOLD - 0.04)
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+      window.scrollTo({ top: window.scrollY + ((target - pos) / LAST) * scrollable, behavior: reduced ? 'auto' : 'smooth' })
+    }
+    const arm = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(settle, 170)
+    }
+    const down = () => {
+      touching = true
+      window.clearTimeout(timer)
+    }
+    const up = () => {
+      touching = false
+      arm()
+    }
+    window.addEventListener('scroll', arm, { passive: true })
+    window.addEventListener('touchstart', down, { passive: true })
+    window.addEventListener('touchend', up, { passive: true })
+    window.addEventListener('touchcancel', up, { passive: true })
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('scroll', arm)
+      window.removeEventListener('touchstart', down)
+      window.removeEventListener('touchend', up)
+      window.removeEventListener('touchcancel', up)
+    }
+  }, [ref])
+}
+
 /**
  * Attach to the tall scroll track element. Measures how far through that
  * element the viewport has scrolled and writes it into `heroScroll`.

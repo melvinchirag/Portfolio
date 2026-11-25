@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { EffectComposer } from '@react-three/postprocessing'
 import { BloomEffect } from 'postprocessing'
 import * as THREE from 'three'
@@ -37,6 +37,42 @@ function TunedBloom() {
     effect.luminanceMaterial.threshold = lab.bloom_threshold
   })
   return <primitive object={effect} dispose={null} />
+}
+
+/**
+ * PHONES: a safety net for slow GPUs (2026-11-24). Nobody has measured this site on
+ * a real low-end phone, so the scene watches its own frame rate. After the intro
+ * has settled, two slow readings in a row (under 30 frames a second, each over two
+ * seconds) lower the canvas resolution one step, down to 1x at the lowest. Fast
+ * phones never trip it and keep full sharpness.
+ */
+function PhoneQualityGuard() {
+  const setDpr = useThree((s) => s.setDpr)
+  const st = useRef({ warm: 0, t: 0, frames: 0, slow: 0, dpr: Math.min(window.devicePixelRatio || 1, 2) })
+  useFrame((_, dt) => {
+    const s = st.current
+    if (dt > 0.5 || document.hidden) {
+      // a paused tab or a long stall is not a frame-rate reading
+      s.t = 0
+      s.frames = 0
+      return
+    }
+    s.warm += dt
+    if (s.warm < 6) return
+    s.t += dt
+    s.frames++
+    if (s.t < 2) return
+    const fps = s.frames / s.t
+    s.t = 0
+    s.frames = 0
+    s.slow = fps < 30 ? s.slow + 1 : 0
+    if (s.slow >= 2 && s.dpr > 1) {
+      s.dpr = Math.max(1, s.dpr - 0.5)
+      s.slow = 0
+      setDpr(s.dpr)
+    }
+  })
+  return null
 }
 
 /**
@@ -172,7 +208,8 @@ function SceneContents({
     <>
       {isAbout && aboutTex && <VideoPlane texture={aboutTex} />}
       {/* Velvet preview: the light sheet, bright in the hero and quiet on reading pages. */}
-      {velvet > 0 && !isAbout && <RibbonBackdrop gain={isHome ? 1 : 0.5} lite={isPhone} />}
+      {velvet > 0 && !isAbout && <RibbonBackdrop gain={isHome ? 1 : 0.5} lite={isPhone} scrollDim={isHome && isPhone ? 0.45 : 1} />}
+      {isPhone && <PhoneQualityGuard />}
 
       {/* TWO LAYERS ACROSS THE HERO → CONTACT BOUNDARY, both driven off the
           one shared `contactHandoff.t` in contactVisibility.ts so they can't

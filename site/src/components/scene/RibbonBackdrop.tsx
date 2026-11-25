@@ -16,6 +16,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { CREST_GLSL, SHEET, hexToVec3, lab, maskScreen } from '../../velvetLab'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
+import { heroScroll } from '../../hooks/heroScroll'
 
 const vertex = /* glsl */ `
   void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
@@ -119,7 +120,12 @@ const fragment = (lite: boolean) => /* glsl */ `
 const bg = new THREE.Color()
 const buf = new THREE.Vector2()
 
-export function RibbonBackdrop({ gain, lite = false }: { gain: number; lite?: boolean }) {
+/**
+ * `scrollDim` (0..1, default 1 = off): on the Home page, the brightness the light
+ * falls to once the hero has scrolled past its first frame. Used on phones, where
+ * the frames' text spans the whole screen and the crest ran straight through it.
+ */
+export function RibbonBackdrop({ gain, lite = false, scrollDim = 1 }: { gain: number; lite?: boolean; scrollDim?: number }) {
   const reduced = usePrefersReducedMotion()
   const { geo, mat } = useMemo(() => {
     const geo = new THREE.BufferGeometry()
@@ -188,7 +194,12 @@ export function RibbonBackdrop({ gain, lite = false }: { gain: number; lite?: bo
     }
 
     // Ease the brightness when the page changes (hero vs reading pages).
-    const g = gain * lab.brightness
+    let quiet = 1
+    if (scrollDim < 1) {
+      const t = Math.min(1, Math.max(0, (heroScroll.progress - 0.03) / 0.09))
+      quiet = 1 - (1 - scrollDim) * t * t * (3 - 2 * t)
+    }
+    const g = gain * lab.brightness * quiet
     u.uGain.value += (g - u.uGain.value) * (1 - Math.exp(-dt * 3))
   })
 
