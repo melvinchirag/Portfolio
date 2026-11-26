@@ -1,27 +1,55 @@
 /* ============================================================================
- * PhoneSwarm.tsx: the phone hero. Twelve small masks that BREAK into glyphs the
- * moment you start scrolling, leaving three that circle together and dance.
+ * PhoneSwarm.tsx: the phone hero. Glyphs in the air on the first screen; on the
+ * way to The Past they gather into THREE masks, and the three dance a set piece
+ * through The Past, The Present and The Future, then rest beside the form.
  * ----------------------------------------------------------------------------
- * Melvin, 2026-11-20 (phone pick-board variant A, then his notes after trying
- * it on a phone):
- *  - The masks must look exactly like the desktop mask, only smaller: so this
- *    now runs the SAME particle pipeline as ContactMaskSwarm / MaskField (a
- *    shared GPGPU spring-to-home sim, 84x84 dots per face, the same face crop,
- *    eye and nose weights, blink, speed-driven alpha, additive sand points and
- *    the same rising binary/Telugu glyph layer), not a cheaper stand-in.
- *  - The break is an EVENT, not a scrubbed animation. Cross a small scroll
- *    threshold and the nine faces break up over time; stop scrolling halfway
- *    and nothing is left half dissolved. Scroll back to the top and the faces
- *    regenerate, while glyphs that already left keep flying until they fade.
- *  - The three keepers circle together and then dance on their own clock, with
- *    no scrolling needed (scroll speed, a finger and taps only add energy).
+ * Melvin, 2026-11-25: "remove the masks from the phone version ... we just keep
+ * the glyphs, and when I start scrolling, the three masks should form in the past
+ * slide, and then they should keep dancing as you go to the present, the future.
+ * Dance needs to be better."
  *
- * Cost: one sim of 84x84, twelve draws of 7,056 dots (about 85,000, versus about
- * 147,000 for the big mask), plus glyph layers. Burst layers are hidden while
- * idle. Dispose frees the geometry and materials.
+ * WHAT HAPPENS
+ *  1. First screen: no masks. A sparse field of binary digits and Telugu letters
+ *     drifts up and twinkles behind the name.
+ *  2. Forming is an EVENT, not a scrub. Once the first frame starts to slide away
+ *     (FORM_POS) some of those same glyphs fly in along arcs and condense into
+ *     three masks over FORM_SECS, whatever the finger does next. Scrolling back to
+ *     the first screen (LOOSEN_POS) loosens them into glyphs again. The gap between
+ *     the two thresholds stops any flicker.
+ *  3. The dance is three composed moves on one shared clock, one per frame:
+ *       The Past     THE CHASE     all three follow each other round one tall
+ *                                  figure-eight (the three-body orbit), heads
+ *                                  turned into the direction of travel, banking.
+ *       The Present  THE TRIANGLE  they hold a triangle round the text, breathe
+ *                                  together facing inward, then step a sixth of a
+ *                                  turn so the triangle flips. Hold, step, hold.
+ *       The Future   THE ASCENT    one after another they spiral up from the
+ *                                  bottom, widening, looking up and outward, then
+ *                                  slip back down the side margin to go again.
+ *     Moving between frames cross-fades the moves over about a second; a spring
+ *     carries each mask, so nothing teleports and nothing snaps when the scroll
+ *     direction flips. Scroll speed raises the tempo and sways them, then it settles.
+ *  4. Reading comes first. The paths rest in the free lanes (above the title, the
+ *     side margins, below the text) and cross the text at their fastest; a mask
+ *     over the text is dimmer and smaller. The text block is MEASURED from the
+ *     frame on screen ([data-pan]), with safe defaults if it is not found.
+ *  5. A tap on a mask bursts it into glyphs and it re-forms; all three turn to
+ *     look at the finger.
+ *  6. Contact: they peek in from the screen edges beside the form, clear of the
+ *     fields, with a slow bob.
+ *  Reduced motion: no flight and no dance. The glyphs stand still and the masks
+ *  fade in at their resting places by the edges.
  *
- * Face crop, features and glyph vocabulary are copied from ContactMaskSwarm so
- * that tuned file stays untouched.
+ * Cost: one 84x84 sim, three draws of 7,056 dots (about 21,000, down from about
+ * 85,000), three small roving-glyph draws and ONE draw for every glyph in the
+ * air (326). Seven draw calls, no allocation in the frame loop.
+ *
+ * The masks are the same pipeline as ContactMaskSwarm / MaskField (same crop,
+ * eye and nose weights, blink, speed-driven alpha, additive points, roving
+ * glyphs); those files stay untouched. Colours come from maskColor().
+ *
+ * Debug: add ?dancedebug to the address and window.__dance holds the three
+ * mask centres, form amounts and dimming (tools/phone-check/dance.mjs reads it).
  * ========================================================================= */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -38,6 +66,7 @@ import { heroIntro } from '../../hooks/heroIntro'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 
 const SIZE = 84 // 84 x 84 = 7,056 dots per face, the same as the desktop swarm
+const MASKS = 3
 
 // Face crop and features (same values as ContactMaskSwarm / MaskField).
 const FRONT_FACING = 0.12
@@ -74,50 +103,67 @@ function noseWeight(x: number, y: number): number {
   return Math.max(0, 1 - noseDist) * 0.85
 }
 
-/* Twelve starting places as fractions of the viewport. `keeper` = never breaks. */
-type Slot = { fx: number; fy: number; scale: number; keeper?: boolean }
-const SLOTS: Slot[] = [
-  // Top band: clear of the copy.
-  { fx: 0.14, fy: 0.08, scale: 1.0, keeper: true },
-  { fx: 0.4, fy: 0.06, scale: 0.8 },
-  { fx: 0.66, fy: 0.1, scale: 1.0 },
-  { fx: 0.88, fy: 0.07, scale: 0.85 },
-  // Second row.
-  { fx: 0.24, fy: 0.2, scale: 0.8 },
-  { fx: 0.52, fy: 0.21, scale: 0.9 },
-  { fx: 0.84, fy: 0.2, scale: 1.0, keeper: true },
-  // The edges beside the copy.
-  { fx: 0.09, fy: 0.45, scale: 0.7 },
-  { fx: 0.91, fy: 0.43, scale: 0.7 },
-  { fx: 0.09, fy: 0.64, scale: 0.75, keeper: true },
-  { fx: 0.91, fy: 0.66, scale: 0.75 },
-  { fx: 0.09, fy: 0.82, scale: 0.7 },
-]
-
-const FACE_PX = 56 // on-screen width of a scale-1 face, CSS px
+/* ---------------------------------------------------------------------------
+ * KNOBS
+ * ------------------------------------------------------------------------- */
 const FACE_LOCAL_W = 0.64
-const INTRO_SECS = 1.2
-const INTRO_STAGGER = 0.07
-const INTRO_Z_DEEP = -3
+const FACE_MID_Y = -0.14 // the face's visual middle, in its own units (it hangs below its origin)
+/** On-screen width of a mask in CSS px: a share of the screen width, inside limits. */
+const FACE_SHARE = 0.148
+const FACE_MIN = 50
+const FACE_MAX = 62
 
-/* THE EVENT. Break above BREAK_AT of hero progress, re-form below FORM_AT. */
-const BREAK_AT = 0.012
-const FORM_AT = 0.004
-const BREAK_STAGGER = 0.07 // seconds between faces
-const BREAK_DUR = 1.1 // seconds for a face's dots to lift off
-const GLYPH_LIFE = 5.5 // seconds a released glyph keeps rising
-const CIRCLE_SECS = 4.5 // circle first, then dance
+/* THE EVENT, in frame units (hero progress x 3: 0 = first screen, 1 = The Past).
+ * The first frame holds still until 0.3, so the masks never form over it. */
+const FORM_POS = 0.33
+const LOOSEN_POS = 0.29
+const FORM_SECS = 1.15
+const LOOSEN_SECS = 0.9
+const FORM_STAGGER = 0.1 // seconds between the three
 
-// Roving glyphs (the ever-present ones, same mechanism and numbers as the desktop swarm).
+/* THE DANCE. Seconds for one figure-eight, one hold-and-step, one ascent. */
+const T_CHASE = 10.5
+const T_STEP = 4.4
+const T_ASCENT = 12
+const CHASE_WARP = 0.3 // slower at the tips of the eight, faster through the text
+const STEP_HOLD = 0.55 // share of T_STEP the triangle stands still and breathes
+const ASCENT_RISE = 0.7 // share of T_ASCENT spent rising; the rest is the way back down
+const SPRING_K = 60
+const SPRING_C = 13 // a little under critical: one soft overshoot, no bounce
+const TEMPO_GAIN = 1.4 // extra tempo at full scroll speed
+const SWAY_PX = 34 // how far a fast scroll carries the masks sideways
+
+/* READING. A mask over the text loses this share of brightness and size. */
+const DIM_FADE = 0.58
+const DIM_SHRINK = 0.2
+
+/* TOUCH. */
+const TAP_RADIUS = 70 // px from a mask's middle that still counts as tapping it
+const BURST_OUT = 0.4
+const BURST_HOLD = 0.25
+const BURST_BACK = 0.95
+const LOOK_SECS = 2.6
+
+/* THE AIR: glyphs that gather into the masks, plus glyphs that only ever float. */
+const GATHER = 72 // per mask
+const FREE = 110
+const AIR_COUNT = GATHER * MASKS + FREE
+/** Where the name, sentence and buttons sit on the first screen, as shares of its height. */
+const FIRST_WORDS_TOP = 0.44
+const FIRST_WORDS_BOTTOM = 0.9
+const AIR_GLYPH_PX = 12 // CSS px at depth 1; each glyph is 0.55x to 1.45x of this
+
+// Roving glyphs on the faces (same mechanism and numbers as the desktop swarm).
 const BINARY = ['0', '1']
 const TELUGU = ['అ', 'ఇ', 'క', 'గ', 'చ', 'జ', 'ట', 'డ', 'ద', 'న', 'మ', 'ర', 'ల', 'వ', 'స', 'హ']
 const GLYPH_CHARS = [...BINARY, ...TELUGU]
-const GLYPH_POOL_FRACTION = 0.07 // fewer roving glyphs on a phone: a cleaner screen
+const GLYPH_POOL_FRACTION = 0.07
 const GLYPH_ON_FRAC = 0.06
 const GLYPH_ROVE_SPEED = 0.0024
 const GLYPH_RISE_EXP = 1.6
 const GLYPH_SIZE = 10
-const BURST_STRIDE = 8 // one dot in eight becomes a burst glyph (about 880 per face)
+
+const DEBUG = typeof location !== 'undefined' && location.search.includes('dancedebug')
 
 function makeGlyphAtlas() {
   const cols = Math.ceil(Math.sqrt(GLYPH_CHARS.length))
@@ -168,13 +214,15 @@ const simVelocity = /* glsl */ `
   }
 `
 
-// The face dots: identical to the desktop swarm, plus `uForm` (dots lift off and
-// vanish as it falls, in a per-dot random order, and return as it rises).
+// The face dots: the desktop swarm's shader, plus `uForm`. As a face forms, its dots
+// appear in a per-dot random order and each one arrives from a wider, turned cloud,
+// so the face CONDENSES into place; falling `uForm` plays the same thing backwards.
 const renderVertex = /* glsl */ `
   uniform sampler2D uPositionTexture;
   uniform sampler2D uVelocityTexture;
   uniform float uParticleSize;
   uniform float uForm;
+  uniform float uStill;
   attribute vec2 aRef;
   attribute float aGlyphSeed;
   attribute float aEye;
@@ -199,8 +247,16 @@ const renderVertex = /* glsl */ `
       float edge = min(0.06, uOnFrac * 0.5);
       vGlyphFade = clamp(smoothstep(0.0, edge, life) - smoothstep(uOnFrac - edge, uOnFrac, life), 0.0, 1.0);
     }
-    float th = aRand * 0.8;
-    vAlive = smoothstep(th, th + 0.2, uForm);
+    float th = 0.3 + aRand * 0.4;
+    vAlive = smoothstep(th, th + 0.3, uForm);
+    float loose = (1.0 - vAlive) * (1.0 - uStill);
+    vec3 mid = vec3(0.0, ${FACE_MID_Y.toFixed(2)}, 0.0);
+    vec3 q = pos - mid;
+    float turn = loose * 1.3;
+    float ca = cos(turn);
+    float sa = sin(turn);
+    q.xy = mat2(ca, sa, -sa, ca) * q.xy * (1.0 + loose * (0.8 + 1.6 * fract(aRand * 7.31)));
+    pos = q + mid;
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     gl_PointSize = (uParticleSize / -mv.z) * step(0.002, vAlive);
     gl_Position = projectionMatrix * mv;
@@ -227,7 +283,7 @@ const renderFragment = /* glsl */ `
   }
 `
 
-// The ever-present roving glyphs (same as the desktop swarm).
+// The ever-present roving glyphs on a face (same as the desktop swarm).
 const roveVertex = /* glsl */ `
   uniform sampler2D uPositionTexture;
   uniform float uGlyphSize;
@@ -267,74 +323,76 @@ const roveVertex = /* glsl */ `
     gl_Position = projectionMatrix * mv;
   }
 `
-// The burst: when a face breaks, a third of its dots become glyphs that peel off
-// in the same random order, then rise and fade on their own clock (uTime - uBreakT),
-// so they keep flying whatever the face does afterwards.
-const burstVertex = /* glsl */ `
-  uniform sampler2D uPositionTexture;
-  uniform float uGlyphSize;
-  uniform float uTime;
-  uniform float uBreakT;
-  uniform float uBreakDur;
-  uniform float uLife;
-  uniform float uRise;
-  attribute vec2 aRef;
-  attribute float aSeed;
-  attribute float aRand;
-  varying float vGlyph;
-  varying float vAlpha;
-  float hash(float x) { return fract(sin(x * 127.1) * 43758.5453); }
-  void main() {
-    vec3 pos = texture2D(uPositionTexture, aRef).xyz;
-    float start = 0.8 * (1.0 - aRand) * uBreakDur;
-    float t = (uTime - uBreakT - start) / uLife;
-    float on = step(0.0, t) * step(t, 1.0) * step(0.0, uBreakT);
-    float tc = clamp(t, 0.0, 1.0);
-    float rise = pow(tc, 1.35);
-    pos.y += uRise * rise;
-    pos.x += (hash(aSeed * 17.0) - 0.5) * uRise * 0.22 * rise;
-    pos.z += uRise * 0.12 * rise;
-    vAlpha = on * smoothstep(0.0, 0.06, tc) * (1.0 - smoothstep(0.5, 1.0, tc));
-    vGlyph = floor(hash(aSeed * 7.3 + floor(uTime * 8.0 + aSeed * 5.0)) * ${GLYPH_CHARS.length}.0);
-    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-    gl_PointSize = (uGlyphSize / -mv.z) * step(0.002, vAlpha);
-    gl_Position = projectionMatrix * mv;
-  }
-`
-// THE ATMOSPHERE: glyphs that left the faces stay in the air for good. Each one drifts
-// from where its face was to a random place on the screen, then wanders and twinkles
-// there, on its own clock (uTime - uStart), whatever the faces do afterwards.
-const atmosVertex = /* glsl */ `
-  attribute vec2 aHome;
+
+// THE AIR: every floating glyph, in one draw. Each drifts slowly upward round its own
+// place and twinkles. A glyph that belongs to a mask (aFace 0..2) also has a seat on
+// that mask (aRef, one of its dots): as the mask's uForm rises the glyph leaves the
+// air, flies to its seat along an arc and goes out as the dots come on. Falling uForm
+// sends it back. uNear moves its "air" place to a ring round the mask, which is what
+// a tap uses: the mask bursts into a small cloud of glyphs and takes them back.
+const airVertex = /* glsl */ `
   attribute vec2 aTarget;
   attribute float aSeed;
-  attribute float aDelay;
+  attribute float aFace;
+  attribute vec2 aRef;
+  attribute float aRand;
+  uniform sampler2D uPositionTexture;
+  uniform mat4 uFaceM[${MASKS}];
+  uniform float uForm[${MASKS}];
+  uniform float uNear[${MASKS}];
   uniform float uTime;
-  uniform float uStart;
-  uniform float uAtmos;
-  uniform float uGlyphSize;
+  uniform float uAir;
+  uniform float uCalm;
+  uniform vec2 uQuiet;
+  uniform float uStill;
+  uniform float uRing;
+  uniform float uGlyphPx;
   uniform vec2 uWorld;
   varying float vGlyph;
   varying float vAlpha;
   float hash(float x) { return fract(sin(x * 127.1) * 43758.5453); }
   void main() {
-    float t = uTime - uStart - aDelay;
-    float on = step(0.0, t) * step(0.0, uStart);
-    float travel = smoothstep(0.0, 6.0, t);
-    vec2 f = mix(aHome, aTarget, travel);
     float s = aSeed * 6.2831;
-    f += 0.035 * vec2(sin(t * 0.33 + s), cos(t * 0.27 + s * 1.7)) * travel;
-    f += 0.012 * vec2(sin(t * 0.9 + s * 3.1), cos(t * 0.8 + s * 2.3));
+    float t = uTime * (1.0 - uStill);
+    vec2 f = aTarget;
+    f.y = fract(f.y - t * (0.004 + 0.008 * hash(aSeed * 3.3)));
+    float edge = smoothstep(0.0, 0.07, f.y) * (1.0 - smoothstep(0.93, 1.0, f.y));
+    f.x += 0.03 * sin(t * 0.21 + s) + 0.012 * sin(t * 0.63 + s * 2.3);
+    f.y += 0.012 * cos(t * 0.47 + s * 1.7);
     vec3 pos = vec3((f.x - 0.5) * uWorld.x, -(f.y - 0.5) * uWorld.y, 0.0);
-    float tw = 0.5 + 0.5 * sin(t * 1.2 + s * 2.0);
-    vAlpha = on * smoothstep(0.0, 1.5, t) * (0.35 + 0.65 * tw) * uAtmos;
+    float depth = 0.55 + 0.9 * hash(aSeed * 11.0);
+    float tw = 0.5 + 0.5 * sin(t * (0.5 + 0.8 * hash(aSeed * 5.0)) + s * 2.0);
+    // quieter where the words are: uQuiet is the top and bottom of the text, as screen fractions
+    float words = smoothstep(uQuiet.x - 0.05, uQuiet.x + 0.03, f.y) * (1.0 - smoothstep(uQuiet.y - 0.03, uQuiet.y + 0.05, f.y));
+    float alpha = edge * (0.2 + 0.62 * tw * tw) * (0.5 + 0.4 * depth) * mix(1.0, 0.75, uCalm) * (1.0 - 0.62 * words);
+    float size = depth;
+    if (aFace > -0.5) {
+      int fi = int(aFace + 0.5);
+      float form = uForm[fi];
+      float nr = uNear[fi];
+      vec3 home = (uFaceM[fi] * vec4(texture2D(uPositionTexture, aRef).xyz, 1.0)).xyz;
+      vec3 ctr = (uFaceM[fi] * vec4(0.0, ${FACE_MID_Y.toFixed(2)}, 0.0, 1.0)).xyz;
+      float ang = hash(aSeed * 23.0) * 6.2831;
+      vec3 ring = ctr + vec3(cos(ang), sin(ang), 0.0) * uRing * (0.55 + 0.9 * hash(aSeed * 29.0));
+      vec3 air = mix(pos, ring, nr);
+      float g = clamp(form * 1.6 - aRand * 0.6, 0.0, 1.0);
+      float e = g * g * g * (g * (g * 6.0 - 15.0) + 10.0);
+      vec3 p = mix(air, home, e);
+      vec2 d = home.xy - air.xy;
+      p.xy += vec2(-d.y, d.x) * 0.3 * sin(e * 3.14159) * (hash(aSeed * 41.0) - 0.5) * 2.0;
+      float bright = max(smoothstep(0.0, 0.2, g), nr);
+      float flying = mix(alpha, 0.9, bright) * (1.0 - smoothstep(0.78, 1.0, g));
+      // reduced motion: nothing flies; the glyph just fades where it is as the mask fades in
+      pos = mix(p, pos, uStill);
+      alpha = mix(flying, alpha * (1.0 - form), uStill);
+      size = mix(mix(depth, 1.0, bright), depth, uStill);
+    }
+    vAlpha = alpha * uAir;
     vGlyph = floor(hash(aSeed * 7.3 + floor(t * 0.45 + aSeed * 9.0)) * ${GLYPH_CHARS.length}.0);
-    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-    gl_PointSize = (uGlyphSize / -mv.z) * step(0.002, vAlpha);
-    gl_Position = projectionMatrix * mv;
+    gl_PointSize = uGlyphPx * size * step(0.004, vAlpha);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
 `
-const ATMOS_COUNT = 560
 const glyphFragment = /* glsl */ `
   precision highp float;
   uniform sampler2D uAtlas;
@@ -353,14 +411,119 @@ const glyphFragment = /* glsl */ `
   }
 `
 
-type Dancer = { x: number; y: number; vx: number; vy: number }
-type Blink = { clock: number; next: number; start: number }
-type Face = { form: number; formT: number; formAt: number; breakT: number }
-
+/* ---------------------------------------------------------------------------
+ * Small maths, no allocation.
+ * ------------------------------------------------------------------------- */
+const clamp = (x: number, a: number, b: number) => (x < a ? a : x > b ? b : x)
 const smooth = (a: number, b: number, x: number) => {
-  const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
+  const t = clamp((x - a) / (b - a), 0, 1)
   return t * t * (3 - 2 * t)
 }
+const TAU = Math.PI * 2
+
+/** The text block of a frame, in screen px. Measured live; these are the fall-backs. */
+type Zone = { l: number; r: number; t: number; b: number; ok: boolean }
+/** The free lanes round a text block: where a mask may rest. */
+const LANE = { xl: 0, xr: 0, yt: 0, yb: 0 }
+function lanes(z: Zone, W: number, H: number) {
+  LANE.xl = clamp(z.l * 0.5, 20, 46)
+  LANE.xr = W - clamp((W - z.r) * 0.5, 20, 46)
+  LANE.yt = clamp(z.t * 0.5 + 8, 38, 70)
+  LANE.yb = clamp((z.b + H) * 0.5, H - 130, H - 46)
+}
+/** What a move asks of one dancer this frame. */
+const STEP = { x: 0, y: 0, yaw: 0, pitch: 0, size: 1, fade: 1, travel: 0 }
+
+/** THE CHASE: one tall figure-eight, three bodies a third of a lap apart. */
+function chase(k: number, song: number, W: number, swell: number) {
+  const s = (song / T_CHASE) * TAU + (k * TAU) / 3 - Math.PI / 2
+  const u = s + CHASE_WARP * Math.sin(2 * s)
+  const ax = ((LANE.xr - LANE.xl) / 2) * swell
+  const ay = (LANE.yb - LANE.yt) / 2
+  STEP.x = W / 2 + ax * Math.sin(2 * u)
+  STEP.y = (LANE.yt + LANE.yb) / 2 + ay * Math.sin(u)
+  STEP.yaw = 0
+  STEP.pitch = 0
+  STEP.size = 1
+  STEP.fade = 1
+  STEP.travel = 1 // heads follow the direction of travel
+}
+
+/** THE TRIANGLE: hold a triangle round the text and breathe, then step a sixth of a turn. */
+function triangle(k: number, song: number, W: number, swell: number) {
+  const tau = song / T_STEP
+  const n = Math.floor(tau)
+  const frac = tau - n
+  const move = smooth(STEP_HOLD, 1, frac)
+  const phi = -Math.PI / 2 + (Math.PI / 3) * (n + move) + (k * TAU) / 3
+  // breathe in during the hold: draw together a little and grow, then let go before the step
+  const hold = clamp(frac / STEP_HOLD, 0, 1)
+  const breath = Math.sin(Math.PI * hold) ** 2
+  const a = ((LANE.xr - LANE.xl) / 2) * swell * (1 - 0.07 * breath)
+  const b = ((LANE.yb - LANE.yt) / 2) * (1 - 0.05 * breath)
+  // an ellipse squared off a little, so the resting places sit out in the lanes
+  const Q = 0.04
+  const cx = (Math.cos(phi) - Q * Math.cos(3 * phi)) / (1 - Q)
+  const sy = (Math.sin(phi) + Q * Math.sin(3 * phi)) / (1 - Q)
+  STEP.x = W / 2 + a * cx
+  STEP.y = (LANE.yt + LANE.yb) / 2 + b * sy
+  // face the middle of the formation, which is each other
+  STEP.yaw = -cx * 0.62
+  STEP.pitch = -sy * 0.26
+  STEP.size = 1 + 0.07 * breath
+  STEP.fade = 1
+  STEP.travel = Math.sin(Math.PI * move) * 0.75 // look where you step, then back to the middle
+}
+
+/** THE ASCENT: spiral up from the bottom, widening; slip back down the side margin. */
+function ascent(k: number, song: number, W: number, swell: number) {
+  const c = song / T_ASCENT + k / 3
+  const n = Math.floor(c)
+  const q = c - n
+  // Every lap ends in the LEFT margin and comes down it (the right top corner belongs to the
+  // menu button). Keeping one side for all three is what stops the dancer on the way down
+  // from meeting the next one swinging out: that one is always in the other margin.
+  const side = -1
+  const a = ((LANE.xr - LANE.xl) / 2) * swell
+  const yTop = Math.max(LANE.yt + 40, 104)
+  const yBot = LANE.yb
+  if (q < ASCENT_RISE) {
+    const r = q / ASCENT_RISE
+    const h = r - Math.sin(TAU * r) / TAU // eases out of the bottom and into the top
+    const a0 = 2.5 * Math.PI * r // one and a quarter turns round the text,
+    const alpha = a0 + 0.3 * Math.sin(2 * a0) // lingering out in the margins, quick across the words
+    const reach = a * smooth(0.02, 0.4, h)
+    const sn = Math.sin(alpha)
+    STEP.x = W / 2 + side * reach * sn
+    STEP.y = yBot + (yTop - yBot) * h
+    STEP.yaw = side * sn * 0.6 * smooth(0.05, 0.4, h) // outward
+    STEP.pitch = -0.34 * smooth(0, 0.25, h) // and up
+    STEP.size = 1 + 0.1 * Math.cos(alpha) * smooth(0, 0.15, r) // nearer at the front of the turn, further at the back
+    STEP.fade = 1
+  } else {
+    const r = (q - ASCENT_RISE) / (1 - ASCENT_RISE)
+    const inward = smooth(0.5, 1, r)
+    STEP.x = W / 2 + side * a * (1 - inward)
+    STEP.y = yTop + (yBot - yTop) * smooth(0, 0.8, r)
+    // the walk back to the start is quieter: smaller, softer, eyes already on the middle
+    const quiet = Math.sin(Math.PI * clamp(r / 0.9, 0, 1))
+    STEP.yaw = side * 0.6 * (1 - inward) * (1 - quiet) - side * 0.35 * quiet
+    STEP.pitch = -0.34 * (1 - smooth(0, 0.3, r)) + 0.18 * quiet
+    STEP.size = 1 - 0.16 * quiet
+    STEP.fade = 1 - 0.28 * quiet
+  }
+  STEP.travel = 0
+}
+
+type Dancer = {
+  x: number; y: number; vx: number; vy: number; ax: number
+  yaw: number; pitch: number; roll: number
+  dim: number
+  form: number; formT: number; delay: number
+  burst: number; burstT: number; near: number
+}
+type Blink = { clock: number; next: number; start: number }
+type DanceDebug = { x: number[]; y: number[]; form: number[]; dim: number[]; move: number; song: number }
 
 export function PhoneSwarm() {
   const gl = useThree((s) => s.gl)
@@ -397,12 +560,11 @@ export function PhoneSwarm() {
     velVar: any
     geometry: THREE.BufferGeometry
     roveGeo: THREE.BufferGeometry
-    burstGeo: THREE.BufferGeometry
-    atmosGeo: THREE.BufferGeometry
-    atmosMat: THREE.ShaderMaterial
+    airGeo: THREE.BufferGeometry
+    airMat: THREE.ShaderMaterial
+    atlas: THREE.Texture
     faceMats: THREE.ShaderMaterial[]
     roveMats: THREE.ShaderMaterial[]
-    burstMats: THREE.ShaderMaterial[]
   } | null>(null)
 
   useEffect(() => {
@@ -467,7 +629,7 @@ export function PhoneSwarm() {
       const err = gpu.init()
       if (err) console.error('[PhoneSwarm] GPGPU init error:', err)
 
-      // Roving-glyph candidates (strided, as in the desktop swarm) and burst dots.
+      // Roving-glyph candidates on a face (strided, as in the desktop swarm).
       const glyphPool = Math.max(1, Math.floor(count * GLYPH_POOL_FRACTION))
       const stride = Math.max(1, Math.floor(count / glyphPool))
       const gRefs: number[] = []
@@ -478,14 +640,6 @@ export function PhoneSwarm() {
         gRefs.push(refs[k * 2], refs[k * 2 + 1])
         gSeeds.push(seed)
         baseGlyphSeed[k] = seed
-      }
-      const bRefs: number[] = []
-      const bSeeds: number[] = []
-      const bRand: number[] = []
-      for (let k = 0; k < count; k += BURST_STRIDE) {
-        bRefs.push(refs[k * 2], refs[k * 2 + 1])
-        bSeeds.push(Math.random())
-        bRand.push(randData[k])
       }
 
       const geometry = new THREE.BufferGeometry()
@@ -501,33 +655,29 @@ export function PhoneSwarm() {
       roveGeo.setAttribute('aRef', new THREE.BufferAttribute(new Float32Array(gRefs), 2))
       roveGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array(gSeeds), 1))
 
-      const burstGeo = new THREE.BufferGeometry()
-      burstGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((bRefs.length / 2) * 3), 3))
-      burstGeo.setAttribute('aRef', new THREE.BufferAttribute(new Float32Array(bRefs), 2))
-      burstGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array(bSeeds), 1))
-      burstGeo.setAttribute('aRand', new THREE.BufferAttribute(new Float32Array(bRand), 1))
-
-      // The atmosphere: homes are the nine dissolving faces' places (as viewport fractions).
-      const homes = SLOTS.filter((sl) => !sl.keeper)
-      const aHome = new Float32Array(ATMOS_COUNT * 2)
-      const aTarget = new Float32Array(ATMOS_COUNT * 2)
-      const aSeed = new Float32Array(ATMOS_COUNT)
-      const aDelay = new Float32Array(ATMOS_COUNT)
-      for (let k = 0; k < ATMOS_COUNT; k++) {
-        const h = homes[k % homes.length]
-        aHome[k * 2] = h.fx + (Math.random() - 0.5) * 0.07
-        aHome[k * 2 + 1] = h.fy + (Math.random() - 0.5) * 0.09
-        aTarget[k * 2] = 0.04 + Math.random() * 0.92
-        aTarget[k * 2 + 1] = 0.04 + Math.random() * 0.86
+      // The air. The first GATHER x 3 glyphs each have a seat on a mask; the rest only float.
+      const aTarget = new Float32Array(AIR_COUNT * 2)
+      const aSeed = new Float32Array(AIR_COUNT)
+      const aFace = new Float32Array(AIR_COUNT)
+      const aRef = new Float32Array(AIR_COUNT * 2)
+      const aRand = new Float32Array(AIR_COUNT)
+      for (let k = 0; k < AIR_COUNT; k++) {
+        aTarget[k * 2] = 0.03 + Math.random() * 0.94
+        aTarget[k * 2 + 1] = Math.random()
         aSeed[k] = Math.random()
-        aDelay[k] = Math.random() * 1.6
+        aFace[k] = k < GATHER * MASKS ? k % MASKS : -1
+        const seat = Math.floor(Math.random() * count)
+        aRef[k * 2] = refs[seat * 2]
+        aRef[k * 2 + 1] = refs[seat * 2 + 1]
+        aRand[k] = Math.random()
       }
-      const atmosGeo = new THREE.BufferGeometry()
-      atmosGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ATMOS_COUNT * 3), 3))
-      atmosGeo.setAttribute('aHome', new THREE.BufferAttribute(aHome, 2))
-      atmosGeo.setAttribute('aTarget', new THREE.BufferAttribute(aTarget, 2))
-      atmosGeo.setAttribute('aSeed', new THREE.BufferAttribute(aSeed, 1))
-      atmosGeo.setAttribute('aDelay', new THREE.BufferAttribute(aDelay, 1))
+      const airGeo = new THREE.BufferGeometry()
+      airGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(AIR_COUNT * 3), 3))
+      airGeo.setAttribute('aTarget', new THREE.BufferAttribute(aTarget, 2))
+      airGeo.setAttribute('aSeed', new THREE.BufferAttribute(aSeed, 1))
+      airGeo.setAttribute('aFace', new THREE.BufferAttribute(aFace, 1))
+      airGeo.setAttribute('aRef', new THREE.BufferAttribute(aRef, 2))
+      airGeo.setAttribute('aRand', new THREE.BufferAttribute(aRand, 1))
 
       const atlas = makeGlyphAtlas()
       const mk = (vs: string, fs: string, uniforms: Record<string, { value: unknown }>) =>
@@ -540,7 +690,8 @@ export function PhoneSwarm() {
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         })
-      const faceMats = SLOTS.map(() =>
+      const three = [0, 1, 2]
+      const faceMats = three.map(() =>
         mk(renderVertex, renderFragment, {
           uPositionTexture: { value: null },
           uVelocityTexture: { value: null },
@@ -551,13 +702,14 @@ export function PhoneSwarm() {
           uFeatureFloor: { value: 0.8 },
           uEyeOpen: { value: 1 },
           uFade: { value: 0 },
-          uForm: { value: 1 },
+          uForm: { value: 0 },
+          uStill: { value: 0 },
           uTime: { value: 0 },
           uRoveSpeed: { value: GLYPH_ROVE_SPEED },
           uOnFrac: { value: GLYPH_ON_FRAC },
         }),
       )
-      const roveMats = SLOTS.map(() =>
+      const roveMats = three.map(() =>
         mk(roveVertex, glyphFragment, {
           uPositionTexture: { value: null },
           uGlyphSize: { value: GLYPH_SIZE },
@@ -576,33 +728,25 @@ export function PhoneSwarm() {
           uColor: { value: maskColor('#e6d2a4', 1.7) },
         }),
       )
-      const burstMats = SLOTS.map(() =>
-        mk(burstVertex, glyphFragment, {
-          uPositionTexture: { value: null },
-          uGlyphSize: { value: GLYPH_SIZE * 0.85 },
-          uTime: { value: 0 },
-          uBreakT: { value: -1 },
-          uBreakDur: { value: BREAK_DUR },
-          uLife: { value: GLYPH_LIFE },
-          uRise: { value: 9 },
-          uAtlas: { value: atlas.texture },
-          uCols: { value: atlas.cols },
-          uFade: { value: 0 },
-          uColor: { value: maskColor('#e6d2a4', 1.0) },
-        }),
-      )
-      const atmosMat = mk(atmosVertex, glyphFragment, {
+      const airMat = mk(airVertex, glyphFragment, {
+        uPositionTexture: { value: null },
+        uFaceM: { value: three.map(() => new THREE.Matrix4()) },
+        uForm: { value: [0, 0, 0] },
+        uNear: { value: [0, 0, 0] },
         uTime: { value: 0 },
-        uStart: { value: -1 },
-        uAtmos: { value: 0 },
-        uGlyphSize: { value: GLYPH_SIZE * 0.8 },
+        uAir: { value: 0 },
+        uCalm: { value: 0 },
+        uQuiet: { value: new THREE.Vector2(0.44, 0.86) },
+        uStill: { value: 0 },
+        uRing: { value: 0.1 },
+        uGlyphPx: { value: AIR_GLYPH_PX },
         uWorld: { value: new THREE.Vector2(1, 1) },
         uAtlas: { value: atlas.texture },
         uCols: { value: atlas.cols },
         uFade: { value: 1 },
         uColor: { value: maskColor('#ecd9ab', 1.15) },
       })
-      if (!cancelled) setSim({ gpu, posVar, velVar, geometry, roveGeo, burstGeo, atmosGeo, atmosMat, faceMats, roveMats, burstMats })
+      if (!cancelled) setSim({ gpu, posVar, velVar, geometry, roveGeo, airGeo, airMat, atlas: atlas.texture, faceMats, roveMats })
     }
     build()
     return () => {
@@ -610,40 +754,83 @@ export function PhoneSwarm() {
     }
   }, [geo, gl])
 
-  // Per-face and global state, outside React state (read and written every frame).
+  // Everything below lives outside React state: it is read and written every frame.
   const groups = useRef<(THREE.Group | null)[]>([])
-  const burstPts = useRef<(THREE.Object3D | null)[]>([])
-  const intro = useMemo<number[]>(() => SLOTS.map(() => 0), [])
-  const blinks = useMemo<Blink[]>(() => SLOTS.map((_, i) => ({ clock: 0, next: 1.4 + i * 0.41, start: -1 })), [])
-  const yaw = useMemo<number[]>(() => SLOTS.map(() => 0), [])
-  const pitch = useMemo<number[]>(() => SLOTS.map(() => 0), [])
-  const faces = useMemo<Face[]>(() => SLOTS.map(() => ({ form: 1, formT: 1, formAt: 0, breakT: -1 })), [])
-  const dancers = useRef<Dancer[]>([])
-  const clock = useRef({ t: 0, dance: 0, lastP: 0, speed: 0, kick: 0, broken: false, brkAt: 0, brkW: 0, atmosStart: -1, atmos: 0 })
-  const pointer = useRef({ x: -9999, y: -9999, at: -99 })
-
+  const dancers = useMemo<Dancer[]>(
+    () =>
+      [0, 1, 2].map(() => ({
+        x: -1, y: -1, vx: 0, vy: 0, ax: 0,
+        yaw: 0, pitch: 0, roll: 0,
+        dim: 0,
+        form: 0, formT: 0, delay: 0,
+        burst: 0, burstT: 0, near: 0,
+      })),
+    [],
+  )
+  const blinks = useMemo<Blink[]>(() => [0, 1, 2].map((i) => ({ clock: 0, next: 1.4 + i * 0.9, start: -1 })), [])
+  // The text block of frames 1..3 (index 0 unused), measured from the page; and the live blend.
+  const zones = useMemo<Zone[]>(() => [0, 1, 2, 3].map(() => ({ l: 46, r: 344, t: 96, b: 554, ok: false })), [])
+  const zoneNow = useMemo<Zone>(() => ({ l: 46, r: 344, t: 96, b: 554, ok: false }), [])
+  const panes = useRef<(HTMLElement | null)[]>([null, null, null, null])
+  const clock = useRef({
+    t: 0,
+    song: 0, // the choreography clock; runs faster while the page is being scrolled
+    lastP: -1,
+    energy: 0, // 0..1, how hard the page is being scrolled
+    vel: 0, // signed, smoothed scroll speed: the sway
+    formed: false,
+    go: 0, // 0 while forming (the dance barely moves), 1 at full tempo
+    air: 0,
+    move: 1, // which frame's move leads: 1 Past, 2 Present, 3 Future
+    w: [0, 1, 0, 0], // the moves' weights, eased twice so a handover starts and ends softly
+    wa: [0, 1, 0, 0],
+    kick: 0,
+    lookW: 0, // 1 just after a tap: everyone looks at the finger
+    lookAt: -99,
+    measureAt: 0,
+    focusAt: 0,
+    focused: false,
+  })
+  const pointer = useRef({ x: 0, y: 0, downX: 0, downY: 0, downAt: 0, tapX: 0, tapY: 0, tapped: false })
+  const debug = useMemo<DanceDebug | null>(() => (DEBUG ? { x: [0, 0, 0], y: [0, 0, 0], form: [0, 0, 0], dim: [0, 0, 0], move: 1, song: 0 } : null), [])
   useEffect(() => {
+    if (!debug) return
+    ;(window as unknown as { __dance?: DanceDebug }).__dance = debug
+    return () => {
+      delete (window as unknown as { __dance?: DanceDebug }).__dance
+    }
+  }, [debug])
+
+  // Touch. A TAP is a finger that goes down and comes up in place; a scroll drag ends in
+  // pointercancel and is ignored here, so scrolling never sets the masks off by accident.
+  useEffect(() => {
+    const down = (e: PointerEvent) => {
+      const pt = pointer.current
+      pt.downX = e.clientX
+      pt.downY = e.clientY
+      pt.downAt = performance.now()
+    }
+    const up = (e: PointerEvent) => {
+      const pt = pointer.current
+      if (performance.now() - pt.downAt > 450) return
+      if (Math.hypot(e.clientX - pt.downX, e.clientY - pt.downY) > 14) return
+      pt.tapX = e.clientX
+      pt.tapY = e.clientY
+      pt.tapped = true // handled in the frame loop, where the masks' places are known
+    }
     const move = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return
       pointer.current.x = e.clientX
       pointer.current.y = e.clientY
-      pointer.current.at = performance.now() / 1000
+      clock.current.lookAt = performance.now() / 1000
     }
-    const down = (e: PointerEvent) => {
-      move(e)
-      clock.current.kick = 1
-      dancers.current.forEach((d) => {
-        const dx = d.x - e.clientX
-        const dy = d.y - e.clientY
-        const len = Math.hypot(dx, dy) || 1
-        d.vx += (dx / len) * 520
-        d.vy += (dy / len) * 520 - 260
-      })
-    }
-    window.addEventListener('pointermove', move, { passive: true })
     window.addEventListener('pointerdown', down, { passive: true })
+    window.addEventListener('pointerup', up, { passive: true })
+    window.addEventListener('pointermove', move, { passive: true })
     return () => {
-      window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerdown', down)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointermove', move)
     }
   }, [])
 
@@ -652,9 +839,9 @@ export function PhoneSwarm() {
     const dt = Math.min(0.05, rawDt)
     const c = clock.current
     c.t += dt
-    const nowT = c.t
+    const now = performance.now() / 1000
 
-    // The shared sim, then push its live textures into every material.
+    // The shared sim.
     sim.velVar.material.uniforms.uTime.value += dt
     sim.gpu.compute()
     const posTex = sim.gpu.getCurrentRenderTarget(sim.posVar).texture
@@ -667,75 +854,153 @@ export function PhoneSwarm() {
     const worldH = 2 * Math.tan(fovRad / 2) * camera.position.z
     const worldW = worldH * (W / H)
     const pxPerWorld = H / worldH
-    const toWorld = (px: number, py: number) => ({ x: (px / W - 0.5) * worldW, y: -(py / H - 0.5) * worldH })
-    const baseScale = FACE_PX / (FACE_LOCAL_W * pxPerWorld)
+    const dpr = gl.getPixelRatio()
+    const facePx = clamp(W * FACE_SHARE, FACE_MIN, FACE_MAX)
+    const baseScale = facePx / (FACE_LOCAL_W * pxPerWorld)
 
     const p = heroScroll.progress
+    const pos = p * 3
     const contactAmt = 1 - contactHandoff.t
-    const sv = Math.abs(p - c.lastP) / Math.max(dt, 0.001)
-    c.lastP = p
-    c.speed += (Math.min(1, sv * 6) - c.speed) * (1 - Math.exp(-dt * 6))
-    const formFocused = ['INPUT', 'TEXTAREA', 'SELECT'].includes((document.activeElement?.tagName ?? '').toString())
-    if (!reduced && !formFocused) c.dance += dt * (1 + c.speed * 2.2)
-    c.kick = Math.max(0, c.kick - dt * 1.6)
 
-    // THE EVENT: cross the threshold once and the break plays out on its own clock.
+    // Scroll energy (tempo) and signed speed (sway). Both are smoothed, so a change of
+    // direction swings through zero instead of snapping.
+    if (c.lastP < 0) c.lastP = p
+    const dp = (p - c.lastP) / Math.max(dt, 0.001)
+    c.lastP = p
+    c.energy += (Math.min(1, Math.abs(dp) * 5) - c.energy) * (1 - Math.exp(-dt * 4.5))
+    c.vel += (clamp(dp * 2.2, -1, 1) - c.vel) * (1 - Math.exp(-dt * 5))
+
+    // A focused form field parks the masks and stops the clock (checked a few times a second).
+    if (now > c.focusAt) {
+      c.focusAt = now + 0.3
+      const tag = document.activeElement?.tagName
+      c.focused = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+    }
+
+    // THE EVENT. Cross the threshold once and the forming plays out on its own clock.
     const introReady = heroIntro.ready && (heroIntro.nameDone || !heroIntro.nameExpected)
-    if (!reduced && introReady) {
-      if (!c.broken && p > BREAK_AT) {
-        c.broken = true
-        c.brkAt = nowT
-        if (c.atmosStart < 0) c.atmosStart = nowT
-        let r = 0
-        SLOTS.forEach((s, i) => {
-          if (s.keeper) return
-          faces[i].breakT = tSim + r * BREAK_STAGGER
-          faces[i].formT = 0
-          faces[i].formAt = nowT + r * BREAK_STAGGER
-          r++
-        })
-      } else if (c.broken && p < FORM_AT) {
-        c.broken = false
-        let r = 0
-        SLOTS.forEach((s, i) => {
-          if (s.keeper) return
-          faces[i].formT = 1
-          faces[i].formAt = nowT + r * 0.06
-          r++
-        })
+    if (introReady) {
+      c.air = Math.min(1, c.air + dt / 2.4)
+      if (!c.formed && pos > FORM_POS) {
+        c.formed = true
+        // start the piece from its opening picture when the stage is empty
+        if (dancers[0].form + dancers[1].form + dancers[2].form < 0.05) {
+          c.song = 0
+          c.go = 0
+          for (let k = 0; k < MASKS; k++) dancers[k].x = -1 // appear on their marks, not on the way to them
+        }
+        for (let k = 0; k < MASKS; k++) {
+          dancers[k].formT = 1
+          dancers[k].delay = k * FORM_STAGGER
+        }
+      } else if (c.formed && pos < LOOSEN_POS) {
+        c.formed = false
+        for (let k = 0; k < MASKS; k++) {
+          dancers[k].formT = 0
+          dancers[k].delay = (MASKS - 1 - k) * 0.07
+          dancers[k].burst = 0
+        }
       }
     }
-    c.brkW += ((c.broken ? 1 : 0) - c.brkW) * (1 - Math.exp(-dt * 2.2))
-    const tb = c.broken ? nowT - c.brkAt : 0
-    // Atmosphere strength: full while broken, a fair share kept once the faces re-form.
-    c.atmos += ((c.broken ? 1 : 0.45) - c.atmos) * (1 - Math.exp(-dt * 0.8))
-    const am = sim.atmosMat.uniforms
-    am.uTime.value = nowT
-    am.uStart.value = c.atmosStart
-    am.uAtmos.value = reduced ? 0 : c.atmos * (c.atmosStart >= 0 ? 1 : 0)
-    ;(am.uWorld.value as THREE.Vector2).set(worldW, worldH)
 
-    const now = performance.now() / 1000
-    const lookActive = !reduced && now - pointer.current.at < 3
-    let keeperIdx = 0
+    // Which move leads. The change-over points sit either side of half way, so a page
+    // resting between two frames cannot flip the move back and forth.
+    if (Math.abs(pos - c.move) > 0.56) c.move = clamp(Math.round(pos), 1, 3)
+    const kw = 1 - Math.exp(-dt * 3.4)
+    for (let m = 1; m <= 3; m++) {
+      c.wa[m] += ((c.move === m ? 1 : 0) - c.wa[m]) * kw
+      c.w[m] += (c.wa[m] - c.w[m]) * kw
+    }
 
-    SLOTS.forEach((slot, i) => {
-      const g = groups.current[i]
-      const fm = sim.faceMats[i]
-      const rm = sim.roveMats[i]
-      const bm = sim.burstMats[i]
-      if (!g || !fm || !rm || !bm) return
+    // The song. It crawls while the masks are still forming, then runs; scrolling drives it on.
+    const minForm = Math.min(dancers[0].form, dancers[1].form, dancers[2].form)
+    c.go = clamp(c.go + (minForm > 0.8 ? dt / 1.5 : -dt / 0.9), 0, 1)
+    const goS = c.go * c.go * (3 - 2 * c.go)
+    if (!reduced && !c.focused) c.song += dt * (0.22 + 0.78 * goS) * (1 + TEMPO_GAIN * c.energy)
+    c.kick = Math.max(0, c.kick - dt * 2.2)
+    const swell = 1 + 0.07 * c.energy
+
+    // Measure the text block of the frame on screen, twice a second, only while it sits centred.
+    const fNear = clamp(Math.round(pos), 1, 3)
+    if (now > c.measureAt) {
+      c.measureAt = now + 0.5
+      let el = panes.current[fNear]
+      if (!el || !el.isConnected) {
+        el = document.querySelector<HTMLElement>('[data-pan="' + fNear + '"]')
+        panes.current[fNear] = el
+      }
+      if (el) {
+        const r = el.getBoundingClientRect()
+        if (r.width > 60 && r.height > 60 && Math.abs((r.left + r.right) / 2 - W / 2) < 6) {
+          const s = r.width / Math.max(1, el.offsetWidth)
+          const z = zones[fNear]
+          z.l = r.left + 24 * s
+          z.r = r.right - 24 * s
+          z.t = r.top + 16 * s
+          z.b = r.bottom - 16 * s
+          z.ok = true
+        }
+      }
+    }
+    for (let m = 1; m <= 3; m++) {
+      const z = zones[m]
+      if (!z.ok) {
+        // fall-back before the first measurement: the band the frames are fitted into
+        z.l = 46
+        z.r = W - 46
+        z.t = 84
+        z.b = H - 74
+      }
+    }
+    zoneNow.l = zones[1].l * c.w[1] + zones[2].l * c.w[2] + zones[3].l * c.w[3]
+    zoneNow.r = zones[1].r * c.w[1] + zones[2].r * c.w[2] + zones[3].r * c.w[3]
+    zoneNow.t = zones[1].t * c.w[1] + zones[2].t * c.w[2] + zones[3].t * c.w[3]
+    zoneNow.b = zones[1].b * c.w[1] + zones[2].b * c.w[2] + zones[3].b * c.w[3]
+
+    const parkW = reduced || c.focused ? 1 : smooth(0.1, 0.62, contactAmt)
+
+    // A tap: the nearest mask within reach bursts; all three look at the finger.
+    const pt = pointer.current
+    if (pt.tapped) {
+      pt.tapped = false
+      if (!reduced && c.formed) {
+        pt.x = pt.tapX
+        pt.y = pt.tapY
+        c.lookAt = now
+        c.kick = 1
+        let best = -1
+        let bestD = TAP_RADIUS
+        for (let k = 0; k < MASKS; k++) {
+          const dd = Math.hypot(dancers[k].x - pt.tapX, dancers[k].y - pt.tapY)
+          if (dd < bestD && dancers[k].form > 0.995 && dancers[k].burst === 0) {
+            bestD = dd
+            best = k
+          }
+        }
+        if (best >= 0) dancers[best].burst = 1
+      }
+    }
+    const lookT = !reduced && now - c.lookAt < LOOK_SECS ? 1 : 0
+    c.lookW += (lookT - c.lookW) * (1 - Math.exp(-dt * 4))
+
+    const am = sim.airMat.uniforms
+    let formSum = 0
+
+    for (let k = 0; k < MASKS; k++) {
+      const g = groups.current[k]
+      const fm = sim.faceMats[k]
+      const rm = sim.roveMats[k]
+      const d = dancers[k]
+      if (!g) continue
 
       fm.uniforms.uPositionTexture.value = posTex
       fm.uniforms.uVelocityTexture.value = velTex
       fm.uniforms.uTime.value = tSim
       rm.uniforms.uPositionTexture.value = posTex
       rm.uniforms.uTime.value = tSim
-      bm.uniforms.uPositionTexture.value = posTex
-      bm.uniforms.uTime.value = tSim
 
-      // Blink, independent per face.
-      const bk = blinks[i]
+      // Blink.
+      const bk = blinks[k]
       bk.clock += dt
       let eyeOpen = 1
       if (bk.start < 0 && bk.clock >= bk.next) bk.start = bk.clock
@@ -748,108 +1013,172 @@ export function PhoneSwarm() {
       }
       fm.uniforms.uEyeOpen.value = eyeOpen
 
-      // Intro: fly in from the deep once the name is done, staggered.
-      if (introReady && nowT > i * INTRO_STAGGER) intro[i] = Math.min(1, intro[i] + dt / INTRO_SECS)
-      const e = 1 - Math.pow(1 - intro[i], 3)
-      const zIn = INTRO_Z_DEEP * (1 - e)
-
-      // This face's own form: ramps to its target once its stagger has passed.
-      const f = faces[i]
-      if (reduced && !slot.keeper) {
-        f.form = 0
-      } else if (nowT >= f.formAt) {
-        const step = dt / BREAK_DUR
-        f.form += Math.max(-step, Math.min(step, f.formT - f.form))
-      }
-      fm.uniforms.uForm.value = f.form
-      fm.uniforms.uFade.value = e
-      rm.uniforms.uFade.value = e * (0.35 + 0.65 * f.form)
-      // The burst keeps flying on its own clock, whatever the face is doing now.
-      bm.uniforms.uFade.value = e * 0.7
-      bm.uniforms.uBreakT.value = f.breakT
-      const bp = burstPts.current[i]
-      if (bp) bp.visible = f.breakT >= 0 && tSim - f.breakT < GLYPH_LIFE + BREAK_DUR + 0.6
-
-      let px = slot.fx * W
-      let py = slot.fy * H
-      let sc = baseScale * slot.scale * (0.86 + 0.14 * Math.max(0, f.form))
-      let roll = 0
-
-      if (slot.keeper) {
-        const k = keeperIdx++
-        const homeX = px
-        const homeY = py
-        const parkW = reduced || formFocused ? 1 : smooth(0.12, 0.7, contactAmt)
-
-        // Circle, then dance: both run on the clock since the break, not on scroll.
-        const circ = c.brkW * (1 - smooth(CIRCLE_SECS, CIRCLE_SECS + 2, tb))
-        const dnc = c.brkW * smooth(CIRCLE_SECS, CIRCLE_SECS + 2, tb)
-        const th = tb * 0.9 + (k * Math.PI * 2) / 3
-        const R = Math.min(W * 0.3, H * 0.2)
-        const circX = W * 0.5 + R * Math.cos(th)
-        const circY = H * 0.46 + R * 1.15 * Math.sin(th)
-        const d2 = c.dance
-        const danceX = W * 0.5 + W * 0.36 * Math.sin(d2 * (0.9 + 0.13 * k) + k * 2.1)
-        const danceY = H * 0.46 + H * 0.3 * Math.sin(d2 * (1.1 + 0.11 * k) + k * 1.3 + 1.0) - Math.abs(Math.sin(d2 * 3 + k)) * H * 0.025
-        const parkX = W * 0.93
-        const parkY = H * (0.2 + 0.24 * k) + Math.sin(d2 * 1.4 + k) * H * 0.012
-
-        let tx = homeX
-        let ty = homeY
-        tx += (circX - tx) * circ
-        ty += (circY - ty) * circ
-        tx += (danceX - tx) * dnc
-        ty += (danceY - ty) * dnc
-        tx += (parkX - tx) * parkW
-        ty += (parkY - ty) * parkW
-        if (reduced) {
-          tx = parkX
-          ty = H * (0.2 + 0.24 * k)
-        }
-
-        let d = dancers.current[k]
-        if (!d) {
-          d = { x: homeX, y: homeY, vx: 0, vy: 0 }
-          dancers.current[k] = d
-        }
-        if (reduced) {
-          d.x = tx
-          d.y = ty
-          d.vx = 0
-          d.vy = 0
-        } else {
-          const steps = Math.max(1, Math.ceil(dt / 0.008))
-          const h = dt / steps
-          for (let s = 0; s < steps; s++) {
-            d.vx += (62 * (tx - d.x) - 9.5 * d.vx) * h
-            d.vy += (62 * (ty - d.y) - 9.5 * d.vy) * h
-            d.x += d.vx * h
-            d.y += d.vy * h
+      // This mask's own form: a straight ramp in time; the shaders ease each dot and glyph.
+      if (d.delay > 0) d.delay -= dt
+      else {
+        let target = d.formT
+        let rate = reduced ? 1 / 0.45 : target > d.form ? 1 / FORM_SECS : 1 / LOOSEN_SECS
+        if (d.burst === 1) {
+          target = 0
+          rate = 1 / BURST_OUT
+          if (d.form <= 0.001) {
+            d.burst = 2
+            d.burstT = BURST_HOLD
           }
+        } else if (d.burst === 2) {
+          target = 0
+          d.burstT -= dt
+          if (d.burstT <= 0) d.burst = 3
+        } else if (d.burst === 3) {
+          rate = 1 / BURST_BACK
+          if (d.form >= 0.999 || d.formT === 0) d.burst = 0
         }
-        px = d.x
-        py = d.y
-        roll = Math.max(-0.5, Math.min(0.5, d.vx / 900)) * 0.7 + Math.sin(c.dance * 2 + k) * 0.1 * dnc
-        sc *= (1 + 0.1 * Math.sin(c.dance * 3.2 + k) * dnc + 0.3 * c.kick) * (1 - 0.22 * parkW)
+        d.form += clamp(target - d.form, -rate * dt, rate * dt)
+      }
+      // While bursting, this mask's glyphs gather in a ring round it instead of out in the air.
+      if (d.burst > 0) d.near = 1
+      else if (d.form >= 0.999) d.near = 0
+      else d.near = Math.max(0, d.near - dt * 1.6)
+      formSum += d.form
+
+      // WHERE THE CHOREOGRAPHY WANTS THIS DANCER: the three moves, mixed by their weights.
+      let tx = 0
+      let ty = 0
+      let yawM = 0
+      let pitchM = 0
+      let sizeM = 0
+      let fadeM = 0
+      let travel = 0
+      for (let m = 1; m <= 3; m++) {
+        const w = c.w[m]
+        if (w < 0.0005) continue
+        lanes(zones[m], W, H)
+        if (m === 1) chase(k, c.song, W, swell)
+        else if (m === 2) triangle(k, c.song, W, swell)
+        else ascent(k, c.song, W, swell)
+        tx += STEP.x * w
+        ty += STEP.y * w
+        yawM += STEP.yaw * w
+        pitchM += STEP.pitch * w
+        sizeM += STEP.size * w
+        fadeM += STEP.fade * w
+        travel += STEP.travel * w
+      }
+      const wSum = Math.max(0.001, (c.w[1] >= 0.0005 ? c.w[1] : 0) + (c.w[2] >= 0.0005 ? c.w[2] : 0) + (c.w[3] >= 0.0005 ? c.w[3] : 0))
+      tx /= wSum
+      ty /= wSum
+      yawM /= wSum
+      pitchM /= wSum
+      sizeM /= wSum
+      fadeM /= wSum
+      travel /= wSum
+      // a fast scroll carries them with the page for a moment
+      tx -= c.vel * SWAY_PX
+
+      // CONTACT: peek in from the screen edges beside the form, clear of the fields.
+      const parkSide = k === 1 ? -1 : 1
+      const parkX = parkSide > 0 ? W - 3 : 3
+      const parkY = H * (0.25 + 0.245 * k) + (reduced ? 0 : Math.sin(c.t * 0.7 + k * 2.1) * 4)
+      tx += (parkX - tx) * parkW
+      ty += (parkY - ty) * parkW
+
+      if (d.x < 0 || reduced) {
+        d.x = tx
+        d.y = ty
+        d.vx = 0
+        d.vy = 0
+        d.ax = 0
+      } else {
+        const steps = Math.max(1, Math.ceil(dt / 0.008))
+        const h = dt / steps
+        let ax = 0
+        for (let s = 0; s < steps; s++) {
+          ax = SPRING_K * (tx - d.x) - SPRING_C * d.vx
+          d.vx += ax * h
+          d.vy += (SPRING_K * (ty - d.y) - SPRING_C * d.vy) * h
+          d.x += d.vx * h
+          d.y += d.vy * h
+        }
+        d.ax += (ax - d.ax) * (1 - Math.exp(-dt * 6))
       }
 
-      const w = toWorld(px, py)
-      g.position.set(w.x, w.y, zIn)
+      // READING: how much of this mask is over the text block right now.
+      const half = facePx * 0.5
+      const overX = smooth(zoneNow.l - half, zoneNow.l + 8, d.x) * (1 - smooth(zoneNow.r - 8, zoneNow.r + half, d.x))
+      const overY = smooth(zoneNow.t - half * 1.4, zoneNow.t + 6, d.y) * (1 - smooth(zoneNow.b - 6, zoneNow.b + half * 1.4, d.y))
+      const over = overX * overY * (1 - parkW)
+      d.dim += (over - d.dim) * (1 - Math.exp(-dt * 5))
+
+      // HEAD. Into the direction of travel, or as the move asks; a tap turns it to the finger.
+      const parkYaw = -parkSide * 0.5 + (reduced ? 0 : Math.sin(c.t * 0.45 + k * 1.9) * 0.08)
+      let yawT = yawM + (clamp(d.vx / 230, -0.8, 0.8) - yawM) * travel
+      let pitchT = pitchM + (clamp(d.vy / 330, -0.38, 0.38) - pitchM) * travel
+      yawT += (parkYaw - yawT) * parkW
+      pitchT += (0.04 - pitchT) * parkW
+      if (c.lookW > 0.001) {
+        const fy = clamp(((pt.x - d.x) / (W * 0.5)) * 0.9, -0.8, 0.8)
+        const fp = clamp(((pt.y - d.y) / (H * 0.5)) * 0.5, -0.4, 0.4)
+        yawT += (fy - yawT) * c.lookW
+        pitchT += (fp - pitchT) * c.lookW
+      }
+      // bank into the curve: lean the top of the head toward the inside of the turn
+      const rollT = reduced ? 0 : clamp(-d.ax / 1500, -0.34, 0.34) * (1 - parkW)
+      const lag = reduced ? 1 : 1 - Math.exp(-dt / 0.22)
+      d.yaw += (yawT - d.yaw) * lag
+      d.pitch += (pitchT - d.pitch) * lag
+      d.roll += (rollT - d.roll) * lag
+
+      const sc =
+        baseScale *
+        sizeM *
+        (0.9 + 0.1 * d.form) *
+        (1 - DIM_SHRINK * d.dim) *
+        (1 - 0.22 * parkW) *
+        (1 + 0.1 * c.kick)
+      const fade = fadeM * (1 - DIM_FADE * d.dim)
+      fm.uniforms.uForm.value = d.form
+      fm.uniforms.uStill.value = reduced ? 1 : 0
+      fm.uniforms.uFade.value = fade
+      rm.uniforms.uFade.value = fade * d.form
+      rm.uniforms.uGlyphSize.value = GLYPH_SIZE * Math.max(1, dpr * 0.8)
+
+      // Place the group so the face's visual middle sits on (d.x, d.y).
+      g.position.set((d.x / W - 0.5) * worldW, -(d.y / H - 0.5) * worldH - FACE_MID_Y * sc, 0)
       g.scale.setScalar(sc)
+      g.rotation.set(d.pitch, d.yaw, d.roll)
+      g.visible = d.form > 0.001
+      g.updateMatrixWorld()
+      ;(am.uFaceM.value as THREE.Matrix4[])[k].copy(g.matrixWorld)
+      ;(am.uForm.value as number[])[k] = d.form
+      ;(am.uNear.value as number[])[k] = d.near
 
-      let lookYaw = 0
-      let lookPitch = 0
-      if (lookActive) {
-        lookYaw = Math.max(-0.7, Math.min(0.7, ((pointer.current.x - px) / (W * 0.5)) * 0.7))
-        lookPitch = Math.max(-0.35, Math.min(0.35, ((pointer.current.y - py) / (H * 0.5)) * 0.35))
-      } else if (!reduced) {
-        lookYaw = Math.sin(c.t * 0.6 + i) * 0.18
+      if (debug) {
+        debug.x[k] = d.x
+        debug.y[k] = d.y
+        debug.form[k] = d.form
+        debug.dim[k] = d.dim
       }
-      const lag = 1 - Math.exp(-dt / 0.35)
-      yaw[i] += (lookYaw - yaw[i]) * lag
-      pitch[i] += (lookPitch - pitch[i]) * lag
-      g.rotation.set(pitch[i], yaw[i], roll)
-    })
+    }
+    if (debug) {
+      debug.move = c.move
+      debug.song = c.song
+    }
+
+    am.uPositionTexture.value = posTex
+    am.uTime.value = c.t
+    am.uAir.value = c.air
+    const calm = formSum / MASKS
+    am.uCalm.value = calm
+    // first screen: the name and the sentence; after that: the frame's measured text block
+    // and in the Contact section the whole screen, so nothing bright drifts over the form
+    const park = reduced || c.focused ? 1 : smooth(0.1, 0.62, contactAmt)
+    const qTop = FIRST_WORDS_TOP + (zoneNow.t / H - FIRST_WORDS_TOP) * calm
+    const qBot = FIRST_WORDS_BOTTOM + (zoneNow.b / H - FIRST_WORDS_BOTTOM) * calm
+    ;(am.uQuiet.value as THREE.Vector2).set(qTop + (-0.2 - qTop) * park, qBot + (1.2 - qBot) * park)
+    am.uStill.value = reduced ? 1 : 0
+    am.uRing.value = (facePx * 1.25) / pxPerWorld
+    am.uGlyphPx.value = AIR_GLYPH_PX * dpr
+    ;(am.uWorld.value as THREE.Vector2).set(worldW, worldH)
   })
 
   useEffect(() => {
@@ -857,30 +1186,22 @@ export function PhoneSwarm() {
       if (!sim) return
       sim.geometry.dispose()
       sim.roveGeo.dispose()
-      sim.burstGeo.dispose()
-      sim.atmosGeo.dispose()
-      sim.atmosMat.dispose()
+      sim.airGeo.dispose()
+      sim.airMat.dispose()
+      sim.atlas.dispose()
       sim.faceMats.forEach((m) => m.dispose())
       sim.roveMats.forEach((m) => m.dispose())
-      sim.burstMats.forEach((m) => m.dispose())
     }
   }, [sim])
 
   if (!sim) return null
   return (
     <>
-      <points geometry={sim.atmosGeo} material={sim.atmosMat} frustumCulled={false} />
-      {SLOTS.map((_, i) => (
-        <group key={i} ref={(el) => { groups.current[i] = el }}>
+      <points geometry={sim.airGeo} material={sim.airMat} frustumCulled={false} />
+      {[0, 1, 2].map((i) => (
+        <group key={i} ref={(el) => { groups.current[i] = el }} visible={false}>
           <points geometry={sim.geometry} material={sim.faceMats[i]} frustumCulled={false} />
           <points geometry={sim.roveGeo} material={sim.roveMats[i]} frustumCulled={false} />
-          <points
-            ref={(el) => { burstPts.current[i] = el }}
-            geometry={sim.burstGeo}
-            material={sim.burstMats[i]}
-            frustumCulled={false}
-            visible={false}
-          />
         </group>
       ))}
     </>
