@@ -12,6 +12,8 @@ Run from this folder. Output folders are created where you point them; keep them
 | `audit.mjs` | Screenshot of every hero frame, the Contact section and each page, top and scrolled. | `node audit.mjs http://127.0.0.1:4188 ../../.phone-out/b` |
 | `guard.mjs` | With the CPU slowed 20x, does the quality guard lower the canvas resolution, with no errors? | `node guard.mjs http://127.0.0.1:4188/ ../../.phone-out/c 20` |
 | `touch.mjs` | Does a finger drag scroll the page from every height of the screen? | `node touch.mjs https://melvinchirag.com ../../.phone-out/d` |
+| `menu.mjs` | The phone CM menu (top right): closed, open, every word, tap outside, Escape; add `modes` for reduced motion and no WebGL. | `node menu.mjs http://127.0.0.1:4191 ../../.phone-out/e 390 664 9391 modes` |
+| `menu-desktop.mjs` | At 1440x900, is the desktop row and island menu still there and does it navigate? Optional second address to compare geometry. | `node menu-desktop.mjs http://127.0.0.1:4191 ../../.phone-out/f https://melvinchirag.com` |
 
 Sizes worth running: 390x664 (an iPhone with Safari's bars showing: the real visible height),
 360x640 (small Android), 390x844 (bars hidden).
