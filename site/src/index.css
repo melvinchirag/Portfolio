@@ -1066,3 +1066,167 @@ html.has-cursor.cursor-hover .cursor-dot {
 .mercury-item.is-under {
   color: var(--color-void);
 }
+
+/* ===========================================================================
+ * THE CM MENU, phones only (Nav.tsx CmMenu, Melvin 2026-11-25). START
+ * A liquid blob top right holding CM; a tap drops the five page words under it.
+ * Nothing here applies at 768px and wider: the component is not mounted there.
+ * ======================================================================== */
+/* The shade behind the open list. No box and no border: darkness that is
+ * deepest in the corner where the words are and lets the page show elsewhere. */
+.cm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39; /* above the page (10) and bottom blur (30), under the wordmark (40) and the menu (50) */
+  opacity: 0;
+  visibility: hidden;
+  background: rgba(7, 2, 3, 0.9); /* browsers without color-mix */
+  background: radial-gradient(
+    150% 105% at 100% 0%,
+    color-mix(in srgb, var(--color-void) 97%, transparent) 0%,
+    color-mix(in srgb, var(--color-void) 94%, transparent) 46%,
+    color-mix(in srgb, var(--color-void) 76%, transparent) 100%
+  );
+  /* It stays tappable for a moment after closing, so the tap that closed the
+   * menu cannot fall through onto a link in the page. */
+  transition:
+    opacity 260ms ease,
+    visibility 0s linear 340ms;
+}
+.cm-scrim.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 320ms ease,
+    visibility 0s;
+}
+
+.cm-menu {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  right: env(safe-area-inset-right, 0px);
+  z-index: 50;
+  width: 208px;
+  height: 316px;
+  pointer-events: none; /* only the blob, and the words while open, take taps */
+}
+
+/* CM. A 48px target; the liquid is drawn by the canvas behind it. */
+.cm-button {
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 9999px;
+  color: var(--color-void);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-button:focus-visible {
+  outline: 2px solid var(--color-sand);
+  outline-offset: 3px;
+}
+/* A plain disc under the canvas, hidden by the liquid whenever it draws. */
+.cm-disc {
+  position: absolute;
+  top: 15px;
+  right: 21px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  background: var(--color-sand);
+}
+.cm-menu.is-plain .cm-disc {
+  top: 10px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+}
+
+.cm-list {
+  position: absolute;
+  top: 62px;
+  right: 0;
+  left: 0;
+  visibility: hidden; /* closed: not on screen and not focusable */
+  transition: visibility 0s linear 220ms;
+}
+.cm-menu.is-open .cm-list {
+  visibility: visible;
+  pointer-events: auto;
+  transition: visibility 0s;
+}
+/* The whole 46px row is the target; the pill is the smaller slot inside it. */
+.cm-link {
+  display: flex;
+  height: 46px;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 14px;
+  outline: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-slot {
+  display: inline-flex;
+  height: 34px;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 9999px;
+}
+.cm-link:focus-visible .cm-slot {
+  outline: 1px solid var(--color-sand);
+  outline-offset: 3px;
+}
+.cm-word {
+  color: var(--color-sand);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-14px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    color 220ms ease;
+}
+/* Opening: the words follow the drop down, one after another. */
+.cm-menu.is-open .cm-word {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 380ms var(--ease-out-expo) calc(var(--i, 0) * 45ms + 70ms),
+    transform 520ms var(--ease-out-expo) calc(var(--i, 0) * 45ms + 70ms),
+    color 220ms ease;
+}
+/* The word the drop is sitting behind reads in the ground colour. */
+.cm-slot.is-under .cm-word {
+  color: var(--color-void);
+}
+/* No WebGL: a plain pill marks the current page. */
+.cm-menu.is-plain .cm-link[aria-current='page'] .cm-slot {
+  background: var(--color-sand);
+}
+.cm-menu.is-plain .cm-link[aria-current='page'] .cm-word {
+  color: var(--color-void);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-word,
+  .cm-menu.is-open .cm-word {
+    transform: none;
+    transition-delay: 0s;
+  }
+}
+/* THE CM MENU. END */

@@ -41,6 +41,12 @@ export type MercuryFrame = {
   still: boolean
   /** Ferrofluid spikes at the head: amplitude 0..1.2, centre, lattice spacing and height in canvas units. */
   spike?: { amp: number; at: [number, number]; spacing: number; height: number; zone: number }
+  /** Surface wobble scale, 0..1 (default 1). The wobble is sized in canvas units, so a
+   *  tall canvas (the phone CM menu) passes a fraction to keep it the same size in pixels. */
+  wobble?: number
+  /** Draw only this box (CSS pixels from the canvas's top left: x, y, width, height).
+   *  The phone CM menu uses it so the closed blob costs a small square, not the whole canvas. */
+  clip?: [number, number, number, number]
 }
 
 export type Mercury = {
@@ -151,6 +157,7 @@ export function createMercury(canvas: HTMLCanvasElement): Mercury | null {
 
   let lost = false
   let lastT = 0
+  let scale = 1
   const amp = { x: 0, v: 0 }
   const onLost = (e: Event) => { e.preventDefault(); lost = true }
   const onRestored = () => { lost = false }
@@ -162,6 +169,7 @@ export function createMercury(canvas: HTMLCanvasElement): Mercury | null {
       const dpr = Math.min(2, window.devicePixelRatio || 1)
       const w = Math.max(1, Math.round(cssWidth * dpr))
       const h = Math.max(1, Math.round(cssHeight * dpr))
+      scale = dpr
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w
         canvas.height = h
@@ -181,7 +189,7 @@ export function createMercury(canvas: HTMLCanvasElement): Mercury | null {
       gl.uniform4f(U.u_body, f.body[0], f.body[1], f.body[2], f.body[3])
       gl.uniform1f(U.u_bodyOn, f.bodyOn ? 1 : 0)
       gl.uniform1f(U.u_axis, f.axis)
-      gl.uniform1f(U.u_still, f.still ? 1 : 0)
+      gl.uniform1f(U.u_still, f.still ? 1 : 1 - (f.wobble ?? 1))
       // Ferrofluid spikes (spikes.ts): the head is the magnet, the lagging drop a weaker second pole.
       const sp = f.spike
       const dt = lastT ? Math.min(0.05, Math.max(0, f.time - lastT)) : 0.016
@@ -197,6 +205,14 @@ export function createMercury(canvas: HTMLCanvasElement): Mercury | null {
       gl.uniform1f(U.u_spW, Math.min(1.2 * (sp ? sp.spacing : 0.2), 0.6 * Math.min(f.rb[0], f.rb[1])))
       gl.uniform1f(U.u_px, 2 / canvas.height)
       gl.clear(gl.COLOR_BUFFER_BIT)
+      if (f.clip) {
+        const [cx, cy, cw, ch] = f.clip
+        gl.enable(gl.SCISSOR_TEST)
+        gl.scissor(Math.floor(cx * scale), Math.floor(canvas.height - (cy + ch) * scale), Math.ceil(cw * scale), Math.ceil(ch * scale))
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        gl.disable(gl.SCISSOR_TEST)
+        return
+      }
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     },
     dispose() {
