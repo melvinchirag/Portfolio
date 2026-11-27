@@ -167,6 +167,9 @@ function IdentityFrame({ index }: { index: number }) {
       sub.style.letterSpacing = '0px'
       sub.style.marginRight = '0px'
       const target = first.getBoundingClientRect().width
+      // The paragraph and the "Open to" line under the name span the same width
+      // (Melvin, 2026-11-27: "it can span out as wide as the name").
+      rootRef.current?.style.setProperty('--name-w', `${target}px`)
       const natural = sub.getBoundingClientRect().width
       const n = (sub.textContent ?? '').length
       const ls = Math.max(0, (target - natural) / n)
@@ -188,7 +191,7 @@ function IdentityFrame({ index }: { index: number }) {
       ref={rootRef}
       data-pan={index}
       // Right padding on md+ clears the fixed 76px clock rail (HeroClockRail).
-      className="relative grid h-full w-full grid-cols-12 items-end px-6 pb-[calc(64px+env(safe-area-inset-bottom,0px))] md:px-10 md:pb-[12vh] md:pr-[100px] lg:px-14 lg:pr-[110px]"
+      className="relative grid h-full w-full grid-cols-12 items-end pb-[calc(64px+env(safe-area-inset-bottom,0px))] md:px-10 md:pb-[12vh] md:pr-[100px] lg:px-14 lg:pr-[110px]"
     >
       <NameAssembly rootRef={rootRef} targetRef={firstNameRef} onDone={reveal} />
 
@@ -200,7 +203,7 @@ function IdentityFrame({ index }: { index: number }) {
           sit inside the name lockup, right-aligned so they end exactly above
           the N of MELVIN, and the surname is tracked out to MELVIN's width
           (see the effect above), so the whole lockup is one aligned block. */}
-      <div data-quiet className="frame-item relative col-span-12 flex flex-col md:col-span-7 md:col-start-6 md:block" style={FI(0)}>
+      <div data-quiet className="frame-item relative col-span-12 flex flex-col max-md:w-[var(--name-w,100%)] max-md:justify-self-center md:col-span-7 md:col-start-6 md:block" style={FI(0)}>
         {/* On a phone the wrapper below is display:contents so the links, the name,
             the sentence and the two buttons can be ordered freely. Order since
             2026-11-25 (Melvin): links, name, sentence, then the buttons UNDER the
@@ -249,7 +252,7 @@ function IdentityFrame({ index }: { index: number }) {
           <FerroName targetRef={firstNameRef} shown={nameShown} onActive={setFerro} />
         </div>
 
-        <p className="order-4 mt-6 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/80 sm:text-[15.5px] md:mt-7">
+        <p className="order-4 mt-6 w-[var(--name-w,100%)] max-w-full text-[14.5px] leading-relaxed text-sand/80 sm:text-[15.5px] md:mt-7">
           {/* Melvin's own outline, 2026-11-26: who he is, the fields in HIS order,
               bringing them together. No titles or roles in this paragraph. */}
           I’m a computer science undergraduate focused on AI, machine learning and software
@@ -262,7 +265,7 @@ function IdentityFrame({ index }: { index: number }) {
           .
         </p>
 
-        <p className="open-to order-4 mt-4 max-w-[48ch] text-[12.5px] leading-relaxed text-sand">
+        <p className="open-to order-4 mt-4 w-[var(--name-w,100%)] max-w-full text-[12.5px] leading-relaxed text-sand">
           Open to <strong>2027 internships and full-time roles</strong>. Always up to collaborate on
           new projects and startups.
         </p>
