@@ -541,7 +541,11 @@ function CmMenu() {
 export function Nav() {
   const wide = useWide()
   const [hidden, setHidden] = useState(false)
+  // Text scrolling under the name and the menu used to collide with them
+  // (2026-11-26). A soft veil sits behind the header once there is text under it.
+  const [veil, setVeil] = useState(false)
   const lastY = useRef(0)
+  const { pathname } = useLocation()
 
   useEffect(() => {
     const onScroll = () => {
@@ -549,14 +553,19 @@ export function Nav() {
       // The brand hides going down and returns coming up; the menu never hides.
       setHidden(y > 140 && y > lastY.current)
       lastY.current = y
+      // On Home the panning hero keeps its own text clear, so the veil waits
+      // until the hero has been left behind.
+      const track = document.getElementById('hero-track')
+      setVeil(track ? y > track.offsetTop + track.offsetHeight - window.innerHeight * 0.6 : y > 24)
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [pathname])
 
   return (
     <>
+      <div aria-hidden className={`top-veil ${veil ? 'is-on' : ''}`} />
       <header
         className={`ease-out-expo pointer-events-none fixed top-0 left-0 z-40 transition-[transform,opacity] duration-500 ${
           hidden ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'

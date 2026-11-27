@@ -268,8 +268,9 @@ function ContactView() {
           Let's Build What Comes Next.
         </h1>
         <p className="mt-6 max-w-xl text-[14px] leading-relaxed text-white/70">
-          I'm always open to internships, jobs, research, and projects worth building. If you have
-          something in mind, or you just want to talk through an idea, send it over.
+          I’m looking for 2027 internships and full-time roles, and I’m always up to collaborate
+          on new projects and startups. If you have something in mind, or you just want to talk
+          through an idea, send it over.
         </p>
       </Reveal>
 

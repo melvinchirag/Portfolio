@@ -4288,3 +4288,13 @@ Melvin, by voice: the bottom page menu "looks down, not good"; wants a liquid CM
 Test scripts added to `tools/phone-check/`: `menu.mjs`, `menu-desktop.mjs`, `dance.mjs` (film strips and trails; `?dancedebug` publishes mask positions and is inert otherwise). Scripts that run at the same time must use different debugging ports (`phone({port})`): two helpers hung for ten minutes sharing 9377.
 
 Frame-rate readings from the harness swing between 30 and 60 for the same stage and even read 30 with the CPU unthrottled and 60 throttled, so they are not evidence either way. NOT verified: a real phone, Safari, in-app browsers, real GPU speed, how the dance feels at full speed (judged from stills and trails), reduced motion on the new masks.
+
+## 2026-11-26: benchmark fixes (branch phone-redesign, PREVIEW only)
+Melvin approved: intro about 2s with his name; featured Otto, ADE, Lingo, Manas; availability line
+(2027 internships and full-time roles, open to collaborations); a new intro sentence.
+Done: intro shortened (ends ~2.6s after navigation, min 1s) with a static first paint in index.html;
+veil under the header; About video dimmed; desktop pan settles on frames; facts avoid [data-quiet];
+Otto moved to Flagship and rewritten (public-safe facts only); cover art in site/public/work/.
+Local measurement: home visible ~3.1-3.4s fast, ~5.6-6.5s throttled phone (targets 3 and 5, not met on slow).
+Open: real project screenshots (Manas repo has screenshot.png), photo, split the JS bundle for speed.
+Not live until Melvin says so.

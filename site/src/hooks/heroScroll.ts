@@ -18,6 +18,7 @@
  * ========================================================================= */
 
 import { useEffect, useRef, useState } from 'react'
+import { glideTo } from './useLenis'
 
 /**
  * How many full-viewport frames the hero pans through: Hero · Past · Present ·
@@ -86,34 +87,52 @@ export function phonePan(pos: number): number {
 }
 
 /**
- * Phones only: when a scroll comes to rest inside the slide between two frames,
- * glide the short distance to the nearer frame's hold zone, so the page never
+ * When a scroll comes to rest between two frames, glide to one, so the page never
  * sits with a frame half off the screen. Does nothing while a finger is down,
- * inside a hold zone, above the track or once the Contact section has taken over.
+ * above the track or once the Contact section has taken over.
+ *
+ * Phones glide the short distance to the nearer frame's hold zone. Wider screens
+ * (added 2026-11-26) go to a frame's centre, favouring the direction of travel so
+ * one notch of a mouse wheel moves on instead of bouncing back.
  */
-export function usePhoneFrameSettle(ref: React.RefObject<HTMLElement | null>) {
+export function useFrameSettle(ref: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
     const LAST = BEAT_COUNT - 1
     let timer = 0
     let touching = false
+    let lastY = window.scrollY
+    let dir = 1
     const settle = () => {
       const el = ref.current
-      if (!el || touching || !isPhoneWidth()) return
+      if (!el || touching) return
       const rect = el.getBoundingClientRect()
       const scrollable = rect.height - window.innerHeight
       const scrolled = -rect.top
-      if (scrollable <= 0 || scrolled <= 0 || scrolled >= scrollable) return
+      if (scrollable <= 0 || scrolled <= 1 || scrolled >= scrollable - 1) return
       const pos = (scrolled / scrollable) * LAST
-      const k = Math.round(pos)
-      const off = pos - k
-      if (Math.abs(off) <= PHONE_HOLD) return
-      const target = k + Math.sign(off) * (PHONE_HOLD - 0.04)
+      let target: number
+      if (isPhoneWidth()) {
+        const k = Math.round(pos)
+        const off = pos - k
+        if (Math.abs(off) <= PHONE_HOLD) return
+        target = k + Math.sign(off) * (PHONE_HOLD - 0.04)
+      } else {
+        const from = dir > 0 ? Math.floor(pos) : Math.ceil(pos)
+        target = Math.abs(pos - from) > 0.06 ? from + dir : from
+        if (Math.abs(pos - target) < 0.004) return
+      }
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
-      window.scrollTo({ top: window.scrollY + ((target - pos) / LAST) * scrollable, behavior: reduced ? 'auto' : 'smooth' })
+      glideTo(window.scrollY + ((target - pos) / LAST) * scrollable, reduced)
     }
     const arm = () => {
       window.clearTimeout(timer)
-      timer = window.setTimeout(settle, 170)
+      timer = window.setTimeout(settle, isPhoneWidth() ? 170 : 240)
+    }
+    const onScroll = () => {
+      const y = window.scrollY
+      if (Math.abs(y - lastY) > 0.5) dir = y > lastY ? 1 : -1
+      lastY = y
+      arm()
     }
     const down = () => {
       touching = true
@@ -123,13 +142,13 @@ export function usePhoneFrameSettle(ref: React.RefObject<HTMLElement | null>) {
       touching = false
       arm()
     }
-    window.addEventListener('scroll', arm, { passive: true })
+    window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('touchstart', down, { passive: true })
     window.addEventListener('touchend', up, { passive: true })
     window.addEventListener('touchcancel', up, { passive: true })
     return () => {
       window.clearTimeout(timer)
-      window.removeEventListener('scroll', arm)
+      window.removeEventListener('scroll', onScroll)
       window.removeEventListener('touchstart', down)
       window.removeEventListener('touchend', up)
       window.removeEventListener('touchcancel', up)

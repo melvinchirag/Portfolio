@@ -11,7 +11,7 @@
 export const SITE_URL = 'https://melvinchirag.com'
 export const SITE_NAME = 'Melvin Chirag Karupati'
 export const DEFAULT_DESCRIPTION =
-  "Melvin Chirag Karupati. Computer science student at Eastern Michigan University building computer-vision and machine-learning systems. Vice president of Hack The Nest, EMU's first hackathon."
+  "Melvin Chirag Karupati. Computer science student at Eastern Michigan University who builds AI agents, vision systems and more. Open to 2027 internships and full-time roles. Vice president of Hack The Nest, EMU's first hackathon."
 
 /** Web3Forms access key for the contact and testimonial forms. The key is public by
  *  design (it only lets a form SEND to the inbox it was issued for), so it is safe in

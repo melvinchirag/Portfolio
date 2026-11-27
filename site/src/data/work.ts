@@ -93,6 +93,43 @@ export const WORK_PROJECTS: WorkProject[] = [
     ],
   },
 
+  {
+    // Moved up from Personal (Melvin, 2026-11-26: "something to boast about").
+    // Public-safe facts only: no sponsor names, amounts or private records.
+    id: 'otto',
+    name: 'Otto',
+    category: 'flagship',
+    status: 'In daily use',
+    blurb:
+      'The system I run my work with. I talk to one command center, it sends jobs to AI sessions in the background, and anything risky comes back to me for a yes.',
+    tags: ['cs', 'aiml', 'agents', 'forFun'],
+    role: 'Creator',
+    detail: [
+      {
+        body: [
+          'Otto started in July 2026 as a way to stop repeating myself to AI tools. It is now more than 900 commits of rules, skills and code that any model can pick up and run, because the memory lives in plain files and not inside one product.',
+        ],
+      },
+      {
+        heading: 'What it does',
+        points: [
+          { label: 'Command center', text: 'A terminal app where I talk to Otto on one side and watch every running session on the other.' },
+          { label: 'Background workers', text: 'Each job runs as its own AI session with a fixed set of permissions. If a job needs more, it stops and asks me.' },
+          { label: 'Model routing', text: 'The kind of work decides which model runs it and how hard it thinks. The limits are enforced in code.' },
+          { label: 'Skills', text: 'Written playbooks for email, calendar, documents, research and outreach, all held to one standard.' },
+          { label: 'Hackathon operations', text: 'I used it to run research and outreach for Hack The Nest, with separate agents that research, draft and double-check each other.' },
+        ],
+      },
+      {
+        heading: 'What I learned',
+        body: [
+          'Autonomy is the easy part to promise. The work is in the boundaries: one source of truth, checks that catch drift, and a person who still says yes before anything that cannot be undone.',
+        ],
+      },
+    ],
+    stack: ['Python', 'Textual', 'PowerShell', 'Markdown', 'MCP', 'Claude'],
+  },
+
   // ── HACKATHONS ───────────────────────────────────────────────────────────────
   {
     id: 'lingo',
@@ -449,115 +486,6 @@ export const WORK_PROJECTS: WorkProject[] = [
     links: [{ label: 'GitHub', href: 'https://github.com/melvinchirag/Portfolio' }],
   },
 
-  {
-    id: 'ottosys',
-    name: 'OttoSys',
-    // Melvin's call (2026-08-12): filed under Personal / For Fun. It is a serious
-    // system but carries no conventional tech stack, so no `stack` section.
-    category: 'personal',
-    status: 'In Progress',
-    blurb:
-      'A personal automation system I’m building on Claude, one skill at a time. Right now it runs my admin life: LinkedIn, email, calendar, club.',
-    tags: ['cs', 'aiml', 'forFun'],
-    role: 'Creator & Developer',
-    detail: [
-      {
-        body: [
-          'Long term, OttoSys is one node in a network of automations, each bounded to its own part of life, coordinated by a single intelligent layer above them.',
-          'The tempting move is one system that automates everything. I’m avoiding that on purpose. One system covering a whole life adds latency, adds redundancy, and burns compute on tasks that never needed that much reasoning. So OttoSys is a network instead.',
-        ],
-      },
-      {
-        heading: 'What’s built: the skills',
-        points: [
-          {
-            label: 'LinkedIn post drafting',
-            text: 'Writes posts from real project data pulled from Devpost and GitHub, not memory. Tone shifts by content type. Credits teammates by name, every time.',
-          },
-          {
-            label: 'LinkedIn outreach DMs',
-            text: 'Short, one ask, always tied to something specific about the person. Never invents a hook.',
-          },
-          {
-            label: 'Google Calendar',
-            text: 'Books events by relationship and time of day rules. Surfaces conflicts instead of resolving them on its own. Confirms before inviting anyone.',
-          },
-          {
-            label: 'Email drafting',
-            text: 'Tone climbs as the relationship gets more established. Drafts only. Never sends.',
-          },
-          {
-            label: 'Skill creator',
-            text: 'A meta skill that scaffolds every new skill to the same standard, so nothing drifts from day one.',
-          },
-        ],
-      },
-      {
-        heading: 'The hands: MCP connections',
-        points: [
-          {
-            label: 'Gmail and Calendar',
-            text: 'Anthropic’s own connectors. Credentials stay server side, off any single device.',
-          },
-          {
-            label: 'GitHub and Devpost',
-            text: 'Fetched live for real project facts, a direct fetch each time, no standing connector.',
-          },
-          {
-            label: 'LinkedIn',
-            text: 'No connector at all. There is no API to actually post or send, so everything is draft only, copied out by hand. That is a safety rail, not a gap I’m rushing to close.',
-          },
-        ],
-      },
-      {
-        heading: 'Architecture: a network of domains, not one brain',
-        body: [
-          'Each part of life becomes its own domain: bounded, independent, replaceable. OttoSys is the admin domain (LinkedIn, email, calendar, club, soon GitHub hygiene). A future domain would oversee my actual builds, like Osiris.',
-          'Every domain runs the same three layers: MCP for the hands, skills for the judgment, context for the memory. Above them all sits a thin orchestrator, the harness. It does two jobs only: decide which domain owns a task, and decide which model runs it.',
-        ],
-      },
-      {
-        heading: 'Model agnosticism',
-        body: [
-          'The core bet: judgment lives in the skill, not in whichever model is running it. Every skill has to pass one test. Could a cheap, weak model execute it correctly, start to finish, with no hidden judgment left unstated. If a skill only works on a strong model, that is a bug in the skill, not a limit of the model.',
-          'Strong models write and improve skills. Cheap models run them day to day. That split is what makes the whole thing affordable to run for real, not just as a demo.',
-        ],
-      },
-      {
-        heading: 'SEAS: assisted evolution, always human approved',
-        body: [
-          'The goal is a system that keeps getting better on its own initiative. It notices its own mistakes, proposes fixes, improves over time. I call the loop SEAS. Observe a correction or a repeated failure. Propose a concrete diff to the skill, with a reason. Present it to me, never applied silently. I approve or reject, my call every time. Commit to git, so every change is tracked and reversible.',
-          'It is deliberately not autonomous. A system that drafts my emails and books my time doesn’t get to rewrite its own judgment while I’m not looking. The improvement is real, the loop just always closes through me.',
-        ],
-      },
-      {
-        heading: 'Command center',
-        body: [
-          'One place to talk to the whole system, not a different app per domain. Terminal first, where the harness gets built and proven. A Telegram bot next, a phone based door into the same orchestrator, so a task started on my phone and one started in the terminal get handled the exact same way. The same rules travel with it: draft don’t send, confirm before anything irreversible, verify after write. Texting a bot doesn’t loosen the human gate.',
-        ],
-      },
-      {
-        heading: 'The context vault: toward a second brain',
-        body: [
-          'Right now the vault is plain markdown with YAML frontmatter, one file each for people, rules, and facts, linked together and Obsidian compatible on purpose. The plan is to bring it into Obsidian and use the graph view to actually see the system think, relationships and rules and past decisions as one connected map. A second brain the automation reads from, not just a place I take notes.',
-        ],
-      },
-      {
-        heading: 'Roadmap',
-        points: [
-          { text: 'Finish the admin domain: compliance auditor, then scout.' },
-          {
-            text: 'Put the club side to real use helping run Hack the Nest, EMU’s first ever hackathon, led by our Google Developer Group.',
-          },
-          { text: 'Stand up a second domain and let two real systems tell me what the harness actually needs.' },
-          { text: 'Build the harness: domain router plus model router.' },
-          { text: 'Bring the context vault into Obsidian for the second brain view.' },
-          { text: 'Move hosting onto local and VPS instances.' },
-          { text: 'Interfaces last: a command center in the terminal, then a Telegram bot, both on the same harness.' },
-        ],
-      },
-    ],
-  },
 ]
 
 /** Section title shown for each category (also used to open the right section

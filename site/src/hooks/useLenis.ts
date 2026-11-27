@@ -47,6 +47,12 @@ export function heroScrollToTop() {
   }
 }
 
+/** Glide to a scroll position through whichever scroll engine is running. */
+export function glideTo(y: number, reduced: boolean) {
+  if (activeLenis) activeLenis.scrollTo(y, { duration: reduced ? 0 : 0.7, easing: (t: number) => 1 - Math.pow(1 - t, 3) })
+  else window.scrollTo({ top: y, behavior: reduced ? 'auto' : 'smooth' })
+}
+
 /**
  * Scroll so hero frame `index` is centred. Because the strip pans exactly one
  * viewport-height of scroll per frame, the target Y is simply the track's top

@@ -24,7 +24,7 @@
 import { useRef } from 'react'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { HeroBeats } from '../components/HeroBeats'
-import { BEAT_COUNT, useHeroScrollTrack, usePhoneFrameSettle } from '../hooks/heroScroll'
+import { BEAT_COUNT, useHeroScrollTrack, useFrameSettle } from '../hooks/heroScroll'
 import { Contact } from './Contact'
 
 export function Home() {
@@ -35,7 +35,7 @@ export function Home() {
   // `heroScroll` store. This is the ONLY thing that writes scroll state.
   useHeroScrollTrack(trackRef)
   // Phones: never leave the page resting between two frames (see heroScroll.ts).
-  usePhoneFrameSettle(trackRef)
+  useFrameSettle(trackRef)
 
   return (
     <>

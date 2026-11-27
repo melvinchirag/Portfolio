@@ -200,13 +200,13 @@ function IdentityFrame({ index }: { index: number }) {
           sit inside the name lockup, right-aligned so they end exactly above
           the N of MELVIN, and the surname is tracked out to MELVIN's width
           (see the effect above), so the whole lockup is one aligned block. */}
-      <div className="frame-item relative col-span-12 flex flex-col md:col-span-7 md:col-start-6 md:block" style={FI(0)}>
+      <div data-quiet className="frame-item relative col-span-12 flex flex-col md:col-span-7 md:col-start-6 md:block" style={FI(0)}>
         {/* On a phone the wrapper below is display:contents so the links, the name,
             the sentence and the two buttons can be ordered freely. Order since
             2026-11-25 (Melvin): links, name, sentence, then the buttons UNDER the
             sentence where the page dots used to be, and the dots at the very bottom. */}
         <div className="contents md:relative md:block md:w-fit">
-          <div ref={slime.links} className="label order-2 mb-5 flex items-center justify-end gap-5">
+          <div ref={slime.links} className="label hero-links order-2 mb-5 flex items-center justify-end gap-5">
             <a data-slime href="https://github.com/melvinchirag" target="_blank" rel="noopener noreferrer" className={link}>
               GitHub
             </a>
@@ -249,17 +249,22 @@ function IdentityFrame({ index }: { index: number }) {
           <FerroName targetRef={firstNameRef} shown={nameShown} onActive={setFerro} />
         </div>
 
-        <p className="order-4 mt-7 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/75 sm:text-[15.5px]">
-          {/* Rewritten 2026-11-25. Melvin: "I don't build computer vision and machine
-              learning systems only, right? I have a lot of things." Every item named
-              here is a project on the Work page. */}
-          I build whatever the idea needs: AI agents, vision systems, a space simulator, this
-          site. Some of it has won hackathons. I'm also vice president of Hack The Nest, EMU's
-          first hackathon. This site can{' '}
+        <p className="order-4 mt-6 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/80 sm:text-[15.5px] md:mt-7">
+          {/* Rewritten 2026-11-26 around his own words from The Past ("I was looking
+              for a way to keep creating"). Melvin: "Something that is more me."
+              Every item named here is a project on the Work page. */}
+          I didn’t want a job title. I wanted a way to keep creating. So far: AI agents, vision
+          systems, a space simulator, and Otto, the system I run my work with. I’m also vice
+          president of Hack The Nest. This site can{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
             see further
           </Link>
           .
+        </p>
+
+        <p className="open-to order-4 mt-4 max-w-[48ch] text-[12.5px] leading-relaxed text-sand">
+          Open to <strong>2027 internships and full-time roles</strong>, and always up to
+          collaborate on new projects and startups.
         </p>
 
         <div ref={slime.cta} className="order-5 mt-6 flex flex-wrap items-center gap-3 md:order-none md:mt-8">
@@ -286,7 +291,7 @@ function IdentityFrame({ index }: { index: number }) {
  * ------------------------------------------------------------------------ */
 function PastFrame({ index }: { index: number }) {
   return (
-      <div data-pan={index} className={`${GLASS_BOX} w-[min(88vw,600px)]`}>
+      <div data-quiet data-pan={index} className={`${GLASS_BOX} w-[min(88vw,600px)]`}>
         <h2
           className="frame-title frame-item font-display text-[2.2rem] tracking-[-0.015em] leading-[0.95] sm:text-[clamp(2.6rem,7vw,5.2rem)]"
           style={FI(0)}
@@ -543,53 +548,22 @@ function ProjectRail() {
              look that makes a page feel templated. Only the preview well
              carries a surface. */
           <article key={p.name} data-project-card className="flex flex-col text-left">
-            {/* Image + name ARE the "Explore Project" action now (Melvin,
-                2026-08-10: "remove those [Explore Project buttons]... if
-                someone hovers over its name or the image it should
-                automatically do what 'explore project' is doing" — this also
-                evens out card height, since a trailing CTA line whose
-                presence/absence depended on `href` was the thing making cards
-                sit at different heights). No separate link when there's
-                nothing to link to yet (`tentative` projects) — the "Preview
-                coming" label in the image already says that, an inert hover
-                target would just be a dead end. */}
-            {p.href ? (
-              <a
-                href={p.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Explore ${p.name}`}
-                className="group/card ease-out-expo -m-1 rounded-lg p-1 transition-opacity duration-300 hover:opacity-90"
-              >
-                <div className="relative mb-4 flex aspect-[16/7] items-end sm:aspect-[16/10] overflow-hidden rounded-lg bg-white/[0.045] transition-colors group-hover/card:bg-white/[0.07]">
-                  <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
-                    {p.name.charAt(0)}
-                  </span>
-                  <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">Preview</span>
-                  {/* Same arrow glyph the Resume link already uses elsewhere
-                      on the hero — reused, not a new affordance to learn. */}
-                  <span
-                    aria-hidden
-                    className="ease-out-expo text-accent absolute top-3 right-3 translate-y-1 text-sm opacity-0 transition-all duration-300 group-hover/card:translate-y-0 group-hover/card:opacity-100"
-                  >
-                    ↗
-                  </span>
-                </div>
-                <h3 className="card-name font-display group-hover/card:text-accent text-xl text-white transition-colors duration-300">
-                  {p.name}
-                </h3>
-              </a>
-            ) : (
-              <>
-                <div className="relative mb-4 flex aspect-[16/7] items-end sm:aspect-[16/10] overflow-hidden rounded-lg bg-white/[0.045]">
-                  <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-5xl text-white/15">
-                    {p.name.charAt(0)}
-                  </span>
-                  <span className="m-3 text-[9px] tracking-[0.25em] text-white/40 uppercase">Preview coming</span>
-                </div>
-                <h3 className="card-name font-display text-xl text-white">{p.name}</h3>
-              </>
-            )}
+            {/* Picture + name are the "open this project" action. A card shows a
+                picture only when a real one exists (2026-11-26): the lettered
+                "Preview" boxes read as unfinished. */}
+            <ProjectLinkWrap href={p.href} name={p.name}>
+              {p.image && (
+                <img
+                  src={p.image}
+                  alt=""
+                  loading="lazy"
+                  className="mb-4 aspect-[16/7] w-full rounded-lg bg-white/[0.045] object-cover sm:aspect-[16/10]"
+                />
+              )}
+              <h3 className="card-name font-display group-hover/card:text-accent text-xl text-white transition-colors duration-300">
+                {p.name} <span aria-hidden className="text-accent text-sm">↗</span>
+              </h3>
+            </ProjectLinkWrap>
 
             {/* NOT `flex-1` anymore — see .card-blurb in index.css for why:
                 a flex-grow blurb only pins the BOTTOM of the tags to a common
@@ -609,15 +583,29 @@ function ProjectRail() {
   )
 }
 
+/** A card's link: pages on this site stay in the tab, everything else opens a new one. */
+function ProjectLinkWrap({ href, name, children }: { href: string; name: string; children: React.ReactNode }) {
+  const cls = 'group/card ease-out-expo -m-1 block rounded-lg p-1 transition-opacity duration-300 hover:opacity-90'
+  return href.startsWith('/') ? (
+    <Link to={href} aria-label={`Explore ${name}`} className={cls}>
+      {children}
+    </Link>
+  ) : (
+    <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`Explore ${name}`} className={cls}>
+      {children}
+    </a>
+  )
+}
+
 /* ---------------------------------------------------------------------------
- * Frame 2 — The Present. Three featured project cards inside the glass box.
+ * Frame 2 — The Present. Featured project cards inside the glass box.
  * ------------------------------------------------------------------------ */
 function PresentFrame({ index }: { index: number }) {
   // `relative` so the rail arrows can position against the WHOLE glass box
   // (centred vertically on the panel, out in its side gutters) rather than
   // against the rail alone, which sat them low and over the cards.
   return (
-      <div data-pan={index} className={`${GLASS_BOX} relative w-[min(94vw,1060px)]`}>
+      <div data-quiet data-pan={index} className={`${GLASS_BOX} relative w-[min(94vw,1060px)]`}>
         <h2
           className="frame-title frame-item font-display text-[2.2rem] tracking-[-0.015em] leading-[0.95] sm:text-[clamp(2.6rem,7vw,5.2rem)]"
           style={FI(0)}
@@ -653,7 +641,7 @@ function PresentFrame({ index }: { index: number }) {
  * ------------------------------------------------------------------------ */
 function FutureFrame({ index }: { index: number }) {
   return (
-      <div data-pan={index} className={`${GLASS_BOX} w-[min(90vw,680px)]`}>
+      <div data-quiet data-pan={index} className={`${GLASS_BOX} w-[min(90vw,680px)]`}>
         <h2
           className="frame-title frame-item font-display text-[2.2rem] tracking-[-0.015em] leading-[0.95] sm:text-[clamp(2.6rem,7vw,5.2rem)]"
           style={FI(0)}

@@ -7,9 +7,16 @@
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#060102" />
     <title>Melvin Chirag Karupati</title>
+    <style>
+      html, body { background: #060102; margin: 0; }
+      .boot-screen { position: fixed; inset: 0; background: #000; }
+      .boot-name { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; pointer-events: none; color: #f3dfb4; text-align: center; font-family: 'Archivo Variable', Archivo, system-ui, sans-serif; text-transform: uppercase; text-shadow: 0 0 24px #000, 0 0 8px #000; }
+      .boot-first { font-size: clamp(2.6rem, 11vw, 6rem); font-weight: 800; letter-spacing: 0.02em; line-height: 1; }
+      .boot-rest { font-size: clamp(0.8rem, 3.2vw, 1.25rem); letter-spacing: 0.42em; padding-left: 0.42em; }
+    </style>
     <meta
       name="description"
-      content="Melvin Chirag Karupati. Computer science student at Eastern Michigan University building computer-vision and machine-learning systems. Co-lead of Hack The Nest, EMU's first hackathon."
+      content="Melvin Chirag Karupati. Computer science student at Eastern Michigan University who builds AI agents, vision systems and more. Open to 2027 internships and full-time roles. Vice president of Hack The Nest, EMU's first hackathon."
     />
     <!-- The absolute address. Mirrored in src/data/site.ts (per-page tags),
          public/robots.txt and public/sitemap.xml; change all four when the
@@ -22,7 +29,7 @@
     <meta property="og:title" content="Melvin Chirag Karupati" />
     <meta
       property="og:description"
-      content="Computer science at Eastern Michigan University. Computer vision, machine learning, and Hack The Nest."
+      content="Computer science at Eastern Michigan University. AI agents, vision systems and Hack The Nest. Open to 2027 internships and full-time roles."
     />
     <meta property="og:url" content="https://melvinchirag.com/" />
     <meta property="og:site_name" content="Melvin Chirag Karupati" />
@@ -35,11 +42,12 @@
     <meta name="twitter:title" content="Melvin Chirag Karupati" />
     <meta
       name="twitter:description"
-      content="Computer science at Eastern Michigan University. Computer vision, machine learning, and Hack The Nest."
+      content="Computer science at Eastern Michigan University. AI agents, vision systems and Hack The Nest. Open to 2027 internships and full-time roles."
     />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- The name is on screen before any script runs. React replaces this. -->
+    <div id="root"><div class="boot-screen"><div class="boot-name"><span class="boot-first">Melvin</span><span class="boot-rest">Chirag Karupati</span></div></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

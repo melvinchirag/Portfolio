@@ -1230,3 +1230,21 @@ html.has-cursor.cursor-hover .cursor-dot {
   }
 }
 /* THE CM MENU. END */
+
+/* The veil under the header (2026-11-26): text fades out before it reaches the
+   name and the menu button. */
+.top-veil { position: fixed; inset: 0 0 auto; height: calc(96px + env(safe-area-inset-top, 0px)); z-index: 30; pointer-events: none; opacity: 0; transition: opacity 0.35s ease; background: linear-gradient(to bottom, #060102 0%, #060102f2 55%, #06010200 100%); }
+.top-veil.is-on { opacity: 1; }
+/* Thumb-sized targets for the small things on phones. */
+@media (max-width: 767px) {
+  .frame-dot { position: relative; }
+  .frame-dot::after { content: ''; position: absolute; inset: -18px -6px; }
+}
+
+/* "Open to" line under the hero sentence (2026-11-26). */
+.open-to { border-left: 2px solid #ff8800; padding-left: 12px; }
+.open-to strong { font-weight: 700; }
+@media (max-width: 767px) {
+  /* Bigger touch areas for the three hero links without moving them. */
+  .hero-links a { padding: 14px 6px; margin: -14px -6px; }
+}

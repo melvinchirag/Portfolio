@@ -32,35 +32,44 @@ export type Project = {
   blurb: string
   stack: string[]
   href: string
+  /** A real picture under /public. Absent means the card has no picture box. */
+  image?: string
   /** True while the copy/stack is a placeholder awaiting real details. */
   tentative?: boolean
 }
 
+// Order and choice approved by Melvin, 2026-11-26: Otto, ADE, Lingo, Manas.
 export const PROJECTS: Project[] = [
   {
-    // Full rewrite, confirmed 2026-08-11: Manas is now a real, specific
-    // project (a hackathon build), not a placeholder direction — `tentative`
-    // dropped accordingly.
+    name: 'Otto',
+    blurb:
+      'The system I run my work with. I talk to one command center, it sends jobs to AI sessions in the background, and anything risky comes back to me.',
+    stack: ['Python', 'Textual', 'Claude', 'Markdown'],
+    href: '/work',
+    image: '/work/otto.svg',
+  },
+  {
+    name: 'ADE',
+    blurb:
+      'A team of AI agents that live on your desktop as small 3D animals. You talk to one, it hands out the work, and a warden approves every action. Three prizes at Hack Dearborn 5.',
+    stack: ['Electron', 'React', 'TypeScript', 'Three.js'],
+    href: 'https://devpost.com/software/agentique-desktop-ecosystem',
+    image: '/work/ade.svg',
+  },
+  {
+    name: 'Lingo',
+    blurb:
+      'An AI layer between two people texting that explains idioms, grammar and cultural references. Won the Roots and Renewal track at SpartaHack 11.',
+    stack: ['React', 'FastAPI', 'Gemini', 'OpenRouter'],
+    href: 'https://devpost.com/software/culture-bridge',
+    image: '/work/lingo.svg',
+  },
+  {
     name: 'Manas',
     blurb:
       'A desktop console that runs four real space simulations in one window, driven from a terminal. Every visual is computed from physics, not animated.',
     stack: ['TypeScript', 'WebGL2', 'GLSL', 'Tauri 2'],
     href: 'https://github.com/melvinchirag/Manas',
-  },
-  {
-    name: 'Portfolio (Melvin Chirag)',
-    blurb:
-      'A cinematic space built to tell a technical story through motion and interface design. A real time WebGL experience I built from scratch, not a template.',
-    stack: ['React', 'TypeScript', 'Three.js', 'React Three Fiber', 'WebGL / GLSL', 'GSAP'],
-    href: 'https://github.com/melvinchirag/Portfolio',
-  },
-  {
-    // Replaces the old "Hackathon Project / TBD" placeholder outright — this
-    // is the real, won hackathon project.
-    name: 'Lingo',
-    blurb:
-      'An AI bridge for contextual communication, breaking down grammar, idioms, and cultural nuance so non-native speakers never get lost. Won the Roots and Renewal track at SpartaHack 11.',
-    stack: ['React Vite', 'OpenRouter', 'Gemini API', 'Tailwind CSS', 'Framer motion', 'FastAPI', 'Vercel v0'],
-    href: 'https://devpost.com/software/culture-bridge',
+    image: '/work/manas.svg',
   },
 ]

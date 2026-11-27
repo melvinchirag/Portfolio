@@ -299,6 +299,13 @@ export function FactSnakes() {
           ctx.fillRect(px - PX / 2, py - PX / 2, PX, PX)
         }
       }
+      // Words win (2026-11-26): the facts crossed the name and the headings.
+      // Wipe them from behind anything marked data-quiet that is on screen.
+      for (const el of document.querySelectorAll('[data-quiet]')) {
+        const r = el.getBoundingClientRect()
+        if (r.width > 0 && r.right > 0 && r.left < W && r.bottom > 0 && r.top < H)
+          ctx.clearRect(r.left - 14, r.top - 10, r.width + 28, r.height + 20)
+      }
     }
 
     const tick = (now: number) => {

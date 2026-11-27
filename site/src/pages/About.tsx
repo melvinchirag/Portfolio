@@ -84,10 +84,10 @@ function Card({
   className?: string
 }) {
   return (
-    <div className={`sync-glass-rect flex flex-col gap-2 rounded-2xl border border-white/5 bg-white/[0.02] p-6 transition-colors hover:bg-white/[0.04] ${className}`}>
-      <span className="font-display text-2xl text-white/20 md:text-3xl">{year}</span>
+    <div className={`sync-glass-rect flex flex-col gap-2 rounded-2xl border border-white/10 bg-[#0b0404]/75 p-6 transition-colors hover:bg-[#170a0a]/80 ${className}`}>
+      <span className="font-display text-2xl text-sand/60 md:text-3xl">{year}</span>
       <h3 className="text-base font-medium tracking-wide text-white">{title}</h3>
-      <p className="mt-1 text-xs leading-relaxed text-white/60">{description}</p>
+      <p className="mt-1 text-[13px] leading-relaxed text-white/85">{description}</p>
     </div>
   )
 }
@@ -127,6 +127,8 @@ export function About() {
 
   return (
     <div className="relative z-10 w-full px-6 pt-32 pb-40 md:px-10">
+      {/* Calms the video so the words win (2026-11-26). Behind the text, above the canvas. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-[#060102]/70" />
       {/* ── SECTION 1: "Get to know me !" — header left, milestone cards right ── */}
       <div className="grid grid-cols-1 gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="max-w-2xl flex flex-col items-center justify-center">
@@ -134,7 +136,7 @@ export function About() {
             <h1 className="display-wide font-display text-5xl leading-[0.95] font-bold tracking-tight text-white md:text-7xl">
               Get to know me
             </h1>
-            <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/55">
+            <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/80">
               Three countries, two colleges, one habit: building things until they work.
             </p>
           </Reveal>
@@ -167,7 +169,7 @@ export function About() {
             <h2 className="display-wide mt-4 flex flex-wrap items-center font-display text-4xl leading-[1.05] font-bold text-white md:text-5xl">
               Get to know me even more
             </h2>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/45">
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/80">
               The through-lines that do not fit into a single year &mdash; the interests, disciplines,
               and practices that shape the direction of the journey.
             </p>
@@ -178,8 +180,8 @@ export function About() {
 
           {/* Closing */}
           <Reveal className="mt-40">
-            <p className="font-display text-3xl text-white/25 md:text-4xl">The work continues.</p>
-            <p className="mt-3 text-sm text-white/30">Building the next chapter.</p>
+            <p className="font-display text-3xl text-white/60 md:text-4xl">The work continues.</p>
+            <p className="mt-3 text-sm text-white/65">Building the next chapter.</p>
           </Reveal>
         </div>
         {/* The second "Coming soon" square (right column) was removed

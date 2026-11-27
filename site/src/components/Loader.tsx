@@ -51,9 +51,14 @@ import { markIntroLeaving, markIntroReady } from '../hooks/heroIntro'
 const SESSION_KEY = 'melvin:seen-intro'
 
 const CONFIG = {
-  totalMs: 5200, // full sequence length
-  fadeMs: 900, // the dissolve at the end, revealing the hero
-  unmountMs: 500, // extra time for the DOM fade before we tear down
+  // Cut from 5.2s to about 2s (Melvin, 2026-11-26): visitors waited 9s on a fast
+  // connection before they saw the home page.
+  totalMs: 1700, // full sequence length
+  fadeMs: 450, // the dissolve at the end, revealing the hero
+  endByMs: 2600, // aim to be done this long after navigation began
+  minMs: 1000, // but never shorter than this, so it is still seen
+  unmountMs: 300, // extra time for the DOM fade before we tear down
+  growthRate: 2.6, // the network grows this much faster, so it still completes
   somaCount: 16,
   dustCount: 1400,
   bloomThreshold: 0.34,
@@ -544,6 +549,8 @@ export function Loader() {
 
     /* ---- loop ---- */
     const start = performance.now()
+    // A slow load has already spent the visitor's patience: play a shorter intro.
+    const total = Math.max(CONFIG.minMs, Math.min(CONFIG.totalMs, CONFIG.endByMs - start))
     const fovRad = (CONFIG.fov * Math.PI) / 180
 
     const frame = (now: number) => {
@@ -551,11 +558,11 @@ export function Loader() {
       const t = ms / 1000
 
       // Fade in from black, then dissolve out to reveal the hero.
-      const fadeOutStart = CONFIG.totalMs - CONFIG.fadeMs
-      const fade = Math.min(1, t / 0.35) * clamp((CONFIG.totalMs - ms) / CONFIG.fadeMs, 0, 1)
+      const fadeOutStart = total - CONFIG.fadeMs
+      const fade = Math.min(1, t / 0.35) * clamp((total - ms) / CONFIG.fadeMs, 0, 1)
 
       // Camera: a push through the network with a gentle orbital drift.
-      const k = clamp(ms / CONFIG.totalMs, 0, 1)
+      const k = clamp(ms / total, 0, 1)
       const dist = 78 - k * 46
       const ang = 0.35 + k * 0.5
       const eye = [Math.sin(ang) * dist * 0.34, 7 + Math.sin(t * 0.32) * 4.5, Math.cos(ang) * dist]
@@ -573,7 +580,7 @@ export function Loader() {
       gl.useProgram(pPoints.p)
       gl.uniformMatrix4fv(pPoints.u.uView, false, view)
       gl.uniformMatrix4fv(pPoints.u.uProj, false, proj)
-      gl.uniform1f(pPoints.u.uTime, t)
+      gl.uniform1f(pPoints.u.uTime, t * CONFIG.growthRate)
       gl.uniform1f(pPoints.u.uFocal, focal)
       gl.uniform1f(pPoints.u.uFade, 1.0)
       bindPointAttribs()
@@ -618,7 +625,7 @@ export function Loader() {
         finish()
         return
       }
-      if (ms >= CONFIG.totalMs) {
+      if (ms >= total) {
         finish()
         return
       }
@@ -685,6 +692,11 @@ export function Loader() {
       }}
     >
       <canvas ref={canvasRef} className="h-full w-full" />
+      {/* Same markup as the first paint in index.html, so the name never blinks. */}
+      <div className="boot-name">
+        <span className="boot-first">Melvin</span>
+        <span className="boot-rest">Chirag Karupati</span>
+      </div>
     </div>
   )
 }
