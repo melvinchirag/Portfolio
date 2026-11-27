@@ -23,6 +23,9 @@ console.log('RESTING STATES WITH CUT-OFF TEXT:', bad, 'of', steps.length)
 console.log('fps', await p.fps(2500))
 await p.ev('window.scrollTo(0, 0)'); await sleep(2500)
 for (const word of ['Work', 'Vision', 'About', 'Contact', 'Home']) {
+  // Phones open the page list from the CM button first (since 2026-11-25).
+  const cm = await p.ev(`(() => { const b = document.querySelector('button[aria-controls]'); if (!b || b.getAttribute('aria-expanded') === 'true') return null; const r = b.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; })()`)
+  if (Array.isArray(cm)) { await p.tap(cm[0], cm[1]); await sleep(1400) }
   console.log(await p.tapText('a', word)); await sleep(4500)
   console.log('  ->', await p.state())
 }

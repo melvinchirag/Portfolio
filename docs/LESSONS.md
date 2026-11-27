@@ -270,3 +270,7 @@ would have saved a whole session.
 8. **Anything pinned with `overflow: hidden` must fit the smallest screen or scale
    to it.** There is no scrollbar to rescue it. Use `svh`, not `vh`, for a pinned
    box on phones: `100vh` on iOS is the height with the browser bars hidden.
+9. **Parallel workers need their own ports.** Two helpers running the phone
+   harness at once on the same Chrome debugging port both hung until a watchdog
+   stopped them. Give every concurrent script its own `port`, and run scripts
+   under a hard timeout.
