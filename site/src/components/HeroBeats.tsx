@@ -252,10 +252,10 @@ function IdentityFrame({ index }: { index: number }) {
         <p className="order-4 mt-6 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/80 sm:text-[15.5px] md:mt-7">
           {/* Melvin's own outline, 2026-11-26: who he is, the fields in HIS order,
               bringing them together. No titles or roles in this paragraph. */}
-          I’m a computer science undergrad, constantly learning new things in AI and machine
-          learning, software engineering, brain-computer interfaces, robotics, computer vision
-          and more. I’m always looking to bring fields together to create innovative solutions
-          for the world. This site can{' '}
+          I’m a computer science undergraduate focused on AI, machine learning and software
+          engineering, while developing expertise in brain-computer interfaces, robotics and
+          computer vision. My goal is to bring fields together, these and beyond, to build new
+          solutions. This site can{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
             see further
           </Link>
