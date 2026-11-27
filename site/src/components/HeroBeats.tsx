@@ -250,12 +250,12 @@ function IdentityFrame({ index }: { index: number }) {
         </div>
 
         <p className="order-4 mt-6 max-w-[44ch] text-[14.5px] leading-relaxed text-sand/80 sm:text-[15.5px] md:mt-7">
-          {/* Rewritten 2026-11-26 around his own words from The Past ("I was looking
-              for a way to keep creating"). Melvin: "Something that is more me."
-              Every item named here is a project on the Work page. */}
-          I didn’t want a job title. I wanted a way to keep creating. So far: AI agents, vision
-          systems, a space simulator, and Otto, the system I run my work with. I’m also vice
-          president of Hack The Nest. This site can{' '}
+          {/* Melvin's own outline, 2026-11-26: who he is, the fields in HIS order,
+              bringing them together. No titles or roles in this paragraph. */}
+          I’m a computer science undergrad, constantly learning new things in AI and machine
+          learning, software engineering, brain-computer interfaces, robotics, computer vision
+          and more. I’m always looking to bring fields together to create innovative solutions
+          for the world. This site can{' '}
           <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
             see further
           </Link>
@@ -263,8 +263,8 @@ function IdentityFrame({ index }: { index: number }) {
         </p>
 
         <p className="open-to order-4 mt-4 max-w-[48ch] text-[12.5px] leading-relaxed text-sand">
-          Open to <strong>2027 internships and full-time roles</strong>, and always up to
-          collaborate on new projects and startups.
+          Open to <strong>2027 internships and full-time roles</strong>. Always up to collaborate on
+          new projects and startups.
         </p>
 
         <div ref={slime.cta} className="order-5 mt-6 flex flex-wrap items-center gap-3 md:order-none md:mt-8">

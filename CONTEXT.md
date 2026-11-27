@@ -4298,3 +4298,8 @@ Otto moved to Flagship and rewritten (public-safe facts only); cover art in site
 Local measurement: home visible ~3.1-3.4s fast, ~5.6-6.5s throttled phone (targets 3 and 5, not met on slow).
 Open: real project screenshots (Manas repo has screenshot.png), photo, split the JS bundle for speed.
 Not live until Melvin says so.
+
+2026-11-26, later: Melvin rejected the name-on-intro change ("change it back to old and scrap the new idea"),
+so Loader.tsx is the original 5.2s neuron sequence and the first-paint name is gone. Do not shorten or add
+a name to the opening without asking. Hero paragraph now follows his outline (fields in his order, no
+roles or titles). Arrival time is back to about 9s fast / 13s slow.
