@@ -4336,3 +4336,9 @@ Preview has a "Cursor" corner button and ?cursor=. If he likes neither, ship sys
 - Lettering: src/typeStyle.ts, halo (preview default, thin wide Archivo), nova (Unbounded from Google Fonts,
   self-host if chosen), classic. FerroName and pixel snake trails only in classic.
 Still retro-leaning and untouched: mercury menu pill, glass-cta buttons, clock rail.
+
+## 2026-11-27 (late): tinted glass, still social beads, liquid Halo name
+- Melvin: dark glass looked like "black paint on it"; glass must be tinted itself. LiquidGlassField shader rebuilt as dyed glass (absorption `u_dye`, ambient-lit body from a wide blur `u_ambient`, two glints, edge pooling, 5-tap dispersion, dither). No CSS fill over glass panes.
+- Social buttons: revolving ring removed ("looks cheap"); six still crystal beads (`u_clear` = no dye), slow bloom kept.
+- Lettering: Halo approved and now fixed (`<html data-type="halo">` in index.html; typeStyle.ts, Nova and the Letters switch removed). FerroName (liquid name) runs in Halo with a white-to-orange shade.
+- Cursor: Prism approved; the Cursor switch is removed.

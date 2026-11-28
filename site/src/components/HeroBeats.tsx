@@ -35,7 +35,6 @@ import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
 import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
 import { FerroName } from './FerroName'
-import { typeStyle } from '../typeStyle'
 import { NameAssembly, SOLIDIFY_SECS } from './NameAssembly'
 import { slime } from './slime'
 import { TagThread } from './TagThread'
@@ -236,6 +235,10 @@ function IdentityFrame({ index }: { index: number }) {
                 transitionDuration: `${SOLIDIFY_SECS}s`,
                 transitionTimingFunction: 'ease-in-out',
                 color: ferro ? 'transparent' : undefined,
+                // Halo paints the text with a clipped gradient: drop that too,
+                // or it shows through underneath the liquid.
+                backgroundImage: ferro ? 'none' : undefined,
+                filter: ferro ? 'none' : undefined,
               }}
               className={`name-gold display-wide w-fit font-display text-[clamp(4rem,15vw,9rem)] leading-[0.86] font-extrabold tracking-[-0.03em] uppercase transition-opacity md:text-[clamp(5rem,9.4vw,12rem)] ${
                 nameShown ? 'opacity-100' : 'opacity-0'
@@ -250,9 +253,7 @@ function IdentityFrame({ index }: { index: number }) {
               Chirag Karupati
             </span>
           </h1>
-          {typeStyle === 'classic' && (
-            <FerroName targetRef={firstNameRef} shown={nameShown} onActive={setFerro} />
-          )}
+          <FerroName targetRef={firstNameRef} shown={nameShown} onActive={setFerro} />
         </div>
 
         <div className="text-box hero-box order-4 mt-5 w-[var(--name-w,100%)] max-w-full p-4 md:p-5">

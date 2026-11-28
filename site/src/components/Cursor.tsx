@@ -10,29 +10,12 @@
  * no easing. Only the shape change is animated. The system pointer is hidden
  * only once this one is drawing (`html.has-prism`), so a failure leaves the
  * normal cursor. Text fields always use the system I-beam.
- *
- * Preview links can switch to the standard pointer (?cursor=system).
  * ========================================================================= */
 
 import { useEffect, useRef, useState } from 'react'
-import { isPreview } from '../boxStyle'
 
-type Style = 'prism' | 'system'
-const KEY = 'melvin:cursor'
 const CLICKABLE = 'a, button, [role="button"], [role="tab"], summary, label[for], select'
 const TEXT = 'input, textarea'
-
-function initial(): Style {
-  if (!isPreview) return 'prism'
-  const asked = new URLSearchParams(location.search).get('cursor')
-  if (asked === 'prism' || asked === 'system') return asked
-  try {
-    if (sessionStorage.getItem(KEY) === 'system') return 'system'
-  } catch {
-    /* private window: use the default */
-  }
-  return 'prism'
-}
 
 /* Both outlines start at the point that clicks, (0,0), and run clockwise. */
 type P = [number, number]
@@ -70,21 +53,12 @@ const outline = (t: number) =>
   'M' + FROM.map(([x, y], i) => `${(x + (TO[i][0] - x) * t).toFixed(2)} ${(y + (TO[i][1] - y) * t).toFixed(2)}`).join('L') + 'Z'
 
 export function Cursor() {
-  const [style, setStyle] = useState<Style>(initial)
   const [fine] = useState(() => window.matchMedia('(pointer: fine)').matches)
   const root = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem(KEY, style)
-    } catch {
-      /* not remembered, still applied */
-    }
-  }, [style])
-
-  useEffect(() => {
     const el = root.current
-    if (!el || !fine || style !== 'prism') return
+    if (!el || !fine) return
     const html = document.documentElement
     const paths = el.querySelectorAll('path')
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -145,41 +119,28 @@ export function Cursor() {
       html.removeEventListener('pointerleave', leave)
       leave()
     }
-  }, [style, fine])
+  }, [fine])
 
   if (!fine) return null
   return (
-    <>
-      {style === 'prism' && (
-        <div ref={root} aria-hidden className="prism-cursor">
-          <span className="prism-pulse" />
-          <svg viewBox="-12 -8 44 46" width="44" height="46">
-            <defs>
-              <linearGradient id="prism-edge" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="#ffffff" />
-                <stop offset="0.45" stopColor="#ffd2a0" />
-                <stop offset="1" stopColor="#ff4a1f" />
-              </linearGradient>
-              <linearGradient id="prism-body" x1="0" y1="0" x2="0.7" y2="1">
-                <stop offset="0" stopColor="#fff0dc" stopOpacity="0.92" />
-                <stop offset="0.38" stopColor="#ff9a52" stopOpacity="0.5" />
-                <stop offset="1" stopColor="#1a0403" stopOpacity="0.82" />
-              </linearGradient>
-            </defs>
-            <path fill="url(#prism-body)" />
-            <path fill="none" stroke="url(#prism-edge)" strokeWidth="1.25" strokeLinejoin="round" />
-          </svg>
-        </div>
-      )}
-      {isPreview && (
-        <button
-          type="button"
-          onClick={() => setStyle(style === 'prism' ? 'system' : 'prism')}
-          className="box-switch cursor-switch"
-        >
-          Cursor: {style === 'prism' ? 'Prism' : 'Standard'}
-        </button>
-      )}
-    </>
+    <div ref={root} aria-hidden className="prism-cursor">
+      <span className="prism-pulse" />
+      <svg viewBox="-12 -8 44 46" width="44" height="46">
+        <defs>
+          <linearGradient id="prism-edge" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#ffffff" />
+            <stop offset="0.45" stopColor="#ffd2a0" />
+            <stop offset="1" stopColor="#ff4a1f" />
+          </linearGradient>
+          <linearGradient id="prism-body" x1="0" y1="0" x2="0.7" y2="1">
+            <stop offset="0" stopColor="#fff0dc" stopOpacity="0.92" />
+            <stop offset="0.38" stopColor="#ff9a52" stopOpacity="0.5" />
+            <stop offset="1" stopColor="#1a0403" stopOpacity="0.82" />
+          </linearGradient>
+        </defs>
+        <path fill="url(#prism-body)" />
+        <path fill="none" stroke="url(#prism-edge)" strokeWidth="1.25" strokeLinejoin="round" />
+      </svg>
+    </div>
   )
 }

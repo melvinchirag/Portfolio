@@ -170,25 +170,11 @@ const EXTRA_ICONS: { label: string; href: string; title: string; path: string }[
 ]
 
 /* ---------------------------------------------------------------------------
- * Icon-only social/contact buttons, orbiting a circle counter-clockwise. The
- * original ask (Melvin, 2026-08-10) was "place the social buttons such that
- * they look like an infinity symbol... move in a loop... glow when I hover...
- * halt as I hover and continue when I stop" — everything but the ∞ survived
- * unchanged; see the note below for why that part didn't.
- * NO visible handles or URLs (Melvin, 2026-08-09:
- * showing the raw URL "reads very amateur") — the actual address lives in
- * href + aria-label/title, not on screen, still fully reachable.
- *
- * A CIRCLE, NOT THE FIGURE-EIGHT (Melvin, 2026-08-10, after four attempts at
- * the ∞ and a fifth with the curve stroked on screen: "just make it circular
- * and please remove the trace"). The lemniscate was measurably correct every
- * time it was reported broken; the problem is that an unmarked path can't
- * communicate its own shape, and he doesn't want it marked. A circle is the one
- * closed path that doesn't need marking. See index.css for the full note.
- *
- * The path, the counter-clockwise direction, timing and pause-on-hover all live
- * in `.orbit-ring` / `.orbit-ring-item` (index.css); this component only places
- * each icon at its own evenly-spaced entry point along the shared path.
+ * Icon-only social/contact buttons: six crystal beads, standing still. The
+ * revolving ring was removed on 2026-11-27 (Melvin: "that just looks cheap").
+ * No visible handles or URLs; the address lives in href, aria-label and title.
+ * The slow bloom that asks to be pressed is drawn by LiquidGlassField, one bead
+ * after the next (`--i`).
  * ------------------------------------------------------------------------ */
 
 function FindMeHere() {
@@ -197,18 +183,16 @@ function FindMeHere() {
     ...EXTRA_ICONS,
   ]
   return (
-    <div className="orbit-ring mt-6">
+    <ul className="mt-7 grid grid-cols-3 gap-x-8 gap-y-7">
       {items.map((item, i) => {
         const icon = (
-          <svg viewBox="0 0 24 24" fill="currentColor" width={19} height={19} aria-hidden>
+          <svg viewBox="0 0 24 24" fill="currentColor" width={21} height={21} aria-hidden>
             <path d={item.path} />
           </svg>
         )
-        const shape = 'social-btn flex h-11 w-11 items-center justify-center rounded-full border'
-        // Evenly spaced around the loop: 6 items → 1/6 of the path apart.
-        const style = { '--start': `${(i / items.length) * 100}%`, '--i': i } as CSSProperties
+        const shape = 'social-btn flex h-14 w-14 items-center justify-center rounded-full border'
         return (
-          <div key={item.label} className="orbit-ring-item" style={style}>
+          <li key={item.label} style={{ '--i': i } as CSSProperties}>
             {item.href ? (
               <a
                 href={item.href}
@@ -229,10 +213,10 @@ function FindMeHere() {
                 {icon}
               </span>
             )}
-          </div>
+          </li>
         )
       })}
-    </div>
+    </ul>
   )
 }
 
@@ -366,30 +350,10 @@ function ContactView() {
           )}
         </section>
 
-        {/* Centred in the right-hand column, and vertically centred against the
-            form beside it (Melvin, 2026-08-10: "the socials need to be aligned
-            in the center right"). `self-center` overrides the grid's default
-            stretch so this block sits on the form's midline instead of hanging
-            from the top; `items-center` centres the ring and its label inside
-            the column. A circular ring reads as off-balance unless its label is
-            centred over it too, so both are centred, not just the ring. */}
         <section
           aria-labelledby="contact-direct-heading"
           className="flex flex-col items-center md:self-center"
         >
-          {/* Re-checked 2026-08-10: as a flex column with `items-center`, both
-              this label and the ring below are independently centred on the
-              SAME cross-axis line, so their boxes are provably aligned — this
-              `text-align: center` is a no-op hardening, not the fix for
-              anything measured broken. If it still reads as off-centre, the
-              likely cause is the ring's OWN motion, not this layout: 6 points
-              rotating together in one direction are bilaterally symmetric
-              about a vertical axis only 12 times per lap (every 30deg) — the
-              rest of the time the cluster is genuinely, correctly lopsided,
-              which a static label above it will always look "off" against.
-              That can't be fixed without either breaking "all one direction"
-              (a mirrored pair would need half the icons going clockwise) or
-              stopping the motion — both are calls for Melvin, not a guess. */}
           <h2
             id="contact-direct-heading"
             className="text-center text-[11px] tracking-[0.3em] text-sand/80 uppercase"

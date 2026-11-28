@@ -270,6 +270,8 @@ export function FerroName({
         top: 0,
         width: 1,
         height: 1,
+        // Halo's light around the word.
+        filter: 'drop-shadow(0 0 20px rgb(255 120 40 / 0.42))',
       }}
     />
   )

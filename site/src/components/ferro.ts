@@ -43,7 +43,6 @@
  */
 
 import { spikeSpring } from './spikes'
-import { FLUID } from '../velvet'
 import { ink } from '../velvetLab'
 
 export const TUNING = {
@@ -183,7 +182,7 @@ float coneH(vec2 x){
     vec2 c = vec2(cell.x + 0.5 * cell.y, cell.y * 0.8660254) * P;
     vec2 cuv = c / uCss;
     float s = texture(uS, cuv).a;
-    float th = smoothstep(0.16, 0.62, s) * smoothstep(0.35, 0.6, texture(uB, cuv).r);
+    float th = smoothstep(0.16, 0.62, s) * smoothstep(0.18, 0.42, texture(uB, cuv).r);
     if (th < 0.01) continue;
     float H = uSpH * th * (0.86 + 0.14 * hash(cell));
     vec2 g = texture(uL, cuv).rg; float gl = length(g);
@@ -203,14 +202,19 @@ float domeH(vec2 uv){
   return dome + rip;
 }
 float totalH(vec2 q, float spikesOn){ return domeH(q / uCss) + spikesOn * coneH(q); }
-vec3 shade(vec3 n, vec3 V){
+// Halo (2026-11-27): the liquid is light itself, white at the crown running to
+// orange at the foot, with a wet sheen. v is the height up the canvas, 0..1.
+vec3 shade(vec3 n, vec3 V, float v){
   vec3 L = normalize(vec3(0.35, 0.75, 0.6)); vec3 H = normalize(L + V);
-  float dif = max(dot(n, L), 0.0) * 0.6 + 0.4;
+  float dif = max(dot(n, L), 0.0);
   float nh = max(dot(n, H), 0.0);
-  float spec = pow(nh, 36.0) * 0.4 + pow(nh, 160.0) * 0.5;
-  float fre = pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.45;
-  vec3 deep = ${FLUID.deep}; vec3 sand = ${FLUID.body}; vec3 light = ${FLUID.light};
-  return min(mix(deep, sand, dif) + light * spec + light * fre, ${FLUID.cap});
+  float spec = pow(nh, 30.0) * 0.45 + pow(nh, 140.0) * 0.7;
+  float fre = pow(1.0 - max(dot(n, V), 0.0), 2.0);
+  vec3 tone = mix(vec3(1.0, 0.41, 0.15), vec3(1.0, 0.72, 0.47), smoothstep(0.24, 0.47, v));
+  tone = mix(tone, vec3(1.0, 0.965, 0.92), smoothstep(0.45, 0.72, v));
+  vec3 deep = tone * vec3(0.8, 0.5, 0.38);
+  vec3 col = mix(deep, tone, smoothstep(0.05, 0.75, dif));
+  return min(col + vec3(1.0, 0.96, 0.9) * spec + vec3(1.0, 0.45, 0.16) * fre * 0.5, vec3(1.0));
 }
 void main(){
   // gl_FragCoord is in device px; the hi-res mask has the canvas's own size.
@@ -250,14 +254,14 @@ void main(){
     float e = 1.4; vec2 dx = vec2(e, 0.0); vec2 dy = vec2(0.0, e);
     float gx = (totalH(q + dx, 0.0) - totalH(q - dx, 0.0)) / (2.0 * e);
     float gy = (totalH(q + dy, 0.0) - totalH(q - dy, 0.0)) / (2.0 * e);
-    colF = shade(normalize(vec3(-gx, -gy, 1.0)), vec3(0.0, 0.0, 1.0));
+    colF = shade(normalize(vec3(-gx, -gy, 1.0)), vec3(0.0, 0.0, 1.0), q0.y / uCss.y);
   }
   float al = alF; vec3 col = colF;
   if (hit) {
     float e = 0.6; vec2 dx = vec2(e, 0.0); vec2 dy = vec2(0.0, e);
     float gx = (totalH(pHit + dx, 1.0) - totalH(pHit - dx, 1.0)) / (2.0 * e);
     float gy = (totalH(pHit + dy, 1.0) - totalH(pHit - dy, 1.0)) / (2.0 * e);
-    vec3 colC = shade(normalize(vec3(-gx, -gy, 1.0)), normalize(vec3(0.0, -uK, 1.0)));
+    vec3 colC = shade(normalize(vec3(-gx, -gy, 1.0)), normalize(vec3(0.0, -uK, 1.0)), pHit.y / uCss.y);
     float w = smoothstep(0.15, 1.2, zHit);
     col = alF > 0.001 ? mix(colF, colC, w) : colC;
     al = max(alF, w);

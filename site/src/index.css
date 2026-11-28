@@ -218,89 +218,6 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
- * THE ORBIT RING — the Contact page's "Stalk me here" icon row.
- * ----------------------------------------------------------------------------
- * Six icons orbit a circle, evenly spaced, always COUNTER-CLOCKWISE. Hovering
- * anywhere in the ring pauses every icon at once (so you can actually click one
- * without it drifting away), and the icon under the cursor gets the usual
- * `.social-btn` accent glow on top of that.
- *
- * Built on CSS Motion Path (`offset-path` + `offset-distance`) rather than a
- * JS/rAF loop: the browser drives it off its own compositor, one `@keyframes`
- * serves all six (each just enters at a different point via `--start`), and
- * pause-on-hover is a single `animation-play-state` rule.
- *
- * WHY A CIRCLE AND NOT THE FIGURE-EIGHT (Melvin, 2026-08-10, after four
- * attempts): the lemniscate was correct every single time it was reported
- * broken — correct curve, correct scale, six icons spread perfectly evenly
- * along it, closest pair 81px apart, all measured. It still never read as an
- * infinity symbol, because a moving dot does not draw its own path; six
- * identical circles gliding over a 26s lap give the eye nothing to integrate
- * into a shape. Stroking the curve on screen DID make the ∞ legible, but he
- * didn't want a visible track, and an unmarked figure-eight simply cannot
- * communicate itself. A circle can: it is the one closed path whose shape is
- * unambiguous from a handful of points on it, because every point sits the same
- * distance from a centre the eye locates for free. Do not "restore" the
- * lemniscate without also restoring the track — the two only work together.
- *
- * THE PATH: a 72-segment polyline of x=cx+r·cos t, y=cy−r·sin t (generated with
- * Node, see CONTEXT.md). The MINUS on y is what makes it counter-clockwise:
- * screen y grows downward, so subtracting sin sweeps right → top → left →
- * bottom. Increasing `offset-distance` then travels that direction, which is
- * why the keyframes need no `animation-direction: reverse`.
- *
- * A polyline rather than SVG arc commands purely for risk: this is the exact
- * mechanism that has demonstrably worked here for four rounds, and at 72
- * segments the error against a true circle is 0.08px — invisible. Coordinates
- * are raw CSS pixels in the container's own box (that's how `path()` in
- * `offset-path` is specified), so the box size and the path must change
- * together. At 220x220 it fits the content column even on a small phone, so
- * unlike the 340px figure-eight it needs no scale-down media query.
- * ------------------------------------------------------------------------ */
-.orbit-ring {
-  position: relative;
-  width: 220px;
-  height: 220px;
-}
-
-.orbit-ring-item {
-  position: absolute;
-  top: 0;
-  left: 0;
-  offset-path: path(
-    'M198.0,110.0L197.7,102.3L196.7,94.7L195.0,87.2L192.7,79.9L189.8,72.8L186.2,66.0L182.1,59.5L177.4,53.4L172.2,47.8L166.6,42.6L160.5,37.9L154.0,33.8L147.2,30.2L140.1,27.3L132.8,25.0L125.3,23.3L117.7,22.3L110.0,22.0L102.3,22.3L94.7,23.3L87.2,25.0L79.9,27.3L72.8,30.2L66.0,33.8L59.5,37.9L53.4,42.6L47.8,47.8L42.6,53.4L37.9,59.5L33.8,66.0L30.2,72.8L27.3,79.9L25.0,87.2L23.3,94.7L22.3,102.3L22.0,110.0L22.3,117.7L23.3,125.3L25.0,132.8L27.3,140.1L30.2,147.2L33.8,154.0L37.9,160.5L42.6,166.6L47.8,172.2L53.4,177.4L59.5,182.1L66.0,186.2L72.8,189.8L79.9,192.7L87.2,195.0L94.7,196.7L102.3,197.7L110.0,198.0L117.7,197.7L125.3,196.7L132.8,195.0L140.1,192.7L147.2,189.8L154.0,186.2L160.5,182.1L166.6,177.4L172.2,172.2L177.4,166.6L182.1,160.5L186.2,154.0L189.8,147.2L192.7,140.1L195.0,132.8L196.7,125.3L197.7,117.7L198.0,110.0Z'
-  );
-  /* Centres a 36px icon button ON its path point (offset-path itself anchors
-   * the element's top-left corner, not its centre). */
-  transform: translate(-50%, -50%);
-  offset-rotate: 0deg; /* keep icons upright — they glide, they don't spin */
-  offset-distance: var(--start, 0%);
-  /* 553px path / 22s = 25px per second, a shade calmer than the old loop. */
-  animation: orbit-spin 22s linear infinite;
-}
-
-/* Hovering ANYWHERE in the ring halts every icon at once, so the one you're
- * aiming for holds still long enough to actually click. */
-.orbit-ring:hover .orbit-ring-item {
-  animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .orbit-ring-item {
-    animation: none;
-  }
-}
-
-@keyframes orbit-spin {
-  from {
-    offset-distance: var(--start, 0%);
-  }
-  to {
-    offset-distance: calc(var(--start, 0%) + 100%);
-  }
-}
-
-/* ---------------------------------------------------------------------------
  * TAG THREAD — the accent word list for a project's stack / "Areas I'm
  * exploring" (Melvin, 2026-08-10). See TagThread.tsx for why this shape:
  * short version, it's the site's own "glowing thread" motif (CLAUDE.md)
@@ -993,8 +910,6 @@ body {
   html.has-prism, html.has-prism * { cursor: none; }
   html.has-prism :is(input, textarea) { cursor: text; }
 }
-.box-switch.cursor-switch { bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
-.box-switch.type-switch { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 
 
 @media (prefers-reduced-motion: reduce) {
@@ -1215,8 +1130,8 @@ body {
 html[data-box] .text-box { border-radius: 24px; }
 
 /* Liquid glass: the WebGL layer draws the whole material, edge included. CSS
-   adds only enough tint to stay readable if WebGL is unavailable. */
-html[data-box='glass'] :is(.text-box, .sync-glass-rect) { background: rgb(8 2 2 / 0.1); border-color: transparent; text-shadow: 0 1px 3px rgb(0 0 0 / 0.75); }
+   paints nothing over it: any fill here reads as black paint on the glass. */
+html[data-box='glass'] :is(.text-box, .sync-glass-rect) { background: transparent; border-color: transparent; text-shadow: 0 1px 3px rgb(0 0 0 / 0.75); }
 html[data-box='glass'] .text-box { border-radius: 46px; }
 html[data-box='glass'] .sync-glass-rect { border-radius: 28px; }
 
@@ -1238,35 +1153,33 @@ html[data-box='frost'] :is(.text-box, .sync-glass-rect) { --glass-frost: blur(18
 /* The home paragraph has little padding, so its corners stay tighter. */
 html[data-box='glass'] .text-box.hero-box { border-radius: 28px; }
 
-/* In glass, form fields are wells cut into the pane: dark, with a warm hairline,
-   not the pale fill that read as haze. */
-html[data-box='glass'] .field { background-color: rgb(0 0 0 / 0.32); box-shadow: inset 0 0 0 1px rgb(255 170 100 / 0.16); border-radius: 12px; }
-html[data-box='glass'] .field:hover { background-color: rgb(0 0 0 / 0.4); }
-html[data-box='glass'] .field:focus { background-color: rgb(0 0 0 / 0.5); box-shadow: inset 0 0 0 1px var(--color-sand-dim); }
+/* In glass, form fields are shallow wells in the same dyed glass: a breath of
+   its colour and a lit lower lip, so the pane shows through them. */
+html[data-box='glass'] .field { background-color: rgb(255 96 64 / 0.045); box-shadow: inset 0 0 0 1px rgb(255 160 110 / 0.17), inset 0 -1px 0 rgb(255 190 130 / 0.2); border-radius: 12px; }
+html[data-box='glass'] .field:hover { background-color: rgb(255 96 64 / 0.075); }
+html[data-box='glass'] .field:focus { background-color: rgb(255 96 64 / 0.1); box-shadow: inset 0 0 0 1px var(--color-sand-dim), 0 0 18px rgb(255 100 30 / 0.18); }
 
 /* SOCIAL BEADS. In the glass style the WebGL layer draws each bead and its slow
    bloom (LiquidGlassField); CSS only holds the icon and the press feel. */
-.social-btn.social-glass { color: var(--color-sand); border-color: transparent; transition: scale 450ms var(--ease-out-expo), color 300ms linear; }
-.social-btn.social-glass:hover, .social-btn.social-glass:focus-visible { border-color: transparent; color: #fff4e4; scale: 1.12; }
+.social-btn.social-glass { color: var(--color-sand); border-color: transparent; transition: scale 450ms var(--ease-out-expo), translate 450ms var(--ease-out-expo), color 300ms linear; }
+.social-btn.social-glass:hover, .social-btn.social-glass:focus-visible { border-color: transparent; color: #fff4e4; scale: 1.12; translate: 0 -3px; }
 .social-btn.social-glass:active { scale: 0.94; }
 html[data-box] .social-btn.social-glass { border-radius: 50%; }
-html:not([data-box='glass']) .social-btn.social-glass { background: rgb(18 5 4 / 0.7); box-shadow: inset 0 0 0 1px rgb(255 170 100 / 0.4), 0 0 18px rgb(255 100 20 / 0.28); }
+html:not([data-box='glass']) .social-btn.social-glass { background: rgb(255 140 80 / 0.07); box-shadow: inset 0 0 0 1px rgb(255 170 100 / 0.4), 0 0 18px rgb(255 100 20 / 0.28); }
 
-/* LETTERING (src/typeStyle.ts). Classic is untouched; halo and nova go light,
-   airy and clean: no bevel, no monospace, no pixels. */
+/* LETTERING, "Halo" (approved 2026-11-27; <html data-type="halo">): light,
+   airy and clean, no bevel, no monospace, no pixels. The first name is the
+   liquid one (FerroName); this gradient is what shows without WebGL. */
 html[data-type='halo'] { --font-mono: var(--font-sans); }
-html[data-type='nova'] { --font-display: 'Unbounded', 'Archivo Variable', sans-serif; --font-mono: var(--font-sans); }
-html:is([data-type='halo'], [data-type='nova']) :is(h1, h2, h3, .frame-title, .cm-word, .card-name) { font-weight: 250; letter-spacing: 0.012em; }
-html:is([data-type='halo'], [data-type='nova']) .label { font-weight: 400; letter-spacing: 0.24em; }
-html:is([data-type='halo'], [data-type='nova']) .name-gold { font-weight: 200; letter-spacing: 0.055em; margin-right: -0.055em; color: transparent; background: linear-gradient(176deg, #ffffff 8%, #ffe9cf 38%, #ffb273 66%, #ff6a2a 96%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 22px rgb(255 120 40 / 0.4)); }
-html:is([data-type='halo'], [data-type='nova']) .display-narrow { font-variation-settings: 'wdth' 112; font-weight: 250; color: #ffe3c4; }
-html:is([data-type='halo'], [data-type='nova']) :is(.glass-cta, .cm-word, .box-switch) { font-weight: 400; letter-spacing: 0.14em; }
-html[data-type='nova'] .frame-title { font-size: clamp(1.75rem, 4.8vw, 4rem); }
+html[data-type='halo'] :is(h1, h2, h3, .frame-title, .cm-word, .card-name) { font-weight: 250; letter-spacing: 0.012em; }
+html[data-type='halo'] .label { font-weight: 400; letter-spacing: 0.24em; }
+html[data-type='halo'] .name-gold { font-weight: 270; letter-spacing: 0.055em; margin-right: -0.055em; color: transparent; background: linear-gradient(176deg, #ffffff 8%, #ffe9cf 38%, #ffb273 66%, #ff6a2a 96%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 22px rgb(255 120 40 / 0.4)); }
+html[data-type='halo'] .display-narrow { font-variation-settings: 'wdth' 112; font-weight: 250; color: #ffe3c4; }
+html[data-type='halo'] :is(.glass-cta, .cm-word, .box-switch) { font-weight: 400; letter-spacing: 0.14em; }
 /* Preview switches on phones: small, in the two bottom corners, clear of the buttons. */
 @media (max-width: 767px) {
   .box-switch { padding: 4px 9px; font-size: 10px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
-  .box-switch.type-switch { left: auto; right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
 }
 /* The wordmark and menu words match the light lettering; spaced caps stay spaced. */
-html:is([data-type='halo'], [data-type='nova']) .display-wide:not(.name-gold, h1, h2) { font-weight: 350; letter-spacing: 0.16em; }
-html:is([data-type='halo'], [data-type='nova']) :is(h2, h3).uppercase { font-weight: 400; letter-spacing: 0.34em; }
+html[data-type='halo'] .display-wide:not(.name-gold, h1, h2) { font-weight: 350; letter-spacing: 0.16em; }
+html[data-type='halo'] :is(h2, h3).uppercase { font-weight: 400; letter-spacing: 0.34em; }
