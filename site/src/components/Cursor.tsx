@@ -1,87 +1,88 @@
 /* ============================================================================
- * Cursor.tsx — the sand dot and ring that replace the pointer (block 5)
+ * Cursor.tsx: which pointer the site uses (desktop only)
  * ----------------------------------------------------------------------------
- * A dot that sits on the pointer, and a hairline ring that trails it with
- * light inertia and opens up over anything clickable. Mounts nothing on touch
- * devices and under reduced motion. The native cursor is hidden by
- * `html.has-cursor` (index.css), which is added only after the first pointer
- * move, so if this component ever fails the visitor keeps their normal cursor.
- *
- * Position is written with `transform` every frame from a rAF loop: no React
- * state, no layout. Hover detection is one `pointerover` listener on the
- * document using `closest()`, so there is nothing to attach per element.
+ * Melvin, 2026-11-27: the trailing dot and ring were annoying. They lagged
+ * behind the mouse and hid the real cursor. Every choice here keeps the system's
+ * own pointer position, so nothing ever lags:
+ *   ember   our arrow and hand, drawn in cream and orange (CSS cursor images)
+ *   glow    the normal cursor with a soft warm light around it
+ *   system  the normal cursor, untouched
+ * Preview links can switch with the corner button or ?cursor=glow.
  * ========================================================================= */
 
-import { useEffect, useRef } from 'react'
-import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
+import { useEffect, useRef, useState } from 'react'
+import { isPreview } from '../boxStyle'
 
-const CLICKABLE = 'a, button, [role="button"], [role="tab"], label, summary, input, select, textarea'
+const STYLES = ['ember', 'glow', 'system'] as const
+type Style = (typeof STYLES)[number]
+const NAMES: Record<Style, string> = { ember: 'Ember', glow: 'Glow', system: 'Standard' }
+const KEY = 'melvin:cursor'
+const DEFAULT: Style = 'ember'
+const CLICKABLE = 'a, button, [role="button"], [role="tab"], summary, label[for], select'
+
+const valid = (v: string | null): v is Style => STYLES.includes(v as Style)
+
+function initial(): Style {
+  if (!isPreview) return DEFAULT
+  const asked = new URLSearchParams(location.search).get('cursor')
+  if (valid(asked)) return asked
+  try {
+    const saved = sessionStorage.getItem(KEY)
+    if (valid(saved)) return saved
+  } catch {
+    /* private window: use the default */
+  }
+  return DEFAULT
+}
 
 export function Cursor() {
-  const reduced = usePrefersReducedMotion()
-  const dotRef = useRef<HTMLDivElement>(null)
-  const ringRef = useRef<HTMLDivElement>(null)
+  const [style, setStyle] = useState<Style>(initial)
+  const [fine] = useState(() => window.matchMedia('(pointer: fine)').matches)
+  const glowRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (reduced) return
-    if (!window.matchMedia('(pointer: fine)').matches) return
-    const dot = dotRef.current
-    const ring = ringRef.current
-    if (!dot || !ring) return
-    const html = document.documentElement
-
-    let tx = -100
-    let ty = -100 // target: the pointer
-    let rx = -100
-    let ry = -100 // the ring, eased toward the pointer
-    let raf = 0
-    let shown = false
-
-    const onMove = (e: PointerEvent) => {
-      tx = e.clientX
-      ty = e.clientY
-      if (!shown) {
-        shown = true
-        rx = tx
-        ry = ty
-        html.classList.add('has-cursor')
-      }
+    document.documentElement.dataset.cursor = style
+    try {
+      sessionStorage.setItem(KEY, style)
+    } catch {
+      /* not remembered, still applied */
     }
-    const onOver = (e: PointerEvent) => {
-      const t = e.target as Element | null
-      html.classList.toggle('cursor-hover', !!t?.closest(CLICKABLE))
-    }
-    const onLeave = () => {
-      html.classList.remove('has-cursor')
-      shown = false
-    }
+  }, [style])
 
-    const tick = () => {
-      rx += (tx - rx) * 0.18
-      ry += (ty - ry) * 0.18
-      dot.style.transform = `translate3d(${tx}px,${ty}px,0)`
-      ring.style.transform = `translate3d(${rx}px,${ry}px,0)`
-      raf = requestAnimationFrame(tick)
+  // The light is written straight to the element on each move: no loop, no lag.
+  useEffect(() => {
+    const el = glowRef.current
+    if (!el || style !== 'glow') return
+    const move = (e: PointerEvent) => {
+      el.style.transform = `translate3d(${e.clientX}px,${e.clientY}px,0)`
+      el.classList.add('is-on')
+      el.classList.toggle('is-over', !!(e.target as Element | null)?.closest(CLICKABLE))
     }
-    raf = requestAnimationFrame(tick)
-
-    window.addEventListener('pointermove', onMove, { passive: true })
-    document.addEventListener('pointerover', onOver, { passive: true })
-    html.addEventListener('pointerleave', onLeave)
+    const leave = () => el.classList.remove('is-on')
+    window.addEventListener('pointermove', move, { passive: true })
+    document.documentElement.addEventListener('pointerleave', leave)
     return () => {
-      cancelAnimationFrame(raf)
-      window.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerover', onOver)
-      html.removeEventListener('pointerleave', onLeave)
-      html.classList.remove('has-cursor', 'cursor-hover')
+      window.removeEventListener('pointermove', move)
+      document.documentElement.removeEventListener('pointerleave', leave)
+      leave()
     }
-  }, [reduced])
+  }, [style])
 
-  if (reduced) return null
+  if (!fine) return null
+  const next = STYLES[(STYLES.indexOf(style) + 1) % STYLES.length]
   return (
     <>
-      <div ref={dotRef} aria-hidden className="cursor-dot" />
-      <div ref={ringRef} aria-hidden className="cursor-ring" />
+      {style === 'glow' && <div ref={glowRef} aria-hidden className="cursor-glow" />}
+      {isPreview && (
+        <button
+          type="button"
+          onClick={() => setStyle(next)}
+          aria-label={`Cursor: ${NAMES[style]}. Switch to ${NAMES[next]}.`}
+          className="box-switch cursor-switch"
+        >
+          Cursor: {NAMES[style]}
+        </button>
+      )}
     </>
   )
 }

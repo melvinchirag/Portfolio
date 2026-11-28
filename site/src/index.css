@@ -981,61 +981,20 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
- * THE CURSOR (Cursor.tsx). A 6px sand dot that follows the pointer with a
- * little inertia, and a 34px hairline ring that grows around it over anything
- * clickable. Pointer devices only, and the native cursor is hidden ONLY once
- * the dot is actually drawing (`html.has-cursor`), so a script failure never
- * leaves the visitor with no cursor. Text fields keep the native I-beam.
+ * THE CURSOR (Cursor.tsx). The system draws it, so it never lags. Ember swaps
+ * in our own arrow and hand; Glow adds light around the normal one.
  * ------------------------------------------------------------------------ */
-.cursor-dot,
-.cursor-ring {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 200;
-  border-radius: 9999px;
-  pointer-events: none;
-  opacity: 0;
-  will-change: transform;
-}
-.cursor-dot {
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  background: var(--color-sand);
-  transition: opacity 300ms linear;
-}
-.cursor-ring {
-  width: 34px;
-  height: 34px;
-  margin: -17px 0 0 -17px;
-  box-shadow: inset 0 0 0 1px var(--color-sand-dim);
-  transition:
-    opacity 300ms linear,
-    scale 500ms var(--ease-out-expo);
-  scale: 0.45;
-}
-html.has-cursor .cursor-dot,
-html.has-cursor .cursor-ring {
-  opacity: 1;
-}
-html.has-cursor.cursor-hover .cursor-ring {
-  scale: 1;
-}
-html.has-cursor.cursor-hover .cursor-dot {
-  opacity: 0;
-}
 @media (pointer: fine) {
-  html.has-cursor,
-  html.has-cursor * {
-    cursor: none;
-  }
-  html.has-cursor input,
-  html.has-cursor textarea,
-  html.has-cursor select {
-    cursor: auto;
-  }
+  html[data-cursor='ember'], html[data-cursor='ember'] body { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2028%2028%22%3E%3Cpath%20d%3D%22M4%202%20L4%2022%20L9.5%2017%20L13%2025%20L17%2023.2%20L13.6%2015.6%20L21%2015.2%20Z%22%20fill%3D%22%23f3dfb4%22%20stroke%3D%22%232a0709%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E") 4 2, auto; }
+  html[data-cursor='ember'] :is(a, button, [role='button'], [role='tab'], summary, label[for], select), html[data-cursor='ember'] :is(a, button, [role='button'], [role='tab'], summary) * { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2028%2028%22%3E%3Cpath%20d%3D%22M10%203.5c1.3%200%202.2%201%202.2%202.3v6.4l1%20.1v-1.4c0-1.2.9-2%202-2s1.9.8%201.9%202v1.6l.9.1v-.9c0-1.1.8-1.9%201.8-1.9s1.8.8%201.8%201.9v6.1c0%204.5-2.9%207.7-7.3%207.7-3.2%200-4.8-1.4-6.6-4.2L4.9%2016.6c-.6-1-.4-2.1.5-2.7.8-.6%201.9-.4%202.6.4l-.2-8.5c0-1.3.9-2.3%202.2-2.3z%22%20fill%3D%22%23ff8a24%22%20stroke%3D%22%232a0709%22%20stroke-width%3D%221.5%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E") 10 4, pointer; }
+  html[data-cursor='ember'] :is(input, textarea) { cursor: text; }
+  html[data-cursor='ember'] button:disabled { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2028%2028%22%3E%3Cpath%20d%3D%22M4%202%20L4%2022%20L9.5%2017%20L13%2025%20L17%2023.2%20L13.6%2015.6%20L21%2015.2%20Z%22%20fill%3D%22%23f3dfb4%22%20stroke%3D%22%232a0709%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E") 4 2, auto; }
 }
+.cursor-glow { position: fixed; top: 0; left: 0; z-index: 90; width: 220px; height: 220px; margin: -110px 0 0 -110px; border-radius: 50%; pointer-events: none; mix-blend-mode: screen; opacity: 0; transition: opacity 250ms linear, scale 250ms var(--ease-out-expo); scale: 0.75; background: radial-gradient(closest-side, rgb(255 150 60 / 0.28), rgb(200 30 10 / 0.12) 50%, transparent); }
+.cursor-glow.is-on { opacity: 1; }
+.cursor-glow.is-over { scale: 1; background: radial-gradient(closest-side, rgb(255 196 120 / 0.46), rgb(255 100 20 / 0.2) 45%, transparent); }
+.box-switch.cursor-switch { bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1056,10 +1015,6 @@ html.has-cursor.cursor-hover .cursor-dot {
   .page-out {
     animation: none;
     opacity: 1;
-  }
-  .cursor-dot,
-  .cursor-ring {
-    display: none;
   }
 }
 

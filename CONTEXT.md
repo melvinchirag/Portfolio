@@ -4324,3 +4324,7 @@ dark form fields, About now uses scene capture (the glass samples what is actual
 
 2026-11-27: "Stalk me here" is a still glass pane; the six social buttons are 44px glass beads with a staggered
 slow bloom (CSS, .social-glass), so they read as clickable.
+
+2026-11-27: the trailing dot-and-ring cursor was rejected as annoying. Cursor.tsx now offers ember (our
+arrow and hand as CSS cursor images, preview default), glow (system cursor plus soft light) and system.
+Preview has a "Cursor" corner button and ?cursor=. If he likes neither, ship system.
