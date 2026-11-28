@@ -4310,3 +4310,9 @@ clay; preview hosts get a corner button and ?box=. The liquid glass shader had N
 from drei's ScreenQuad, which has none. Fixed in LiquidGlassField's vertex shader. Rim toned down and
 warmed. Untested on a real phone; the glass adds a scene capture and blur passes per frame.
 Melvin: changes go to preview links; live only when he says.
+
+2026-11-27, later: first working glass rejected ("does not have the liquid glass feel"). Shader rebuilt:
+squircle bezel with Snell refraction, clear middle, colour fringes, one thin highlight, jelly spring on
+scroll, breathing outline, pointer/finger droplet that merges. Preview switch now Liquid, Smoke, Veil,
+Frost (clay removed). Apple's HIG says not to use Liquid Glass on the content layer; recommended: Smoke
+behind text, liquid kept for controls. Awaiting his pick. Frame rate seen only in headless emulation.

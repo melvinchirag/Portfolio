@@ -4,13 +4,14 @@
  * Melvin, 2026-11-27: every text body gets a box, liquid glass first, with the
  * alternatives to compare. The choice is an attribute on <html>:
  *   glass  the WebGL liquid glass (LiquidGlassField bends the scene behind)
+ *   smoke  dark tinted glass with a thin lit edge
+ *   veil   no edges: a soft shadow that gathers behind the words
  *   frost  a plain frosted CSS panel
- *   clay   a soft solid "claymorphism" panel
  * Preview links can switch with ?box=frost or the button in the corner. The
  * public domain always shows the default, so a half-decided look never leaks.
  * ========================================================================= */
 
-export const BOX_STYLES = ['glass', 'frost', 'clay'] as const
+export const BOX_STYLES = ['glass', 'smoke', 'veil', 'frost'] as const
 export type BoxStyle = (typeof BOX_STYLES)[number]
 
 const KEY = 'melvin:box'

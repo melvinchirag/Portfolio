@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BOX_STYLES, isPreview, setBoxStyle, type BoxStyle } from '../boxStyle'
 
-const NAMES: Record<BoxStyle, string> = { glass: 'Glass', frost: 'Frost', clay: 'Clay' }
+const NAMES: Record<BoxStyle, string> = { glass: 'Liquid', smoke: 'Smoke', veil: 'Veil', frost: 'Frost' }
 
 /** Preview links only: tap to cycle the material of the text boxes. */
 export function BoxSwitch() {

@@ -252,7 +252,7 @@ function IdentityFrame({ index }: { index: number }) {
           <FerroName targetRef={firstNameRef} shown={nameShown} onActive={setFerro} />
         </div>
 
-        <div className="text-box order-4 mt-5 w-[var(--name-w,100%)] max-w-full p-3.5 md:p-5">
+        <div className="text-box hero-box order-4 mt-5 w-[var(--name-w,100%)] max-w-full p-4 md:p-5">
           <p className="text-[14px] leading-relaxed text-sand/90 sm:text-[15.5px]">
             {/* Melvin's own outline, 2026-11-26: who he is, the fields in HIS order,
                 bringing them together. No titles or roles in this paragraph. */}

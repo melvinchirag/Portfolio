@@ -53,95 +53,36 @@ void main() {
 }
 `
 
-// SDF and Glass physics shader (Ported from iyinchao)
+// LIQUID GLASS, rebuilt 2026-11-27. The earlier pane was mostly blur with a
+// bright frame. What makes glass read as LIQUID is: a clear middle, a curved
+// bezel that visibly bends the scene (Snell's law over a squircle profile, the
+// method in kube.io's write-up), colour fringing on that bend, one thin crisp
+// highlight, and a surface that moves.
 const glassFragmentShader = `
 uniform sampler2D u_blurredBg;
 uniform sampler2D u_bg;
 uniform vec2 u_resolution;
 uniform float u_dpr;
-uniform float u_refThickness;
-uniform float u_refFactor;
-uniform float u_refScale;
-uniform float u_refDispersion;
-uniform float u_refFresnelRange;
-uniform float u_refFresnelHardness;
-uniform float u_refFresnelFactor;
-uniform float u_glareRange;
-uniform float u_glareHardness;
-uniform float u_glareFactor;
-uniform float u_glareConvergence;
-uniform float u_glareOppositeFactor;
-uniform float u_glareAngle;
-uniform float u_shadowExpand;
-uniform float u_shadowFactor;
-uniform vec2 u_shadowPosition;
-uniform vec4 u_tint;
-// When 1.0, everything OUTSIDE the glass shapes is output fully transparent so the
-// real background plane (e.g. the About video) shows through untouched, and the
-// quad only contributes refraction inside the shapes. When 0.0 (scene-capture
-// mode) the quad is opaque and reproduces the whole captured scene.
 uniform float u_glassOnly;
-// 0 = liquid lens (clear centre, frosted rim). Toward 1 = uniform FROST across
-// the whole interior, so text over the glass is readable and the mask behind is
-// softly blurred rather than sharp. Set per-page (high on the hero).
 uniform float u_frost;
-
 uniform int u_numRects;
-uniform vec4 u_rects[10]; // x, y, width, height (in CSS pixels, from center of screen)
-uniform float u_radii[10]; // corner radii
-
-// --- iOS-26-style additions (2026-08-12) ---------------------------------
-// Corner shape exponent. 2.0 = an ordinary rounded rectangle (a circular arc
-// that meets the straight edge with a visible curvature jump). Higher values
-// give a SUPERELLIPSE / squircle, where curvature blends continuously into the
-// edge. This is a large part of why Apple's glass reads as premium, and the
-// reference (iyinchao/liquid-glass-studio) uses superellipses too.
+uniform vec4 u_rects[10]; // x, y, width, height in px, bottom-left origin
+uniform float u_radii[10];
 uniform float u_squircle;
-// The backdrop behind this site is near-black, so a purely refractive glass has
-// almost nothing to show and reads as a flat dark panel. Real glass also LIFTS
-// what is behind it: it scatters light forward. These three do that — raise the
-// backdrop's luminance, push its saturation, and lay a faint white sheet over
-// it (the "material" in Apple's glass) so the pane is visibly lighter than the
-// scene around it even over black.
-uniform float u_brightness;
-uniform float u_saturation;
-uniform float u_whiteFill;
-// Cursor as a moving LIGHT SOURCE. The edge nearest the pointer catches a
-// specular highlight and the interior picks up a soft glow, so light appears to
-// enter the glass and travel through it as you move. This is what makes it feel
-// fluid and alive rather than a static frosted rectangle.
+uniform vec4 u_tint;
 uniform vec2 u_mouse;
 uniform float u_mouseActive;
-uniform float u_specular;
 uniform float u_time;
+uniform float u_jelly;  // spring driven by scroll speed, about -1..1
+uniform float u_motion; // 0 under reduced motion
 
 varying vec2 v_uv;
 
-const float PI = 3.14159265359;
-uniform float u_refDispersionVal;
-#define N_R (1.0 - u_refDispersionVal * 0.01)
-#define N_G 1.0
-#define N_B (1.0 + u_refDispersionVal * 0.01)
-
-// Superellipse (squircle) rounded-rect SDF. With u_squircle = 2.0 the p-norm
-// below collapses to length() and this is exactly the classic rounded box; as it
-// rises the corners take on continuous curvature. The small epsilon keeps pow()
-// away from a 0 base, which can produce NaN on some GPUs.
-float roundedRectSDF(vec2 p, vec2 center, float width, float height, float cornerRadius) {
-  p -= center;
-  vec2 d = abs(p) - vec2(width, height) * 0.5 + vec2(cornerRadius);
+float roundedRectSDF(vec2 p, vec2 half_, float r) {
+  vec2 d = abs(p) - half_ + vec2(r);
   vec2 m = max(d, 0.0) + 1e-4;
   float outside = pow(pow(m.x, u_squircle) + pow(m.y, u_squircle), 1.0 / u_squircle);
-  return min(max(d.x, d.y), 0.0) + outside - cornerRadius;
-}
-
-// Lift the backdrop the way real glass does: brighten, saturate, then veil it
-// with a little white. Without this the pane is invisible over a black scene.
-vec3 glassLift(vec3 c) {
-  float luma = dot(c, vec3(0.299, 0.587, 0.114));
-  c = mix(vec3(luma), c, u_saturation);
-  c *= u_brightness;
-  return mix(c, vec3(1.0), u_whiteFill);
+  return min(max(d.x, d.y), 0.0) + outside - r;
 }
 
 float smin(float a, float b, float k) {
@@ -149,175 +90,105 @@ float smin(float a, float b, float k) {
   return mix(b, a, h) - k * h * (1.0 - h);
 }
 
-// Evaluate SDF for all DOM rectangles
-float mainSDF(vec2 p) {
+// Distance to the nearest pane, plus that pane's smaller half-size and centre.
+float field(vec2 p, out float halfMin, out vec2 centre) {
   float d = 1e20;
-  // Convert from pixel space to UV space? No, work in screen pixels for accurate SDF
-  vec2 pixelPos = p * u_resolution; // (0 to width, 0 to height)
-  
-  for(int i = 0; i < 10; i++) {
+  halfMin = 40.0;
+  centre = p;
+  float px = u_dpr;
+  for (int i = 0; i < 10; i++) {
     if (i >= u_numRects) break;
-    // u_rects are in screen pixel coordinates (bottom-left origin for GL)
-    // Actually, bounding client rect is top-left origin.
-    // We'll pass them in bottom-left origin to match GL.
-    vec2 center = vec2(u_rects[i].x + u_rects[i].z * 0.5, u_rects[i].y + u_rects[i].w * 0.5);
-    // Radii is also passed in physical pixels now
-    float rectD = roundedRectSDF(pixelPos, center, u_rects[i].z, u_rects[i].w, u_radii[i]);
-    // Merge smoothly (metaball effect)
-    if (i == 0) {
-      d = rectD;
-    } else {
-      d = smin(d, rectD, 12.0 * u_dpr); // smooth merge radius
-    }
+    vec4 rc = u_rects[i];
+    vec2 c = rc.xy + rc.zw * 0.5;
+    vec2 h = rc.zw * 0.5;
+    // jelly: taller and a touch narrower while the page is moving
+    h.y += u_jelly * min(7.0 * px, h.y * 0.06);
+    h.x -= u_jelly * min(3.0 * px, h.x * 0.02);
+    float di = roundedRectSDF(p - c, h, min(u_radii[i], min(h.x, h.y)));
+    if (di < d) { d = di; halfMin = min(h.x, h.y); centre = c; }
+  }
+  // the outline breathes, like the skin of a drop
+  float wave = sin(p.x / px * 0.021 + u_time * 1.5) + sin(p.y / px * 0.026 - u_time * 1.2) + sin((p.x + p.y) / px * 0.011 + u_time * 0.7);
+  d += wave * (0.55 + 1.6 * abs(u_jelly)) * px * u_motion;
+  // a droplet under the finger or pointer that merges into a pane it nears
+  if (u_mouseActive > 0.001 && d < 140.0 * px) {
+    float near = 1.0 - smoothstep(20.0 * px, 140.0 * px, d);
+    float drop = length(p - u_mouse) - 30.0 * px * u_mouseActive * near;
+    d = smin(d, drop, 46.0 * px);
   }
   return d;
 }
 
-vec2 getNormal(vec2 p) {
-  float eps = 1.0; // 1 pixel
-  vec2 e = vec2(eps / u_resolution.x, 0.0);
-  vec2 ey = vec2(0.0, eps / u_resolution.y);
-  float dx = mainSDF(p + e) - mainSDF(p - e);
-  float dy = mainSDF(p + ey) - mainSDF(p - ey);
-  return normalize(vec2(dx, dy));
-}
-
-vec3 hsv2rgb(vec3 c) {
-  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
-
-float vec2ToAngle(vec2 v) {
-  float angle = atan(v.y, v.x);
-  if (angle < 0.0) angle += 2.0 * PI;
-  return angle;
-}
-
-float safeAsin(float x) {
-  return asin(clamp(x, -1.0, 1.0));
-}
-
-vec4 getTextureDispersion(sampler2D tex1, sampler2D tex2, float mixRate, vec2 offset, float factor) {
-  vec4 pixel = vec4(1.0);
-  float bgR = texture2D(tex1, v_uv + offset * (1.0 - (N_R - 1.0) * factor)).r;
-  float bgG = texture2D(tex1, v_uv + offset * (1.0 - (N_G - 1.0) * factor)).g;
-  float bgB = texture2D(tex1, v_uv + offset * (1.0 - (N_B - 1.0) * factor)).b;
-
-  float blurR = texture2D(tex2, v_uv + offset * (1.0 - (N_R - 1.0) * factor)).r;
-  float blurG = texture2D(tex2, v_uv + offset * (1.0 - (N_G - 1.0) * factor)).g;
-  float blurB = texture2D(tex2, v_uv + offset * (1.0 - (N_B - 1.0) * factor)).b;
-
-  pixel.r = mix(bgR, blurR, mixRate);
-  pixel.g = mix(bgG, blurG, mixRate);
-  pixel.b = mix(bgB, blurB, mixRate);
-  return pixel;
-}
+vec3 grab(sampler2D tex, vec2 uv) { return texture2D(tex, clamp(uv, vec2(0.001), vec2(0.999))).rgb; }
 
 void main() {
-  if (u_numRects == 0) {
-    gl_FragColor = texture2D(u_bg, v_uv);
-    return;
-  }
+  if (u_numRects == 0) { gl_FragColor = vec4(0.0); return; }
+  float px = u_dpr;
+  vec2 p = v_uv * u_resolution;
+  float halfMin; vec2 centre;
+  float d = field(p, halfMin, centre);
 
-  float merged = mainSDF(v_uv); // SDF distance in pixels
-  vec4 outColor = vec4(0.0);
-  float outA = 1.0; // final alpha (dropped to 0 outside the glass in glass-only mode)
+  // soft shadow below the pane
+  float hm; vec2 hc;
+  float ds = d < 60.0 * px ? field(p + vec2(0.0, 10.0 * px), hm, hc) : 1e5;
+  float shadow = 0.38 * exp(-max(ds, 0.0) / (16.0 * px)) * step(ds, 59.0 * px);
+  if (d > 1.0 * px) { gl_FragColor = vec4(0.0, 0.0, 0.0, shadow); return; }
 
-  if (merged < 0.0) {
-    // ---- Inside the glass: refract the background like a liquid lens ----
-    vec2 normal = getNormal(v_uv);
-    float nmerged = -merged; // positive depth inside the shape
+  float e = 1.0 * px; float a_; vec2 b_;
+  vec2 n = vec2(
+    field(p + vec2(e, 0.0), a_, b_) - field(p - vec2(e, 0.0), a_, b_),
+    field(p + vec2(0.0, e), a_, b_) - field(p - vec2(0.0, e), a_, b_)
+  );
+  n = normalize(n + vec2(1e-5));
 
-    // Snell's-law bend: strong near the thin rim, ~0 across the flat centre —
-    // this is what makes the centre read as CLEAR glass and the edges as a lens.
-    float x_R_ratio = clamp(1.0 - nmerged / u_refThickness, 0.0, 1.0);
-    float thetaI = safeAsin(pow(x_R_ratio, 2.0));
-    float thetaT = safeAsin((1.0 / u_refFactor) * sin(thetaI));
-    float edgeFactor = -tan(thetaT - thetaI);
-    if (nmerged >= u_refThickness) edgeFactor = 0.0;
+  // bezel: how far in from the edge, 0 at the rim and 1 where the face is flat
+  // narrower on phones, where the words sit close to the edge
+  float widest = u_resolution.x < 768.0 * px ? 26.0 : 50.0;
+  float bezel = min(widest * px, halfMin * 0.72);
+  float t = clamp(-d / bezel, 0.015, 1.0);
+  float q = 1.0 - t;
+  float height = pow(1.0 - q * q * q * q, 0.25);
+  float slope = q * q * q * pow(max(1.0 - q * q * q * q, 1e-3), -0.75);
+  float inAngle = atan(slope);
+  float outAngle = asin(sin(inAngle) / 1.5);
+  float bend = tan(inAngle - outAngle) * (height + 0.8) * bezel * 1.35;
 
-    // Displace the sample point along the surface normal so the background
-    // visibly bends/magnifies through the glass (the "liquid" read). Scaled in
-    // pixels then converted to UV, so it is resolution-independent. u_refScale is
-    // the single tuning knob for how hard the lens bends.
-    vec2 offset = (normal * edgeFactor * u_refThickness * u_refScale) / u_resolution;
+  // convex glass bends the view inward; the whole face also magnifies a little
+  vec2 shift = -n * bend + (centre - p) * 0.035;
+  float rim = 1.0 - smoothstep(0.0, 1.0, t);
+  float frost = u_frost * smoothstep(0.15, 1.0, t);
 
-    // LIQUID: a slow ripple travelling out from the pointer, fading with
-    // distance, added to the refraction offset. Tiny in amplitude — enough that
-    // the glass looks like it is *flowing* near your cursor rather than sitting
-    // still, without the content behind it visibly wobbling.
-    vec2 pxPos = v_uv * u_resolution;
-    float mDist = length(u_mouse - pxPos);
-    float ripple = sin(mDist * 0.045 - u_time * 2.6) * exp(-mDist / (320.0 * u_dpr));
-    offset += normal * ripple * 0.0016 * u_mouseActive;
+  // colour fringes: red bends a little more than blue, only in the bezel
+  vec2 uvR = v_uv + shift * mix(1.0, 1.1, rim) / u_resolution;
+  vec2 uvG = v_uv + shift / u_resolution;
+  vec2 uvB = v_uv + shift * mix(1.0, 0.9, rim) / u_resolution;
+  vec3 col = vec3(
+    mix(grab(u_bg, uvR).r, grab(u_blurredBg, uvR).r, frost),
+    mix(grab(u_bg, uvG).g, grab(u_blurredBg, uvG).g, frost),
+    mix(grab(u_bg, uvB).b, grab(u_blurredBg, uvB).b, frost)
+  );
 
-    // blurEdge (JSON): the centre samples the SHARP background (clear), and only
-    // the refracting rim blends toward the blurred copy — a frosted rim, clear
-    // core. u_frost raises the FLOOR of that blend so the whole interior frosts
-    // uniformly when requested. Chromatic dispersion splits R/G/B along offset.
-    float edgeBlur = max(clamp(edgeFactor * 5.0, 0.0, 1.0), u_frost);
-    outColor = getTextureDispersion(u_bg, u_blurredBg, edgeBlur, offset, u_refDispersion);
+  // richer colour through the glass
+  float luma = dot(col, vec3(0.299, 0.587, 0.114));
+  col = max(mix(vec3(luma), col, 1.35), 0.0);
+  // the face is shaded for the words on it; the bezel stays bright
+  float face = smoothstep(0.25, 1.0, t);
+  col *= mix(1.28, 1.0 / (1.0 + luma * 4.2), face);
+  col = mix(col, u_tint.rgb, u_tint.a * face);
+  col += vec3(0.0045, 0.0022, 0.0018);
 
-    // Make the pane read as a real material over a near-black scene.
-    outColor.rgb = glassLift(outColor.rgb);
+  // one thin highlight, strongest where the edge faces the light, and again opposite
+  vec2 light = normalize(vec2(-0.45, 0.9));
+  if (u_mouseActive > 0.001) light = normalize(mix(light, normalize(u_mouse - p + vec2(1e-4)), 0.6 * u_mouseActive));
+  float facing = dot(n, light);
+  float line = 1.0 - smoothstep(0.0, 1.7 * px, -d);
+  float spec = line * (0.05 + 0.62 * pow(max(facing, 0.0), 2.5) + 0.34 * pow(max(-facing, 0.0), 2.5));
+  float sheen = pow(q, 4.0) * pow(abs(facing), 3.0) * 0.085;
+  col += vec3(1.0, 0.86, 0.68) * (spec + sheen);
 
-    // Optional glass tint (alpha is 0 in the JSON → this is a no-op, kept for spec parity).
-    outColor = mix(outColor, vec4(u_tint.rgb, 1.0), u_tint.a);
-
-    // Fresnel rim — a bright hairline where the glass turns away at the edge.
-    float fresnelFactor = clamp(
-      pow(1.0 + merged / 1500.0 * pow(500.0 / u_refFresnelRange, 2.0) + u_refFresnelHardness, 5.0),
-      0.0, 1.0
-    );
-    outColor.rgb += vec3(1.0, 0.82, 0.6) * (fresnelFactor * (u_refFresnelFactor * 0.01));
-
-    // Directional glare highlight (angle straight from the JSON).
-    float glareGeoFactor = clamp(
-      pow(1.0 + merged / 1500.0 * pow(500.0 / u_glareRange, 2.0) + u_glareHardness, 5.0),
-      0.0, 1.0
-    );
-    float glareAngle = (vec2ToAngle(normal) - PI / 4.0 + u_glareAngle) * 2.0;
-    float glareFarside = 0.0;
-    if ((glareAngle > PI * 1.5 && glareAngle < PI * 3.5) || glareAngle < -PI * 0.5) {
-      glareFarside = 1.0;
-    }
-    glareAngle = clamp(cos(glareAngle), 0.0, 1.0);
-    float glareIntensity = pow(glareAngle, u_glareConvergence);
-    float finalGlare = glareGeoFactor * glareIntensity * mix(u_glareFactor * 0.01, u_glareOppositeFactor * 0.01, glareFarside);
-    outColor.rgb += vec3(1.0, 0.86, 0.66) * clamp(finalGlare, 0.0, 1.0);
-
-    // ---- The pointer as a light source -----------------------------------
-    // Edge specular: the rim facing the cursor catches a bright highlight, so
-    // light appears to enter the glass exactly where your hand is. Plus a soft
-    // interior glow, which is that light scattering through the body of it.
-    vec2 toMouse = u_mouse - pxPos;
-    vec2 lightDir = normalize(toMouse + vec2(1e-5));
-    float facing = max(dot(normal, lightDir), 0.0);
-    float nearLight = exp(-length(toMouse) / (420.0 * u_dpr));
-    float specular = glareGeoFactor * pow(facing, 3.0) * nearLight * u_specular * u_mouseActive;
-    float innerGlow = exp(-length(toMouse) / (260.0 * u_dpr)) * 0.05 * u_mouseActive;
-    outColor.rgb += vec3(clamp(specular + innerGlow, 0.0, 1.0));
-  } else {
-    // Outside the glass - drop shadow
-    outColor = texture2D(u_bg, v_uv);
-    
-    vec2 shadowUv = v_uv - u_shadowPosition / u_resolution;
-    float shadowMerged = mainSDF(shadowUv);
-    
-    if (shadowMerged > 0.0 && shadowMerged < u_shadowExpand) {
-      float shadowIntensity = 1.0 - shadowMerged / u_shadowExpand;
-      float dShadow = shadowIntensity * (u_shadowFactor * 0.01);
-      outColor.rgb -= dShadow;
-    }
-    // In glass-only mode the surrounding area is not ours to draw — let the real
-    // background plane show. (Keep a faint drop shadow contribution via alpha.)
-    if (u_glassOnly > 0.5) {
-      outA = 0.0;
-    }
-  }
-
-  gl_FragColor = vec4(outColor.rgb, outA);
+  float cover = 1.0 - smoothstep(-1.0 * px, 1.0 * px, d);
+  gl_FragColor = vec4(col * cover, mix(shadow, 1.0, cover));
+  gl_FragColor.rgb /= max(gl_FragColor.a, 1e-4);
 }
 `
 
@@ -365,7 +236,7 @@ export function LiquidGlassField({
    * is not frost, it is a slightly soft edge. That weak blur is a big part of
    * why the glass never read as glass: real frosted glass diffuses the backdrop
    * heavily. ~24px effective is in the range Apple's material sits at. */
-  const BLUR_STEP = 3.0
+  const BLUR_STEP = 1.8
   const BLUR_ITERATIONS = 2
 
   const vBlurMat = useMemo(() => new THREE.ShaderMaterial({
@@ -428,12 +299,12 @@ export function LiquidGlassField({
       u_shadowPosition: { value: new THREE.Vector2(0, -10) },
       // A dark wine tint so cream text stays readable over the bright light
       // sheet (2026-11-27). Linear values, so they look lighter than they read.
-      u_tint: { value: new THREE.Vector4(0.006, 0.0012, 0.001, 0.42) },
+      u_tint: { value: new THREE.Vector4(0.006, 0.0012, 0.001, 0.3) },
       u_glassOnly: { value: 0.0 },
       u_frost: { value: 0.0 },
       // Squircle corners (2 = plain rounded rect). 4.2 is close to Apple's
       // continuous-curvature corner without looking like a lozenge.
-      u_squircle: { value: 4.2 },
+      u_squircle: { value: 3.0 },
       // The "material" over a near-black scene — see glassLift() in the shader.
       u_brightness: { value: 1.08 },
       u_saturation: { value: 1.28 },
@@ -443,6 +314,8 @@ export function LiquidGlassField({
       u_mouseActive: { value: 0.0 },
       u_specular: { value: 0.55 },
       u_time: { value: 0.0 },
+      u_jelly: { value: 0.0 },
+      u_motion: { value: matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.0 : 1.0 },
       // DOM rects tracking
       u_numRects: { value: 0 },
       u_rects: { value: Array(10).fill(new THREE.Vector4()) },
@@ -477,13 +350,15 @@ export function LiquidGlassField({
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       const d = window.devicePixelRatio
-      glassMat.uniforms.u_mouse.value.set(e.clientX * d, (window.innerHeight - e.clientY) * d)
-      glassMat.uniforms.u_mouseActive.value = 1.0
+      pointer.current.x = e.clientX * d
+      pointer.current.y = (window.innerHeight - e.clientY) * d
+      if (pointer.current.on === 0) glassMat.uniforms.u_mouse.value.set(pointer.current.x, pointer.current.y)
+      pointer.current.on = 1
     }
     const onLeave = () => {
-      glassMat.uniforms.u_mouseActive.value = 0.0
+      pointer.current.on = 0
     }
-    // A finger counts too: the light follows it while it touches the screen.
+    // A finger counts too: the droplet follows it while it touches the screen.
     window.addEventListener('pointermove', onMove, { passive: true })
     window.addEventListener('pointerdown', onMove, { passive: true })
     window.addEventListener('pointerup', onLeave, { passive: true })
@@ -513,8 +388,26 @@ export function LiquidGlassField({
 
   const meshRef = useRef<THREE.Mesh>(null)
 
-  useFrame((state) => {
+  const pointer = useRef({ x: -9999, y: -9999, on: 0 })
+  const spring = useRef({ pos: 0, vel: 0, lastY: 0 })
+
+  useFrame((state, delta) => {
     if (!meshRef.current) return
+
+    // Jelly: scroll speed pushes a damped spring, which overshoots and settles.
+    const dt = Math.min(delta, 1 / 30)
+    const sp = spring.current
+    const y = window.scrollY
+    const target = Math.max(-1, Math.min(1, (y - sp.lastY) / Math.max(dt, 1e-3) / 1800))
+    sp.lastY = y
+    sp.vel += ((target - sp.pos) * 140 - sp.vel * 11) * dt
+    sp.pos += sp.vel * dt
+    glassMat.uniforms.u_jelly.value = glassMat.uniforms.u_motion.value * Math.max(-1.2, Math.min(1.2, sp.pos))
+    const ease = 1 - Math.exp(-dt * 12)
+    const m = glassMat.uniforms.u_mouse.value
+    m.x += (pointer.current.x - m.x) * ease
+    m.y += (pointer.current.y - m.y) * ease
+    glassMat.uniforms.u_mouseActive.value += (pointer.current.on - glassMat.uniforms.u_mouseActive.value) * (1 - Math.exp(-dt * 7))
 
     glassMat.uniforms.u_time.value = state.clock.elapsedTime
 
