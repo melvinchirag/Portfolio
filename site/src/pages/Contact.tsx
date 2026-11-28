@@ -216,7 +216,7 @@ function FindMeHere() {
                 rel={item.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                 aria-label={item.label}
                 title={item.title}
-                className={`${shape} social-glass`}
+                className={`${shape} social-glass sync-glass-rect`}
               >
                 {icon}
               </a>
@@ -375,7 +375,7 @@ function ContactView() {
             centred over it too, so both are centred, not just the ring. */}
         <section
           aria-labelledby="contact-direct-heading"
-          className="text-box flex flex-col items-center p-6 md:self-center"
+          className="flex flex-col items-center md:self-center"
         >
           {/* Re-checked 2026-08-10: as a flex column with `items-center`, both
               this label and the ring below are independently centred on the

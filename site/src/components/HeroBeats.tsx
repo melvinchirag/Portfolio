@@ -35,6 +35,7 @@ import { heroScrollTo, heroScrollToFrame } from '../hooks/useLenis'
 import { PROJECTS } from '../data/projects'
 import { HeroClockRail } from './HeroClockRail'
 import { FerroName } from './FerroName'
+import { typeStyle } from '../typeStyle'
 import { NameAssembly, SOLIDIFY_SECS } from './NameAssembly'
 import { slime } from './slime'
 import { TagThread } from './TagThread'
@@ -249,7 +250,9 @@ function IdentityFrame({ index }: { index: number }) {
               Chirag Karupati
             </span>
           </h1>
-          <FerroName targetRef={firstNameRef} shown={nameShown} onActive={setFerro} />
+          {typeStyle === 'classic' && (
+            <FerroName targetRef={firstNameRef} shown={nameShown} onActive={setFerro} />
+          )}
         </div>
 
         <div className="text-box hero-box order-4 mt-5 w-[var(--name-w,100%)] max-w-full p-4 md:p-5">

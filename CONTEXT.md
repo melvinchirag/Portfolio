@@ -4328,3 +4328,11 @@ slow bloom (CSS, .social-glass), so they read as clickable.
 2026-11-27: the trailing dot-and-ring cursor was rejected as annoying. Cursor.tsx now offers ember (our
 arrow and hand as CSS cursor images, preview default), glow (system cursor plus soft light) and system.
 Preview has a "Cursor" corner button and ?cursor=. If he likes neither, ship system.
+
+2026-11-27, futuristic pass (preview): Melvin wants "2099", utopian, not retro/DVD.
+- Social beads: no pane around them; each is a shader glass circle (u_glow gives a slow 6s staggered bloom).
+- Cursor: "Prism", a vector blade that morphs into a hand (DOM, written in pointermove, no easing). Ember and
+  Glow removed. ?cursor=system for the standard pointer.
+- Lettering: src/typeStyle.ts, halo (preview default, thin wide Archivo), nova (Unbounded from Google Fonts,
+  self-host if chosen), classic. FerroName and pixel snake trails only in classic.
+Still retro-leaning and untouched: mercury menu pill, glass-cta buttons, clock rail.

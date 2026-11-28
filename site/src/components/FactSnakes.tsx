@@ -234,7 +234,9 @@ export function FactSnakes() {
       snakeField.w.fill(0)
       snakeField.count = page <= 0 ? 0 : Math.min(SNAKE_SLOTS, snakes.length)
       if (page <= 0) return
-      ctx.font = FONT
+      // Futuristic lettering: a light sans and a thread of light, no pixels.
+      const clean = document.documentElement.dataset.type !== 'classic'
+      ctx.font = clean ? '300 11px "Archivo Variable", sans-serif' : FONT
       ctx.textBaseline = 'middle'
 
       for (let si = 0; si < snakes.length; si++) {
@@ -289,6 +291,20 @@ export function FactSnakes() {
         // end of the sentence is behind, given the direction of travel.
         const t = now / 1000
         const tailEnd = s.dir === 1 ? s.pos : s.pos + s.len
+        if (clean) {
+          const down = s.axis === 'v'
+          const far = tailEnd - s.dir * (TRAIL_N + 1) * TRAIL_GAP * 1.6
+          const x0 = down ? s.lane : tailEnd
+          const y0 = down ? tailEnd : s.lane
+          const x1 = down ? s.lane : far
+          const y1 = down ? far : s.lane
+          const thread = ctx.createLinearGradient(x0, y0, x1, y1)
+          thread.addColorStop(0, `rgba(${inkState.rgb}, ${0.42 * a})`)
+          thread.addColorStop(1, `rgba(${inkState.rgb}, 0)`)
+          ctx.fillStyle = thread
+          ctx.fillRect(Math.min(x0, x1) - (down ? 0.5 : 0), Math.min(y0, y1) - (down ? 0 : 0.5), Math.abs(x1 - x0) || 1, Math.abs(y1 - y0) || 1)
+          continue
+        }
         for (let i = 0; i < TRAIL_N; i++) {
           const k = i / TRAIL_N
           const along = tailEnd - s.dir * (i + 1) * TRAIL_GAP

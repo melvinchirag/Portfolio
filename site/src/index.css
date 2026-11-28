@@ -109,7 +109,6 @@
 .progressive-blur,
 .text-box,
 .sync-glass-rect,
-.social-glass,
 .slide-glass {
   -webkit-backdrop-filter: var(--glass-frost);
   backdrop-filter: var(--glass-frost);
@@ -981,19 +980,21 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
- * THE CURSOR (Cursor.tsx). The system draws it, so it never lags. Ember swaps
- * in our own arrow and hand; Glow adds light around the normal one.
+ * THE CURSOR (Cursor.tsx): a light-edged blade that flows into a hand.
  * ------------------------------------------------------------------------ */
+.prism-cursor { position: fixed; top: 0; left: 0; z-index: 120; width: 0; height: 0; pointer-events: none; opacity: 0; will-change: transform; }
+.prism-cursor.is-on { opacity: 1; }
+.prism-cursor svg { position: absolute; left: -12px; top: -8px; overflow: visible; transform-origin: 12px 8px; transition: scale 220ms var(--ease-out-expo), filter 300ms linear; filter: drop-shadow(0 0 3px rgb(255 150 70 / 0.75)) drop-shadow(0 0 11px rgb(255 60 20 / 0.35)) drop-shadow(0 4px 5px rgb(0 0 0 / 0.55)); }
+.prism-cursor.is-over svg { filter: drop-shadow(0 0 4px rgb(255 190 120 / 0.9)) drop-shadow(0 0 16px rgb(255 100 30 / 0.55)) drop-shadow(0 4px 5px rgb(0 0 0 / 0.55)); }
+.prism-cursor.is-down svg { scale: 0.86; }
+.prism-pulse { position: absolute; left: -17px; top: -17px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgb(255 214 170 / 0.9); opacity: 0; scale: 0.2; transition: opacity 500ms linear, scale 500ms var(--ease-out-expo); }
+.prism-cursor.is-down .prism-pulse { opacity: 0.9; scale: 1; transition-duration: 0ms, 260ms; }
 @media (pointer: fine) {
-  html[data-cursor='ember'], html[data-cursor='ember'] body { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2028%2028%22%3E%3Cpath%20d%3D%22M4%202%20L4%2022%20L9.5%2017%20L13%2025%20L17%2023.2%20L13.6%2015.6%20L21%2015.2%20Z%22%20fill%3D%22%23f3dfb4%22%20stroke%3D%22%232a0709%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E") 4 2, auto; }
-  html[data-cursor='ember'] :is(a, button, [role='button'], [role='tab'], summary, label[for], select), html[data-cursor='ember'] :is(a, button, [role='button'], [role='tab'], summary) * { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2028%2028%22%3E%3Cpath%20d%3D%22M10%203.5c1.3%200%202.2%201%202.2%202.3v6.4l1%20.1v-1.4c0-1.2.9-2%202-2s1.9.8%201.9%202v1.6l.9.1v-.9c0-1.1.8-1.9%201.8-1.9s1.8.8%201.8%201.9v6.1c0%204.5-2.9%207.7-7.3%207.7-3.2%200-4.8-1.4-6.6-4.2L4.9%2016.6c-.6-1-.4-2.1.5-2.7.8-.6%201.9-.4%202.6.4l-.2-8.5c0-1.3.9-2.3%202.2-2.3z%22%20fill%3D%22%23ff8a24%22%20stroke%3D%22%232a0709%22%20stroke-width%3D%221.5%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E") 10 4, pointer; }
-  html[data-cursor='ember'] :is(input, textarea) { cursor: text; }
-  html[data-cursor='ember'] button:disabled { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2028%2028%22%3E%3Cpath%20d%3D%22M4%202%20L4%2022%20L9.5%2017%20L13%2025%20L17%2023.2%20L13.6%2015.6%20L21%2015.2%20Z%22%20fill%3D%22%23f3dfb4%22%20stroke%3D%22%232a0709%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E") 4 2, auto; }
+  html.has-prism, html.has-prism * { cursor: none; }
+  html.has-prism :is(input, textarea) { cursor: text; }
 }
-.cursor-glow { position: fixed; top: 0; left: 0; z-index: 90; width: 220px; height: 220px; margin: -110px 0 0 -110px; border-radius: 50%; pointer-events: none; mix-blend-mode: screen; opacity: 0; transition: opacity 250ms linear, scale 250ms var(--ease-out-expo); scale: 0.75; background: radial-gradient(closest-side, rgb(255 150 60 / 0.28), rgb(200 30 10 / 0.12) 50%, transparent); }
-.cursor-glow.is-on { opacity: 1; }
-.cursor-glow.is-over { scale: 1; background: radial-gradient(closest-side, rgb(255 196 120 / 0.46), rgb(255 100 20 / 0.2) 45%, transparent); }
 .box-switch.cursor-switch { bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+.box-switch.type-switch { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 
 
 @media (prefers-reduced-motion: reduce) {
@@ -1243,18 +1244,29 @@ html[data-box='glass'] .field { background-color: rgb(0 0 0 / 0.32); box-shadow:
 html[data-box='glass'] .field:hover { background-color: rgb(0 0 0 / 0.4); }
 html[data-box='glass'] .field:focus { background-color: rgb(0 0 0 / 0.5); box-shadow: inset 0 0 0 1px var(--color-sand-dim); }
 
-/* SOCIAL BEADS (Melvin, 2026-11-27: glass, "slowly glowing like blooming to
-   indicate that it needs to be clicked"). Dark glass with a warm lit edge; a
-   soft bloom swells and fades, one bead after the next around the ring. */
-.social-btn.social-glass { position: relative; isolation: isolate; --glass-frost: blur(7px) saturate(1.8); border-color: transparent; color: var(--color-sand); background: radial-gradient(130% 130% at 30% 18%, rgb(255 176 110 / 0.26), rgb(18 4 3 / 0.62) 52%, rgb(255 104 20 / 0.34)); box-shadow: inset 0 0 0 1px rgb(255 170 100 / 0.42), inset 0 -6px 11px rgb(255 98 20 / 0.24), inset 0 6px 9px rgb(0 0 0 / 0.38); transition: transform 300ms var(--ease-out-expo); }
-.social-glass::after { content: ''; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; pointer-events: none; box-shadow: 0 0 13px 3px rgb(255 138 36 / 0.72), 0 0 34px 11px rgb(206 24 10 / 0.5); opacity: 0.12; animation: social-bloom 3.6s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -0.6s); }
-.social-btn.social-glass:hover, .social-btn.social-glass:focus-visible { border-color: transparent; transform: scale(1.12); }
-.social-glass:hover::after, .social-glass:focus-visible::after { animation: none; opacity: 1; }
-.social-glass:active { transform: scale(0.94); }
-@keyframes social-bloom {
-  0%, 100% { opacity: 0.1; transform: scale(0.88); }
-  50% { opacity: 1; transform: scale(0.99); }
+/* SOCIAL BEADS. In the glass style the WebGL layer draws each bead and its slow
+   bloom (LiquidGlassField); CSS only holds the icon and the press feel. */
+.social-btn.social-glass { color: var(--color-sand); border-color: transparent; transition: scale 450ms var(--ease-out-expo), color 300ms linear; }
+.social-btn.social-glass:hover, .social-btn.social-glass:focus-visible { border-color: transparent; color: #fff4e4; scale: 1.12; }
+.social-btn.social-glass:active { scale: 0.94; }
+html[data-box] .social-btn.social-glass { border-radius: 50%; }
+html:not([data-box='glass']) .social-btn.social-glass { background: rgb(18 5 4 / 0.7); box-shadow: inset 0 0 0 1px rgb(255 170 100 / 0.4), 0 0 18px rgb(255 100 20 / 0.28); }
+
+/* LETTERING (src/typeStyle.ts). Classic is untouched; halo and nova go light,
+   airy and clean: no bevel, no monospace, no pixels. */
+html[data-type='halo'] { --font-mono: var(--font-sans); }
+html[data-type='nova'] { --font-display: 'Unbounded', 'Archivo Variable', sans-serif; --font-mono: var(--font-sans); }
+html:is([data-type='halo'], [data-type='nova']) :is(h1, h2, h3, .frame-title, .cm-word, .card-name) { font-weight: 250; letter-spacing: 0.012em; }
+html:is([data-type='halo'], [data-type='nova']) .label { font-weight: 400; letter-spacing: 0.24em; }
+html:is([data-type='halo'], [data-type='nova']) .name-gold { font-weight: 200; letter-spacing: 0.055em; margin-right: -0.055em; color: transparent; background: linear-gradient(176deg, #ffffff 8%, #ffe9cf 38%, #ffb273 66%, #ff6a2a 96%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 22px rgb(255 120 40 / 0.4)); }
+html:is([data-type='halo'], [data-type='nova']) .display-narrow { font-variation-settings: 'wdth' 112; font-weight: 250; color: #ffe3c4; }
+html:is([data-type='halo'], [data-type='nova']) :is(.glass-cta, .cm-word, .box-switch) { font-weight: 400; letter-spacing: 0.14em; }
+html[data-type='nova'] .frame-title { font-size: clamp(1.75rem, 4.8vw, 4rem); }
+/* Preview switches on phones: small, in the two bottom corners, clear of the buttons. */
+@media (max-width: 767px) {
+  .box-switch { padding: 4px 9px; font-size: 10px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .box-switch.type-switch { left: auto; right: calc(8px + env(safe-area-inset-right, 0px)); bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .social-glass::after { animation: none; opacity: 0.55; }
-}
+/* The wordmark and menu words match the light lettering; spaced caps stay spaced. */
+html:is([data-type='halo'], [data-type='nova']) .display-wide:not(.name-gold, h1, h2) { font-weight: 350; letter-spacing: 0.16em; }
+html:is([data-type='halo'], [data-type='nova']) :is(h2, h3).uppercase { font-weight: 400; letter-spacing: 0.34em; }

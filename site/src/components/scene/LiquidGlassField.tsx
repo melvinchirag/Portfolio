@@ -69,6 +69,7 @@ uniform int u_numRects;
 uniform vec4 u_rects[10]; // x, y, width, height in px, bottom-left origin
 uniform float u_radii[10];
 uniform float u_fluid[10]; // 1 = moves like liquid, 0 = still glass
+uniform float u_glow[10];  // slow bloom of a pane that asks to be pressed
 uniform float u_squircle;
 uniform vec4 u_tint;
 uniform vec2 u_mouse;
@@ -80,9 +81,11 @@ uniform float u_motion; // 0 under reduced motion
 varying vec2 v_uv;
 
 float roundedRectSDF(vec2 p, vec2 half_, float r) {
+  // a fully round pane is a true circle, not a squircle
+  float n = r >= min(half_.x, half_.y) - 0.5 ? 2.0 : u_squircle;
   vec2 d = abs(p) - half_ + vec2(r);
   vec2 m = max(d, 0.0) + 1e-4;
-  float outside = pow(pow(m.x, u_squircle) + pow(m.y, u_squircle), 1.0 / u_squircle);
+  float outside = pow(pow(m.x, n) + pow(m.y, n), 1.0 / n);
   return min(max(d.x, d.y), 0.0) + outside - r;
 }
 
@@ -121,6 +124,24 @@ float field(vec2 p, out float halfMin, out vec2 centre) {
   return d;
 }
 
+// Light spilling from the panes that are blooming: a soft ring, and how strong
+// the bloom is for the pane under this pixel.
+vec2 bloomAt(vec2 p) {
+  float halo = 0.0;
+  float inside = 0.0;
+  for (int i = 0; i < 10; i++) {
+    if (i >= u_numRects) break;
+    if (u_glow[i] <= 0.0) continue;
+    vec4 rc = u_rects[i];
+    float r = min(rc.z, rc.w) * 0.5;
+    float di = length(p - (rc.xy + rc.zw * 0.5)) - r;
+    float reach = (7.0 + 9.0 * u_glow[i]) * u_dpr;
+    halo = max(halo, u_glow[i] * exp(-pow(max(di, 0.0) / reach, 1.35)));
+    if (di < 1.0 * u_dpr) inside = u_glow[i];
+  }
+  return vec2(halo, inside);
+}
+
 vec3 grab(sampler2D tex, vec2 uv) { return texture2D(tex, clamp(uv, vec2(0.001), vec2(0.999))).rgb; }
 
 void main() {
@@ -134,7 +155,14 @@ void main() {
   float hm; vec2 hc;
   float ds = d < 60.0 * px ? field(p + vec2(0.0, 10.0 * px), hm, hc) : 1e5;
   float shadow = 0.38 * exp(-max(ds, 0.0) / (16.0 * px)) * step(ds, 59.0 * px);
-  if (d > 1.0 * px) { gl_FragColor = vec4(0.0, 0.0, 0.0, shadow); return; }
+  vec2 bloom = bloomAt(p);
+  vec3 bloomColour = vec3(0.95, 0.2, 0.035);
+  if (d > 1.0 * px) {
+    float light = bloom.x * 0.42;
+    float a = light + shadow * (1.0 - light);
+    gl_FragColor = vec4(bloomColour * (light / max(a, 1e-4)), a);
+    return;
+  }
 
   float e = 1.0 * px; float a_; vec2 b_;
   vec2 n = vec2(
@@ -189,6 +217,9 @@ void main() {
   float line = 1.0 - smoothstep(0.0, 1.6 * px, -d);
   col += edge * line * (0.4 + 0.6 * pow(abs(facing), 2.0));
   col += edge * pow(q, 5.0) * 0.16;
+
+  // the same bloom warms the rim and the heart of the bead that owns it
+  col += bloomColour * bloom.y * (0.3 * pow(q, 2.0) + 0.045) + vec3(1.0, 0.45, 0.14) * bloom.y * line * 0.34;
 
   float cover = 1.0 - smoothstep(-1.0 * px, 1.0 * px, d);
   gl_FragColor = vec4(col * cover, mix(shadow, 1.0, cover));
@@ -324,7 +355,8 @@ export function LiquidGlassField({
       u_numRects: { value: 0 },
       u_rects: { value: Array(10).fill(new THREE.Vector4()) },
       u_radii: { value: Array(10).fill(0.0) },
-      u_fluid: { value: Array(10).fill(1.0) }
+      u_fluid: { value: Array(10).fill(1.0) },
+      u_glow: { value: Array(10).fill(0.0) }
     },
     vertexShader, fragmentShader: glassFragmentShader,
     depthWrite: false, depthTest: false,
@@ -456,6 +488,7 @@ export function LiquidGlassField({
     const rects: THREE.Vector4[] = []
     const radii: number[] = []
     const fluid: number[] = []
+    const glow: number[] = []
     const dpr = window.devicePixelRatio
     const vh = window.innerHeight
 
@@ -486,6 +519,13 @@ export function LiquidGlassField({
       radii.push(radius * dpr)
       // The contact area is glass that holds still: forms should not wobble.
       fluid.push(el.closest('#contact, [role="tabpanel"]') ? 0 : 1)
+      // Buttons bloom slowly, one after the next round the ring (six seconds a
+      // breath), and light fully under the pointer.
+      if (el.classList.contains('social-glass')) {
+        const i = Number((el.parentElement as HTMLElement | null)?.style.getPropertyValue('--i') || 0)
+        const breath = Math.pow(0.5 + 0.5 * Math.sin((state.clock.elapsedTime * Math.PI * 2) / 6 - (i * Math.PI) / 3), 2)
+        glow.push(el.matches(':hover, :focus-visible') ? 1 : glassMat.uniforms.u_motion.value ? 0.12 + 0.6 * breath : 0.4)
+      } else glow.push(0)
     })
 
     // Everything scrolled off-screen → nothing to draw this frame.
@@ -500,6 +540,7 @@ export function LiquidGlassField({
       glassMat.uniforms.u_rects.value[i] = rects[i]
       glassMat.uniforms.u_radii.value[i] = radii[i]
       glassMat.uniforms.u_fluid.value[i] = fluid[i]
+      glassMat.uniforms.u_glow.value[i] = glow[i]
     }
 
     if (bgTexture) {
