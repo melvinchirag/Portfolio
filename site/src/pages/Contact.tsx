@@ -204,9 +204,9 @@ function FindMeHere() {
             <path d={item.path} />
           </svg>
         )
-        const shape = 'social-btn flex h-9 w-9 items-center justify-center rounded-full border'
+        const shape = 'social-btn flex h-11 w-11 items-center justify-center rounded-full border'
         // Evenly spaced around the loop: 6 items → 1/6 of the path apart.
-        const style = { '--start': `${(i / items.length) * 100}%` } as CSSProperties
+        const style = { '--start': `${(i / items.length) * 100}%`, '--i': i } as CSSProperties
         return (
           <div key={item.label} className="orbit-ring-item" style={style}>
             {item.href ? (
@@ -216,7 +216,7 @@ function FindMeHere() {
                 rel={item.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                 aria-label={item.label}
                 title={item.title}
-                className={shape}
+                className={`${shape} social-glass`}
               >
                 {icon}
               </a>
@@ -375,7 +375,7 @@ function ContactView() {
             centred over it too, so both are centred, not just the ring. */}
         <section
           aria-labelledby="contact-direct-heading"
-          className="flex flex-col items-center md:self-center"
+          className="text-box flex flex-col items-center p-6 md:self-center"
         >
           {/* Re-checked 2026-08-10: as a flex column with `items-center`, both
               this label and the ring below are independently centred on the
@@ -392,7 +392,7 @@ function ContactView() {
               stopping the motion — both are calls for Melvin, not a guess. */}
           <h2
             id="contact-direct-heading"
-            className="text-center text-[11px] tracking-[0.3em] text-white/40 uppercase"
+            className="text-center text-[11px] tracking-[0.3em] text-sand/80 uppercase"
           >
             Stalk me here
           </h2>

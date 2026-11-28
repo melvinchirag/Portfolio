@@ -4321,3 +4321,6 @@ behind text, liquid kept for controls. Awaiting his pick. Frame rate seen only i
 wobble, and a still contact area. Done: tint darker, no white lift/sheen, edge light sampled from the page
 just outside the pane (warm), ripple/jelly/droplet reduced, u_fluid = 0 inside #contact and tab panels,
 dark form fields, About now uses scene capture (the glass samples what is actually shown).
+
+2026-11-27: "Stalk me here" is a still glass pane; the six social buttons are 44px glass beads with a staggered
+slow bloom (CSS, .social-glass), so they read as clickable.
