@@ -107,6 +107,8 @@
 .liquid-glass,
 .glass-cta,
 .progressive-blur,
+.text-box,
+.sync-glass-rect,
 .slide-glass {
   -webkit-backdrop-filter: var(--glass-frost);
   backdrop-filter: var(--glass-frost);
@@ -1248,3 +1250,22 @@ html.has-cursor.cursor-hover .cursor-dot {
   /* Bigger touch areas for the three hero links without moving them. */
   .hero-links a { padding: 14px 6px; margin: -14px -6px; }
 }
+
+/* TEXT BOXES (Melvin, 2026-11-27): every text body sits in a box so it reads.
+   Three materials, chosen by <html data-box> (src/boxStyle.ts). */
+.text-box, .sync-glass-rect { --glass-frost: none; }
+.text-box { position: relative; }
+html[data-box] .text-box { border-radius: 24px; }
+
+/* Liquid glass: the WebGL layer draws the material. CSS adds only a faint rim,
+   and enough tint to stay readable if WebGL is unavailable. */
+html[data-box='glass'] :is(.text-box, .sync-glass-rect) { background: rgb(14 4 4 / 0.12); box-shadow: inset 0 0 0 1px rgb(255 236 200 / 0.12); text-shadow: 0 1px 2px rgb(0 0 0 / 0.65); }
+
+/* Frost: a plain blurred pane. */
+html[data-box='frost'] :is(.text-box, .sync-glass-rect) { --glass-frost: blur(18px) saturate(1.35); background: rgb(20 7 6 / 0.52); box-shadow: inset 0 0 0 1px rgb(255 236 200 / 0.16), 0 14px 40px rgb(0 0 0 / 0.35); }
+
+/* Clay: soft, solid and raised. */
+html[data-box='clay'] :is(.text-box, .sync-glass-rect) { background: linear-gradient(145deg, #34130e, #1a0807); box-shadow: inset 3px 3px 10px rgb(255 196 150 / 0.16), inset -6px -6px 16px rgb(0 0 0 / 0.55), 0 18px 36px rgb(0 0 0 / 0.5); }
+
+/* The preview-only material switcher. */
+.box-switch { position: fixed; z-index: 45; left: calc(10px + env(safe-area-inset-left, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); padding: 7px 12px; border-radius: 999px; border: 1px solid rgb(243 223 180 / 0.45); background: rgb(10 3 3 / 0.85); color: #f3dfb4; font: 600 11px 'Archivo Variable', system-ui, sans-serif; letter-spacing: 0.04em; cursor: pointer; }

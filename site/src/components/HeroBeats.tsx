@@ -79,7 +79,7 @@ const AREAS = [
 // is gone from every hero element, so the WebGL glass shader skips this page,
 // and `.slide-glass` is now a plain transparent box (see index.css). The
 // text-shadow went with it: no shadows, no glow, anywhere.
-const GLASS_BOX = 'slide-glass px-6 py-4 sm:px-8 sm:py-9 md:px-10'
+const GLASS_BOX = 'slide-glass text-box px-6 py-4 sm:px-8 sm:py-9 md:px-10'
 
 /* The prose block inside Past and Future, as ONE shared class so the two
  * frames can't drift apart (Melvin, 2026-08-11: "this formatting needs to be
@@ -252,23 +252,25 @@ function IdentityFrame({ index }: { index: number }) {
           <FerroName targetRef={firstNameRef} shown={nameShown} onActive={setFerro} />
         </div>
 
-        <p className="order-4 mt-6 w-[var(--name-w,100%)] max-w-full text-[14.5px] leading-relaxed text-sand/80 sm:text-[15.5px] md:mt-7">
-          {/* Melvin's own outline, 2026-11-26: who he is, the fields in HIS order,
-              bringing them together. No titles or roles in this paragraph. */}
-          I’m a computer science undergraduate focused on AI, machine learning and software
-          engineering, while developing expertise in brain-computer interfaces, robotics and
-          computer vision. My goal is to bring fields together, these and beyond, to build new
-          solutions. This site can{' '}
-          <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
-            see further
-          </Link>
-          .
-        </p>
+        <div className="text-box order-4 mt-5 w-[var(--name-w,100%)] max-w-full p-3.5 md:p-5">
+          <p className="text-[14px] leading-relaxed text-sand/90 sm:text-[15.5px]">
+            {/* Melvin's own outline, 2026-11-26: who he is, the fields in HIS order,
+                bringing them together. No titles or roles in this paragraph. */}
+            I’m a computer science undergraduate focused on AI, machine learning and software
+            engineering, while developing expertise in brain-computer interfaces, robotics and
+            computer vision. My goal is to bring fields together, these and beyond, to build new
+            solutions. This site can{' '}
+            <Link to="/vision" className="beyond-link" aria-label="Beyond — explore my Vision">
+              see further
+            </Link>
+            .
+          </p>
 
-        <p className="open-to order-4 mt-4 w-[var(--name-w,100%)] max-w-full text-[12.5px] leading-relaxed text-sand">
-          Open to <strong>2027 internships and full-time roles</strong>. Always up to collaborate on
-          new projects and startups.
-        </p>
+          <p className="open-to mt-3 text-[12.5px] leading-relaxed text-sand">
+            Open to <strong>2027 internships and full-time roles</strong>. Always up to collaborate on
+            new projects and startups.
+          </p>
+        </div>
 
         <div ref={slime.cta} className="order-5 mt-6 flex flex-wrap items-center gap-3 md:order-none md:mt-8">
           <Link data-slime data-slime-home to="/work" className="glass-cta rounded-full px-6 py-2.5 text-sm tracking-wide">

@@ -84,7 +84,7 @@ function Card({
   className?: string
 }) {
   return (
-    <div className={`sync-glass-rect flex flex-col gap-2 rounded-2xl border border-white/10 bg-[#0b0404]/75 p-6 transition-colors hover:bg-[#170a0a]/80 ${className}`}>
+    <div className={`sync-glass-rect flex flex-col gap-2 rounded-2xl border border-white/10 p-6 ${className}`}>
       <span className="font-display text-2xl text-sand/60 md:text-3xl">{year}</span>
       <h3 className="text-base font-medium tracking-wide text-white">{title}</h3>
       <p className="mt-1 text-[13px] leading-relaxed text-white/85">{description}</p>
@@ -132,7 +132,7 @@ export function About() {
       {/* ── SECTION 1: "Get to know me !" — header left, milestone cards right ── */}
       <div className="grid grid-cols-1 gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="max-w-2xl flex flex-col items-center justify-center">
-          <Reveal as="header">
+          <Reveal as="header" className="text-box p-6">
             <h1 className="display-wide font-display text-5xl leading-[0.95] font-bold tracking-tight text-white md:text-7xl">
               Get to know me
             </h1>
@@ -164,7 +164,7 @@ export function About() {
       <div className="mt-32 grid grid-cols-1 gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Left column — threads content */}
         <div className="max-w-2xl">
-          <Reveal className="mb-16">
+          <Reveal className="text-box mb-16 p-6">
             <p className="label">The threads</p>
             <h2 className="display-wide mt-4 flex flex-wrap items-center font-display text-4xl leading-[1.05] font-bold text-white md:text-5xl">
               Get to know me even more
@@ -179,7 +179,7 @@ export function About() {
           <AbstractThreads items={THREADS} />
 
           {/* Closing */}
-          <Reveal className="mt-40">
+          <Reveal className="text-box mt-40 p-6">
             <p className="font-display text-3xl text-white/60 md:text-4xl">The work continues.</p>
             <p className="mt-3 text-sm text-white/65">Building the next chapter.</p>
           </Reveal>

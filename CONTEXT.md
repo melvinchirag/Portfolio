@@ -4303,3 +4303,10 @@ Not live until Melvin says so.
 so Loader.tsx is the original 5.2s neuron sequence and the first-paint name is gone. Do not shorten or add
 a name to the opening without asking. Hero paragraph now follows his outline (fields in his order, no
 roles or titles). Arrival time is back to about 9s fast / 13s slow.
+
+## 2026-11-27: text boxes (preview)
+Every text body now has a box (`.text-box`). Three materials via <html data-box>: glass (default), frost,
+clay; preview hosts get a corner button and ?box=. The liquid glass shader had NEVER drawn: it read `uv`
+from drei's ScreenQuad, which has none. Fixed in LiquidGlassField's vertex shader. Rim toned down and
+warmed. Untested on a real phone; the glass adds a scene capture and blur passes per frame.
+Melvin: changes go to preview links; live only when he says.

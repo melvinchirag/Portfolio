@@ -4,6 +4,7 @@ import { Loader } from './components/Loader'
 import { Nav } from './components/Nav'
 import { Footer } from './components/Footer'
 import { Cursor } from './components/Cursor'
+import { BoxSwitch } from './components/BoxSwitch'
 import { FactSnakes } from './components/FactSnakes'
 import { PageTransition } from './components/PageTransition'
 import { Home } from './pages/Home'
@@ -56,6 +57,7 @@ function Shell() {
       </main>
       <div className="progressive-blur" />
       <Cursor />
+      <BoxSwitch />
       <Loader />
     </>
   )

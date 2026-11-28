@@ -7,8 +7,10 @@ import { useMemo, useRef, useEffect } from 'react'
 const vertexShader = `
 varying vec2 v_uv;
 void main() {
-  v_uv = uv;
-  gl_Position = vec4(position, 1.0);
+  // From the position, NOT the uv attribute: the drei ScreenQuad has none, so
+  // uv read as (0,0) everywhere and the glass was never drawn (found 2026-11-27).
+  v_uv = position.xy * 0.5 + 0.5;
+  gl_Position = vec4(position.xy, 0.0, 1.0);
 }
 `
 
@@ -268,7 +270,7 @@ void main() {
       pow(1.0 + merged / 1500.0 * pow(500.0 / u_refFresnelRange, 2.0) + u_refFresnelHardness, 5.0),
       0.0, 1.0
     );
-    outColor.rgb += vec3(fresnelFactor * (u_refFresnelFactor * 0.01));
+    outColor.rgb += vec3(1.0, 0.82, 0.6) * (fresnelFactor * (u_refFresnelFactor * 0.01));
 
     // Directional glare highlight (angle straight from the JSON).
     float glareGeoFactor = clamp(
@@ -283,7 +285,7 @@ void main() {
     glareAngle = clamp(cos(glareAngle), 0.0, 1.0);
     float glareIntensity = pow(glareAngle, u_glareConvergence);
     float finalGlare = glareGeoFactor * glareIntensity * mix(u_glareFactor * 0.01, u_glareOppositeFactor * 0.01, glareFarside);
-    outColor.rgb += vec3(clamp(finalGlare, 0.0, 1.0));
+    outColor.rgb += vec3(1.0, 0.86, 0.66) * clamp(finalGlare, 0.0, 1.0);
 
     // ---- The pointer as a light source -----------------------------------
     // Edge specular: the rim facing the cursor catches a bright highlight, so
@@ -336,7 +338,9 @@ export function LiquidGlassField({
 }) {
   const { size } = useThree()
 
-  const dpr = window.devicePixelRatio
+  // Phones capture at no more than 1.25x: the pane is frosted, so extra pixels
+  // are invisible and cost frames on a screen that reports 3x.
+  const dpr = size.width < 768 ? Math.min(1.25, window.devicePixelRatio) : window.devicePixelRatio
   const w = Math.max(1, size.width * dpr)
   const h = Math.max(1, size.height * dpr)
 
@@ -411,27 +415,29 @@ export function LiquidGlassField({
       u_refDispersion: { value: 8.0 },
       u_refFresnelRange: { value: 30.0 },
       u_refFresnelHardness: { value: 0.93 },
-      u_refFresnelFactor: { value: 30.0 },
+      u_refFresnelFactor: { value: 9.0 },
       u_refDispersionVal: { value: 8.0 },
       u_glareRange: { value: 30.0 },
       u_glareHardness: { value: 1.48 },
-      u_glareFactor: { value: 58.0 },
+      u_glareFactor: { value: 17.0 },
       u_glareConvergence: { value: 9.0 },
-      u_glareOppositeFactor: { value: 14.0 },
+      u_glareOppositeFactor: { value: 6.0 },
       u_glareAngle: { value: -45.0 * (Math.PI / 180.0) },
       u_shadowExpand: { value: 25.0 },
       u_shadowFactor: { value: 15.0 },
       u_shadowPosition: { value: new THREE.Vector2(0, -10) },
-      u_tint: { value: new THREE.Vector4(8 / 255, 102 / 255, 165 / 255, 0.0) },
+      // A dark wine tint so cream text stays readable over the bright light
+      // sheet (2026-11-27). Linear values, so they look lighter than they read.
+      u_tint: { value: new THREE.Vector4(0.006, 0.0012, 0.001, 0.42) },
       u_glassOnly: { value: 0.0 },
       u_frost: { value: 0.0 },
       // Squircle corners (2 = plain rounded rect). 4.2 is close to Apple's
       // continuous-curvature corner without looking like a lozenge.
       u_squircle: { value: 4.2 },
       // The "material" over a near-black scene — see glassLift() in the shader.
-      u_brightness: { value: 1.3 },
-      u_saturation: { value: 1.22 },
-      u_whiteFill: { value: 0.055 },
+      u_brightness: { value: 1.08 },
+      u_saturation: { value: 1.28 },
+      u_whiteFill: { value: 0.006 },
       // Pointer-as-light.
       u_mouse: { value: new THREE.Vector2(-9999, -9999) },
       u_mouseActive: { value: 0.0 },
@@ -470,7 +476,6 @@ export function LiquidGlassField({
    * Touch devices never set it active, so they simply get the static glass. */
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
       const d = window.devicePixelRatio
       glassMat.uniforms.u_mouse.value.set(e.clientX * d, (window.innerHeight - e.clientY) * d)
       glassMat.uniforms.u_mouseActive.value = 1.0
@@ -478,10 +483,17 @@ export function LiquidGlassField({
     const onLeave = () => {
       glassMat.uniforms.u_mouseActive.value = 0.0
     }
+    // A finger counts too: the light follows it while it touches the screen.
     window.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('pointerdown', onMove, { passive: true })
+    window.addEventListener('pointerup', onLeave, { passive: true })
+    window.addEventListener('pointercancel', onLeave, { passive: true })
     document.addEventListener('pointerleave', onLeave)
     return () => {
       window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerdown', onMove)
+      window.removeEventListener('pointerup', onLeave)
+      window.removeEventListener('pointercancel', onLeave)
       document.removeEventListener('pointerleave', onLeave)
     }
   }, [glassMat])
@@ -527,7 +539,11 @@ export function LiquidGlassField({
     }
 
     // Sync DOM elements to uniforms
-    const els = document.querySelectorAll('.sync-glass-rect')
+    // Only in the glass style; the frost and clay styles are plain CSS.
+    const els: Element[] =
+      document.documentElement.dataset.box === 'glass'
+        ? Array.from(document.querySelectorAll('.sync-glass-rect, .text-box'))
+        : []
 
     // No glass shapes on screen (e.g. the info tabs were removed) → skip the
     // ENTIRE render pipeline (scene capture + 2 blur passes). Otherwise we'd
@@ -550,6 +566,8 @@ export function LiquidGlassField({
     // order eat all the slots and visible cards lower down get no glass.
     els.forEach((el) => {
       if (rects.length >= 10) return
+      // A box inside a closed Work section still has a size; do not draw it.
+      if (el.closest('[class*="grid-rows-[0fr]"]')) return
       const rect = el.getBoundingClientRect()
       if (rect.bottom < -50 || rect.top > vh + 50) return // off-screen vertically
       // Also skip boxes panned off-screen HORIZONTALLY (the hero frames slide
@@ -627,6 +645,6 @@ export function LiquidGlassField({
 
   // Render a full-screen quad over the camera
   return (
-    <ScreenQuad ref={meshRef} material={glassMat} />
+    <ScreenQuad ref={meshRef} material={glassMat} renderOrder={999} />
   )
 }

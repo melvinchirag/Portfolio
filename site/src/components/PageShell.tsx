@@ -41,7 +41,7 @@ export function PageShell({
       className="relative z-10 mx-auto w-full px-6 pt-32 pb-28 md:px-10"
       style={{ maxWidth: SHELL_WIDTH[width] }}
     >
-      <Reveal as="header" className="mb-14">
+      <Reveal as="header" className="text-box mb-8 p-5 md:p-7">
         <p className="label">{eyebrow}</p>
         <h1 className="display-wide font-display mt-4 text-5xl leading-[0.95] font-bold tracking-tight text-white md:text-7xl">
           {title}

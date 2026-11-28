@@ -189,7 +189,7 @@ export function Work() {
           open={openSections.has('Leadership')}
           onToggle={() => toggleSection('Leadership')}
         >
-          <ul className="flex flex-col gap-5">
+          <ul className="text-box flex flex-col gap-5 p-5">
             {LEADERSHIP.map((l) => (
               <li key={l.role + l.org} className="flex flex-col gap-1 border-l border-white/10 pl-4">
                 <span className="text-sm font-medium text-white/85">{l.role}</span>

@@ -44,7 +44,7 @@ export function Vision() {
       title="Vision"
       intro="I want to build intelligent systems that move past the screen: systems that can perceive the world, reason about it, and act within it."
     >
-      <Reveal delay={80} className="flex flex-col gap-5 text-[15px] leading-relaxed text-white/70">
+      <Reveal delay={80} className="text-box flex flex-col gap-5 p-5 text-[15px] leading-relaxed text-white/85 md:p-7">
         <p>
           Right now that means computer vision, applied machine learning, world models, and systems
           that connect vision, language and action. Osiris is the current expression of it: a
@@ -63,7 +63,7 @@ export function Vision() {
         </p>
       </Reveal>
 
-      <Reveal delay={160}>
+      <Reveal delay={160} className="text-box p-5 md:p-7">
         <p className="label mb-3">Areas I’m exploring</p>
         <TagThread items={AREAS} />
       </Reveal>

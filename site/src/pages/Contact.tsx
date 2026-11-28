@@ -263,7 +263,7 @@ function ContactView() {
 
   return (
     <div id="panel-contact" role="tabpanel" aria-labelledby="tab-contact">
-      <Reveal as="header" className="max-w-2xl">
+      <Reveal as="header" className="text-box max-w-2xl p-5 md:p-7">
         <h1 className="display-wide font-display text-[clamp(2.4rem,6vw,4.2rem)] leading-[1.02] font-bold tracking-tight text-white">
           Let's Build What Comes Next.
         </h1>
@@ -274,8 +274,8 @@ function ContactView() {
         </p>
       </Reveal>
 
-      <Reveal delay={120} className="mt-16 grid gap-14 md:grid-cols-[1.1fr_0.9fr] md:gap-20">
-        <section aria-labelledby="contact-form-heading">
+      <Reveal delay={120} className="mt-8 grid gap-14 md:grid-cols-[1.1fr_0.9fr] md:gap-20">
+        <section aria-labelledby="contact-form-heading" className="text-box self-start p-5 md:p-7">
           <h2 id="contact-form-heading" className="sr-only">
             Send a message
           </h2>
@@ -433,7 +433,7 @@ function TestimonialsView() {
 
   return (
     <div id="panel-testimonials" role="tabpanel" aria-labelledby="tab-testimonials">
-      <Reveal as="header" className="max-w-2xl">
+      <Reveal as="header" className="text-box max-w-2xl p-5 md:p-7">
         <h1 className="display-wide font-display text-[clamp(2.4rem,6vw,4.2rem)] leading-[1.02] font-bold tracking-tight text-white">
           Work With Me?
         </h1>
@@ -443,7 +443,7 @@ function TestimonialsView() {
         </p>
       </Reveal>
 
-      <Reveal delay={120} className="mt-16 max-w-xl">
+      <Reveal delay={120} className="text-box mt-8 max-w-2xl p-5 md:p-7">
         {status === 'sent' ? (
           <div
             aria-live="polite"
