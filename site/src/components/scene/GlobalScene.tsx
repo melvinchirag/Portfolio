@@ -248,10 +248,7 @@ function SceneContents({
           frost, and light of its own (see glassLift + the pointer specular in
           LiquidGlassField). `frost` is raised on the hero so text stays
           readable over the particle mask. */}
-      <LiquidGlassField
-        bgTexture={isAbout ? aboutTex ?? undefined : undefined}
-        frost={0.55}
-      />
+      <LiquidGlassField frost={0.55} />
 
       <EffectComposer>
         <TunedBloom />

@@ -68,6 +68,7 @@ uniform float u_frost;
 uniform int u_numRects;
 uniform vec4 u_rects[10]; // x, y, width, height in px, bottom-left origin
 uniform float u_radii[10];
+uniform float u_fluid[10]; // 1 = moves like liquid, 0 = still glass
 uniform float u_squircle;
 uniform vec4 u_tint;
 uniform vec2 u_mouse;
@@ -92,6 +93,7 @@ float smin(float a, float b, float k) {
 
 // Distance to the nearest pane, plus that pane's smaller half-size and centre.
 float field(vec2 p, out float halfMin, out vec2 centre) {
+  float fluid = 0.0;
   float d = 1e20;
   halfMin = 40.0;
   centre = p;
@@ -102,19 +104,19 @@ float field(vec2 p, out float halfMin, out vec2 centre) {
     vec2 c = rc.xy + rc.zw * 0.5;
     vec2 h = rc.zw * 0.5;
     // jelly: taller and a touch narrower while the page is moving
-    h.y += u_jelly * min(7.0 * px, h.y * 0.06);
-    h.x -= u_jelly * min(3.0 * px, h.x * 0.02);
+    h.y += u_jelly * u_fluid[i] * min(3.5 * px, h.y * 0.03);
+    h.x -= u_jelly * u_fluid[i] * min(1.5 * px, h.x * 0.01);
     float di = roundedRectSDF(p - c, h, min(u_radii[i], min(h.x, h.y)));
-    if (di < d) { d = di; halfMin = min(h.x, h.y); centre = c; }
+    if (di < d) { d = di; halfMin = min(h.x, h.y); centre = c; fluid = u_fluid[i]; }
   }
   // the outline breathes, like the skin of a drop
-  float wave = sin(p.x / px * 0.021 + u_time * 1.5) + sin(p.y / px * 0.026 - u_time * 1.2) + sin((p.x + p.y) / px * 0.011 + u_time * 0.7);
-  d += wave * (0.55 + 1.6 * abs(u_jelly)) * px * u_motion;
+  float wave = sin(p.x / px * 0.012 + u_time * 0.9) + sin(p.y / px * 0.015 - u_time * 0.75) + sin((p.x + p.y) / px * 0.007 + u_time * 0.5);
+  d += wave * (0.16 + 0.55 * abs(u_jelly)) * px * u_motion * fluid;
   // a droplet under the finger or pointer that merges into a pane it nears
-  if (u_mouseActive > 0.001 && d < 140.0 * px) {
-    float near = 1.0 - smoothstep(20.0 * px, 140.0 * px, d);
-    float drop = length(p - u_mouse) - 30.0 * px * u_mouseActive * near;
-    d = smin(d, drop, 46.0 * px);
+  if (u_mouseActive * fluid > 0.001 && d < 120.0 * px) {
+    float near = 1.0 - smoothstep(15.0 * px, 110.0 * px, d);
+    float drop = length(p - u_mouse) - 19.0 * px * u_mouseActive * near;
+    d = smin(d, drop, 30.0 * px);
   }
   return d;
 }
@@ -143,7 +145,7 @@ void main() {
 
   // bezel: how far in from the edge, 0 at the rim and 1 where the face is flat
   // narrower on phones, where the words sit close to the edge
-  float widest = u_resolution.x < 768.0 * px ? 26.0 : 50.0;
+  float widest = u_resolution.x < 768.0 * px ? 22.0 : 36.0;
   float bezel = min(widest * px, halfMin * 0.72);
   float t = clamp(-d / bezel, 0.015, 1.0);
   float q = 1.0 - t;
@@ -151,10 +153,10 @@ void main() {
   float slope = q * q * q * pow(max(1.0 - q * q * q * q, 1e-3), -0.75);
   float inAngle = atan(slope);
   float outAngle = asin(sin(inAngle) / 1.5);
-  float bend = tan(inAngle - outAngle) * (height + 0.8) * bezel * 1.35;
+  float bend = tan(inAngle - outAngle) * (height + 0.7) * bezel * 1.05;
 
   // convex glass bends the view inward; the whole face also magnifies a little
-  vec2 shift = -n * bend + (centre - p) * 0.035;
+  vec2 shift = -n * bend + (centre - p) * 0.018;
   float rim = 1.0 - smoothstep(0.0, 1.0, t);
   float frost = u_frost * smoothstep(0.15, 1.0, t);
 
@@ -170,21 +172,23 @@ void main() {
 
   // richer colour through the glass
   float luma = dot(col, vec3(0.299, 0.587, 0.114));
-  col = max(mix(vec3(luma), col, 1.35), 0.0);
-  // the face is shaded for the words on it; the bezel stays bright
-  float face = smoothstep(0.25, 1.0, t);
-  col *= mix(1.28, 1.0 / (1.0 + luma * 4.2), face);
+  col = max(mix(vec3(luma), col, 1.3), 0.0);
+  // smoked: the face is dark so the words win, the bezel lets the light through
+  float face = smoothstep(0.2, 1.0, t);
+  col *= mix(0.95, 0.6 / (1.0 + luma * 3.6), face);
   col = mix(col, u_tint.rgb, u_tint.a * face);
-  col += vec3(0.0045, 0.0022, 0.0018);
 
-  // one thin highlight, strongest where the edge faces the light, and again opposite
+  // NO WHITE (Melvin, 2026-11-27: "I don't like the white haze"). The edge is
+  // lit by whatever glows just outside it, so it takes the page's colour and
+  // stays faint where the page is dark.
+  vec3 around = grab(u_blurredBg, v_uv + n * 34.0 * px / u_resolution);
+  vec3 edge = min(around * 2.1, vec3(0.78, 0.3, 0.1)) + vec3(0.062, 0.024, 0.01);
   vec2 light = normalize(vec2(-0.45, 0.9));
-  if (u_mouseActive > 0.001) light = normalize(mix(light, normalize(u_mouse - p + vec2(1e-4)), 0.6 * u_mouseActive));
+  if (u_mouseActive > 0.001) light = normalize(mix(light, normalize(u_mouse - p + vec2(1e-4)), 0.5 * u_mouseActive));
   float facing = dot(n, light);
-  float line = 1.0 - smoothstep(0.0, 1.7 * px, -d);
-  float spec = line * (0.05 + 0.62 * pow(max(facing, 0.0), 2.5) + 0.34 * pow(max(-facing, 0.0), 2.5));
-  float sheen = pow(q, 4.0) * pow(abs(facing), 3.0) * 0.085;
-  col += vec3(1.0, 0.86, 0.68) * (spec + sheen);
+  float line = 1.0 - smoothstep(0.0, 1.6 * px, -d);
+  col += edge * line * (0.4 + 0.6 * pow(abs(facing), 2.0));
+  col += edge * pow(q, 5.0) * 0.16;
 
   float cover = 1.0 - smoothstep(-1.0 * px, 1.0 * px, d);
   gl_FragColor = vec4(col * cover, mix(shadow, 1.0, cover));
@@ -299,7 +303,7 @@ export function LiquidGlassField({
       u_shadowPosition: { value: new THREE.Vector2(0, -10) },
       // A dark wine tint so cream text stays readable over the bright light
       // sheet (2026-11-27). Linear values, so they look lighter than they read.
-      u_tint: { value: new THREE.Vector4(0.006, 0.0012, 0.001, 0.3) },
+      u_tint: { value: new THREE.Vector4(0.0028, 0.0005, 0.0004, 0.55) },
       u_glassOnly: { value: 0.0 },
       u_frost: { value: 0.0 },
       // Squircle corners (2 = plain rounded rect). 4.2 is close to Apple's
@@ -319,7 +323,8 @@ export function LiquidGlassField({
       // DOM rects tracking
       u_numRects: { value: 0 },
       u_rects: { value: Array(10).fill(new THREE.Vector4()) },
-      u_radii: { value: Array(10).fill(0.0) }
+      u_radii: { value: Array(10).fill(0.0) },
+      u_fluid: { value: Array(10).fill(1.0) }
     },
     vertexShader, fragmentShader: glassFragmentShader,
     depthWrite: false, depthTest: false,
@@ -450,6 +455,7 @@ export function LiquidGlassField({
     meshRef.current.visible = true
     const rects: THREE.Vector4[] = []
     const radii: number[] = []
+    const fluid: number[] = []
     const dpr = window.devicePixelRatio
     const vh = window.innerHeight
 
@@ -478,6 +484,8 @@ export function LiquidGlassField({
         rect.height * dpr
       ))
       radii.push(radius * dpr)
+      // The contact area is glass that holds still: forms should not wobble.
+      fluid.push(el.closest('#contact, [role="tabpanel"]') ? 0 : 1)
     })
 
     // Everything scrolled off-screen → nothing to draw this frame.
@@ -491,6 +499,7 @@ export function LiquidGlassField({
     for (let i = 0; i < rects.length; i++) {
       glassMat.uniforms.u_rects.value[i] = rects[i]
       glassMat.uniforms.u_radii.value[i] = radii[i]
+      glassMat.uniforms.u_fluid.value[i] = fluid[i]
     }
 
     if (bgTexture) {

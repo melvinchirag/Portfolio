@@ -4316,3 +4316,8 @@ squircle bezel with Snell refraction, clear middle, colour fringes, one thin hig
 scroll, breathing outline, pointer/finger droplet that merges. Preview switch now Liquid, Smoke, Veil,
 Frost (clay removed). Apple's HIG says not to use Liquid Glass on the content layer; recommended: Smoke
 behind text, liquid kept for controls. Awaiting his pick. Frame rate seen only in headless emulation.
+
+2026-11-27, later again: Melvin likes the liquid effect, disliked the white haze, wanted darker glass, less
+wobble, and a still contact area. Done: tint darker, no white lift/sheen, edge light sampled from the page
+just outside the pane (warm), ripple/jelly/droplet reduced, u_fluid = 0 inside #contact and tab panels,
+dark form fields, About now uses scene capture (the glass samples what is actually shown).
